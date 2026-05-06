@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use App\Models\MeasurementChart;
+use App\Models\MeasurementChartGroup;
 
 class Product extends Model
 {
@@ -81,6 +82,11 @@ class Product extends Model
     public function measurementCharts(): HasMany
     {
         return $this->hasMany(MeasurementChart::class, 'name', 'measurement_group');
+    }
+
+    public function measurementChartGroup(): BelongsTo
+    {
+        return $this->belongsTo(MeasurementChartGroup::class, 'measurement_group', 'name');
     }
 
     public function wholesaleQuantities(): HasMany

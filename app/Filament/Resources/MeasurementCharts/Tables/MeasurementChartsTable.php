@@ -4,12 +4,14 @@ namespace App\Filament\Resources\MeasurementCharts\Tables;
 
 use App\Filament\Resources\MeasurementCharts\Schemas\MeasurementChartForm;
 use App\Models\MeasurementChart;
+use App\Models\MeasurementChartGroup;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Throwable;
 
@@ -19,10 +21,14 @@ class MeasurementChartsTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')
-                    ->label('الاسم')
+                TextColumn::make('group.name')
+                    ->label('المجموعة')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('name')
+                    ->label('الاسم القديم')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('size_code')
                     ->label('القياس')
                     ->searchable()
@@ -77,7 +83,11 @@ class MeasurementChartsTable
                 ->label('إظهار / إخفاء الأعمدة')
                 ->icon(Heroicon::OutlinedViewColumns))
             ->filters([
-                //
+                SelectFilter::make('measurement_chart_group_id')
+                    ->label('المجموعة')
+                    ->relationship('group', 'name')
+                    ->searchable()
+                    ->preload(),
             ])
             ->recordActions([
                 Action::make('editMeasurementChart')
@@ -89,7 +99,7 @@ class MeasurementChartsTable
                     ->modalWidth('4xl')
                     ->schema(fn (MeasurementChart $record) => MeasurementChartForm::components())
                     ->fillForm(fn (MeasurementChart $record): array => $record->only([
-                        'name',
+                        'measurement_chart_group_id',
                         'size_code',
                         'chest',
                         'shoulder',
@@ -105,6 +115,8 @@ class MeasurementChartsTable
                     ]))
                     ->action(function (MeasurementChart $record, array $data): void {
                         try {
+                            $group = MeasurementChartGroup::find($data['measurement_chart_group_id'] ?? null);
+                            $data['name'] = $group?->name;
                             $record->update($data);
 
                             Notification::make()

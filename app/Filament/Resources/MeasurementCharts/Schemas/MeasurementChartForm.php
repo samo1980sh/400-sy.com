@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\MeasurementCharts\Schemas;
 
+use App\Models\MeasurementChartGroup;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
@@ -19,10 +21,16 @@ class MeasurementChartForm
             Grid::make()
                 ->columns(2)
                 ->schema([
-                    TextInput::make('name')
-                        ->label('الاسم')
+                    Select::make('measurement_chart_group_id')
+                        ->label('المجموعة')
+                        ->options(fn (): array => MeasurementChartGroup::query()
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->all())
+                        ->searchable()
+                        ->preload()
                         ->required()
-                        ->maxLength(255),
+                        ->columnSpanFull(),
                     TextInput::make('size_code')
                         ->label('القياس')
                         ->required()

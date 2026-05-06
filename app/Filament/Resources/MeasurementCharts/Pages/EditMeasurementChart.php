@@ -9,8 +9,8 @@ use Filament\Resources\Pages\EditRecord;
 class EditMeasurementChart extends EditRecord
 {
     protected static string $resource = MeasurementChartResource::class;
-    protected static ?string $title = 'تعديل زمرة وحدة قياس';
-    protected static ?string $breadcrumb = 'زمر وحدة القياس';
+    protected static ?string $title = 'تعديل صف قياس';
+    protected static ?string $breadcrumb = 'صفوف القياس';
 
     protected function getHeaderActions(): array
     {

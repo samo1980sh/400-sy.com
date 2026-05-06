@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MeasurementChart extends Model
 {
     public $timestamps = false;
 
     protected $fillable = [
+        'measurement_chart_group_id',
         'name',
         'size_code',
         'chest',
@@ -23,4 +25,9 @@ class MeasurementChart extends Model
         'leg_width',
         'leg_length',
     ];
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(MeasurementChartGroup::class, 'measurement_chart_group_id');
+    }
 }

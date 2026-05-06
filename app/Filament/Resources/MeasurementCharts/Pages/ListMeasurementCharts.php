@@ -5,6 +5,7 @@ namespace App\Filament\Resources\MeasurementCharts\Pages;
 use App\Filament\Resources\MeasurementCharts\MeasurementChartResource;
 use App\Filament\Resources\MeasurementCharts\Schemas\MeasurementChartForm;
 use App\Models\MeasurementChart;
+use App\Models\MeasurementChartGroup;
 use App\Services\MeasurementChartImportService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -17,8 +18,8 @@ use Throwable;
 class ListMeasurementCharts extends ListRecords
 {
     protected static string $resource = MeasurementChartResource::class;
-    protected static ?string $title = 'زمر وحدة القياس';
-    protected static ?string $breadcrumb = 'زمر وحدة القياس';
+    protected static ?string $title = 'صفوف القياس';
+    protected static ?string $breadcrumb = 'صفوف القياس';
 
     protected function getHeaderActions(): array
     {
@@ -31,26 +32,28 @@ class ListMeasurementCharts extends ListRecords
     protected function createAction(): Action
     {
         return Action::make('createMeasurementChart')
-            ->label('إضافة زمرة')
+            ->label('إضافة صف قياس')
             ->icon(Heroicon::OutlinedPlusCircle)
             ->color('primary')
-            ->modalHeading('إضافة زمرة وحدة قياس')
+            ->modalHeading('إضافة صف قياس')
             ->modalSubmitActionLabel('حفظ')
             ->modalWidth('4xl')
             ->schema(MeasurementChartForm::components())
             ->action(function (array $data): void {
                 try {
+                    $group = MeasurementChartGroup::find($data['measurement_chart_group_id'] ?? null);
+                    $data['name'] = $group?->name;
                     MeasurementChart::create($data);
 
                     Notification::make()
-                        ->title('تمت إضافة الزمرة بنجاح.')
+                        ->title('تمت إضافة صف القياس بنجاح.')
                         ->success()
                         ->send();
                 } catch (Throwable $exception) {
                     report($exception);
 
                     Notification::make()
-                        ->title('فشل إضافة الزمرة.')
+                        ->title('فشل إضافة صف القياس.')
                         ->body($exception->getMessage())
                         ->danger()
                         ->send();
@@ -64,8 +67,8 @@ class ListMeasurementCharts extends ListRecords
             ->label('استيراد')
             ->icon(Heroicon::OutlinedArrowUpTray)
             ->color('gray')
-            ->modalHeading('استيراد زمر وحدة القياس')
-            ->modalDescription('ارفع ملف CSV أو Excel يحتوي على بيانات زمر وحدة القياس ثم نفّذ الاستيراد.')
+            ->modalHeading('استيراد صفوف القياس')
+            ->modalDescription('ارفع ملف CSV أو Excel يحتوي على بيانات صفوف القياس ثم نفّذ الاستيراد.')
             ->modalSubmitActionLabel('استيراد')
             ->modalWidth('xl')
             ->schema([

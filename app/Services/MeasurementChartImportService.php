@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\MeasurementChart;
+use App\Models\MeasurementChartGroup;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use RuntimeException;
@@ -35,7 +36,12 @@ class MeasurementChartImportService
                 continue;
             }
 
+            $group = MeasurementChartGroup::query()->firstOrCreate([
+                'name' => $name,
+            ]);
+
             $payload = [
+                'name' => $name,
                 'chest' => $this->decimal($row['chest'] ?? null),
                 'shoulder' => $this->decimal($row['shoulder'] ?? null),
                 'waist' => $this->decimal($row['waist'] ?? null),
@@ -50,7 +56,10 @@ class MeasurementChartImportService
             ];
 
             $chart = MeasurementChart::query()->updateOrCreate(
-                ['name' => $name, 'size_code' => $sizeCode],
+                [
+                    'measurement_chart_group_id' => $group->id,
+                    'size_code' => $sizeCode,
+                ],
                 $payload,
             );
 
