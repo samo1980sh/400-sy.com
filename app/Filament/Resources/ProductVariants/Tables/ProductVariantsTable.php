@@ -26,9 +26,6 @@ class ProductVariantsTable
             ->columns([
                 TextColumn::make('product.model_no')
                     ->label('رمز المنتج')
-                    ->formatStateUsing(fn ($state, $record): string => trim(
-                        ($record?->product?->model_no ?: '-') . ' — ' . ($record?->product?->title_ar ?: '-')
-                    ))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('product.title_ar')
