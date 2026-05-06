@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\MeasurementChartGroups;
 
-use App\Filament\Resources\MeasurementChartGroups\Pages\CreateMeasurementChartGroup;
-use App\Filament\Resources\MeasurementChartGroups\Pages\EditMeasurementChartGroup;
 use App\Filament\Resources\MeasurementChartGroups\Pages\ListMeasurementChartGroups;
 use App\Filament\Resources\MeasurementChartGroups\RelationManagers\ChartsRelationManager;
 use App\Filament\Resources\MeasurementChartGroups\Schemas\MeasurementChartGroupForm;
@@ -47,8 +45,6 @@ class MeasurementChartGroupResource extends \App\Filament\Resources\RbacResource
     {
         return [
             'index' => ListMeasurementChartGroups::route('/'),
-            'create' => CreateMeasurementChartGroup::route('/create'),
-            'edit' => EditMeasurementChartGroup::route('/{record}/edit'),
         ];
     }
 }

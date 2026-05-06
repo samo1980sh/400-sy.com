@@ -3,8 +3,13 @@
 namespace App\Filament\Resources\MeasurementChartGroups\Pages;
 
 use App\Filament\Resources\MeasurementChartGroups\MeasurementChartGroupResource;
-use Filament\Actions\CreateAction;
+use App\Filament\Resources\MeasurementChartGroups\Schemas\MeasurementChartGroupForm;
+use App\Models\MeasurementChartGroup;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Icons\Heroicon;
+use Throwable;
 
 class ListMeasurementChartGroups extends ListRecords
 {
@@ -15,8 +20,32 @@ class ListMeasurementChartGroups extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()
-                ->label('إضافة مجموعة قياس'),
+            Action::make('createMeasurementChartGroup')
+                ->label('إضافة مجموعة قياس')
+                ->icon(Heroicon::OutlinedPlusCircle)
+                ->color('primary')
+                ->modalHeading('إضافة مجموعة قياس')
+                ->modalSubmitActionLabel('حفظ')
+                ->modalWidth('4xl')
+                ->schema(MeasurementChartGroupForm::components())
+                ->action(function (array $data): void {
+                    try {
+                        MeasurementChartGroup::create($data);
+
+                        Notification::make()
+                            ->title('تمت إضافة مجموعة القياس بنجاح.')
+                            ->success()
+                            ->send();
+                    } catch (Throwable $exception) {
+                        report($exception);
+
+                        Notification::make()
+                            ->title('فشل إضافة مجموعة القياس.')
+                            ->body($exception->getMessage())
+                            ->danger()
+                            ->send();
+                    }
+                }),
         ];
     }
 }
