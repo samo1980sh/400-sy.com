@@ -25,10 +25,14 @@ class ProductVariantForm
                 ->columns(2)
                 ->schema([
                     Select::make('product_id')
-                        ->label('المنتج')
+                        ->label('رمز المنتج')
                         ->options(fn (): array => Product::query()
+                            ->orderBy('model_no')
                             ->orderBy('title_ar')
-                            ->pluck('title_ar', 'id')
+                            ->get()
+                            ->mapWithKeys(fn (Product $product): array => [
+                                $product->id => trim(($product->model_no ?: '-') . ' — ' . ($product->title_ar ?: '-')),
+                            ])
                             ->all())
                         ->searchable()
                         ->preload()

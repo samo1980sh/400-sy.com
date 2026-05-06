@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Services\ProductImageCatalogService;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -175,6 +176,16 @@ class ProductsTable
                         ->pluck('drop_type', 'drop_type')
                         ->toArray())
                     ->searchable(),
+                SelectFilter::make('collection')
+                    ->label('التشكيلة')
+                    ->options(fn (): array => Product::query()
+                        ->whereNotNull('collection')
+                        ->where('collection', '<>', '')
+                        ->orderBy('collection')
+                        ->pluck('collection', 'collection')
+                        ->toArray())
+                    ->searchable()
+                    ->preload(),
                 TernaryFilter::make('show_web')
                     ->label('موقع'),
                 TernaryFilter::make('show_app')
@@ -197,11 +208,45 @@ class ProductsTable
                     ->label('عرض خاص'),
             ])
             ->recordActions([
+                Action::make('deactivateProduct')
+                    ->label('إيقاف العرض')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('إيقاف عرض المنتج')
+                    ->modalDescription('سيتم تعطيل المنتج وإخفاؤه من العرض بدون حذفه من قاعدة البيانات.')
+                    ->modalSubmitActionLabel('إيقاف العرض')
+                    ->visible(fn (Product $record): bool => (bool) $record->is_active)
+                    ->action(fn (Product $record): bool => $record->update(['is_active' => false])),
+                Action::make('activateProduct')
+                    ->label('تفعيل')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('تفعيل المنتج')
+                    ->modalDescription('سيتم إعادة تفعيل المنتج للعرض.')
+                    ->modalSubmitActionLabel('تفعيل')
+                    ->visible(fn (Product $record): bool => ! (bool) $record->is_active)
+                    ->action(fn (Product $record): bool => $record->update(['is_active' => true])),
                 EditAction::make()
                     ->icon(Heroicon::OutlinedPencilSquare),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('deactivateProducts')
+                        ->label('إيقاف العرض')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('إيقاف عرض المنتجات المحددة')
+                        ->modalDescription('سيتم تعطيل المنتجات المحددة وإخفاؤها من العرض بدون حذفها.')
+                        ->modalSubmitActionLabel('إيقاف العرض')
+                        ->action(fn ($records) => $records->each->update(['is_active' => false])),
+                    BulkAction::make('activateProducts')
+                        ->label('تفعيل')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('تفعيل المنتجات المحددة')
+                        ->modalDescription('سيتم إعادة تفعيل المنتجات المحددة.')
+                        ->modalSubmitActionLabel('تفعيل')
+                        ->action(fn ($records) => $records->each->update(['is_active' => true])),
                     DeleteBulkAction::make()
                         ->label('حذف')
                         ->icon(Heroicon::OutlinedTrash),

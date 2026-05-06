@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ProductVariants\Tables;
 
 use App\Filament\Resources\ProductVariants\Schemas\ProductVariantForm;
+use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\ProductVariant;
 use App\Models\Size;
@@ -23,10 +24,17 @@ class ProductVariantsTable
     {
         return $table
             ->columns([
-                TextColumn::make('product.title_ar')
-                    ->label('المنتج')
+                TextColumn::make('product.model_no')
+                    ->label('رمز المنتج')
+                    ->formatStateUsing(fn ($state, $record): string => trim(
+                        ($record?->product?->model_no ?: '-') . ' — ' . ($record?->product?->title_ar ?: '-')
+                    ))
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('product.title_ar')
+                    ->label('وصف المنتج')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('productColor.color_name_ar')
                     ->label('اللون')
                     ->formatStateUsing(fn ($state, $record): string => trim(($record?->productColor?->color_name_ar ?? '-') . ' (' . ($record?->productColor?->color_code ?? '-') . ')'))
@@ -63,9 +71,16 @@ class ProductVariantsTable
                 ->label('إظهار / إخفاء الأعمدة')
                 ->icon(Heroicon::OutlinedViewColumns))
             ->filters([
-                SelectFilter::make('product')
-                    ->label('المنتج')
-                    ->relationship('product', 'title_ar')
+                SelectFilter::make('product_id')
+                    ->label('رمز المنتج')
+                    ->options(fn (): array => Product::query()
+                        ->orderBy('model_no')
+                        ->orderBy('title_ar')
+                        ->get()
+                        ->mapWithKeys(fn (Product $product): array => [
+                            $product->id => trim(($product->model_no ?: '-') . ' — ' . ($product->title_ar ?: '-')),
+                        ])
+                        ->all())
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('product_color_id')

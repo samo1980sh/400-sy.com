@@ -28,6 +28,9 @@ class SizesTable
                 TextColumn::make('name_en')
                     ->label('الاسم بالانكليزية')
                     ->searchable(),
+                TextColumn::make('sort_order')
+                    ->label('الترتيب')
+                    ->sortable(),
                 TextColumn::make('status')
                     ->label('الحالة')
                     ->badge()
