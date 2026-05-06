@@ -70,6 +70,41 @@ class RetailExcelImportService
         return '';
     }
 
+    private function productBodyFit(array $row): ?string
+    {
+        return $this->normalizeOptionalText($this->value(
+            $row,
+            'Body Fit',
+            'Body fit',
+            'BodyFit',
+            'body_fit',
+            'نوع القالب',
+            'القالب',
+            'القصة',
+            'القصّة',
+        ));
+    }
+
+    private function productDropType(array $row): ?string
+    {
+        return $this->normalizeOptionalText($this->value(
+            $row,
+            'Drop',
+            'drop',
+            'Drop Type',
+            'drop_type',
+            'الطول',
+            'النمط',
+        ));
+    }
+
+    private function normalizeOptionalText(?string $value): ?string
+    {
+        $value = $this->normalizeText($value);
+
+        return $value !== '' ? $value : null;
+    }
+
     public function normalizeText(?string $value): string
     {
         $value = trim((string) $value);
@@ -782,6 +817,8 @@ class RetailExcelImportService
                         'structure' => $this->normalizeText($this->value($first, 'التركيب')),
                         'structure_color_id' => $this->resolveOrCreateCatalogColorId($rows, $this->value($first, 'التركيب')),
                         'collection' => $this->normalizeText($this->value($first, 'التشكيلة')),
+                        'body_fit' => $this->productBodyFit($first),
+                        'drop_type' => $this->productDropType($first),
                         'measurement_group' => $this->normalizeText($this->value($first, 'زمر وحدة القياس')) ?: null,
                         'visibility_targets' => $visibility['visibility_targets'],
                         'display_channels' => $visibility['display_channels'],
@@ -904,6 +941,8 @@ class RetailExcelImportService
                         'structure' => $this->normalizeText($this->value($first, 'التركيب')),
                         'structure_color_id' => $this->resolveOrCreateCatalogColorId($rows, $this->value($first, 'التركيب')),
                         'collection' => $this->normalizeText($this->value($first, 'التشكيلة')),
+                        'body_fit' => $this->productBodyFit($first),
+                        'drop_type' => $this->productDropType($first),
                         'measurement_group' => $this->normalizeText($this->value($first, 'زمر وحدة القياس')) ?: null,
                         'visibility_targets' => $visibility['visibility_targets'],
                         'display_channels' => $visibility['display_channels'],

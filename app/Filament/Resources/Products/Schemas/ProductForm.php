@@ -63,6 +63,14 @@ class ProductForm
                                             ->label('التشكيلة')
                                             ->maxLength(100)
                                             ->default(null),
+                                        TextInput::make('body_fit')
+                                            ->label('Body Fit')
+                                            ->maxLength(100)
+                                            ->default(null),
+                                        TextInput::make('drop_type')
+                                            ->label('Drop')
+                                            ->maxLength(100)
+                                            ->default(null),
                                     ]),
                                 Grid::make(2)
                                     ->columnSpanFull()

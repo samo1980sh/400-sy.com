@@ -27,6 +27,8 @@ class Product extends Model
         'structure',
         'structure_color_id',
         'collection',
+        'body_fit',
+        'drop_type',
         'currency_ar',
         'currency_en',
         'visibility_targets',

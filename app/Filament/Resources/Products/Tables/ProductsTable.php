@@ -86,6 +86,16 @@ class ProductsTable
                     ->label('التشكيلة')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('body_fit')
+                    ->label('Body Fit')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('drop_type')
+                    ->label('Drop')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_best_seller')
                     ->label('الأكثر مبيعًا')
                     ->boolean()
@@ -145,6 +155,26 @@ class ProductsTable
                     ->options(fn (): array => Category::breadcrumbOptions())
                     ->searchable()
                     ->preload(),
+                SelectFilter::make('body_fit')
+                    ->label('Body Fit')
+                    ->options(fn (): array => Product::query()
+                        ->distinct()
+                        ->whereNotNull('body_fit')
+                        ->where('body_fit', '<>', '')
+                        ->orderBy('body_fit')
+                        ->pluck('body_fit', 'body_fit')
+                        ->toArray())
+                    ->searchable(),
+                SelectFilter::make('drop_type')
+                    ->label('Drop')
+                    ->options(fn (): array => Product::query()
+                        ->distinct()
+                        ->whereNotNull('drop_type')
+                        ->where('drop_type', '<>', '')
+                        ->orderBy('drop_type')
+                        ->pluck('drop_type', 'drop_type')
+                        ->toArray())
+                    ->searchable(),
                 TernaryFilter::make('show_web')
                     ->label('موقع'),
                 TernaryFilter::make('show_app')
