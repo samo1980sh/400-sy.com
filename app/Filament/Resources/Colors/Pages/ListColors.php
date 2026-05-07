@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Colors\Pages;
 use App\Filament\Resources\Colors\ColorResource;
 use App\Filament\Resources\Colors\Schemas\ColorForm;
 use App\Models\Color;
+use App\Services\ColorExportService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
@@ -39,6 +40,7 @@ class ListColors extends ListRecords
                         ->success()
                         ->send();
                 }),
+            $this->exportAction(),
             Action::make('createColor')
                 ->label('إضافة لون')
                 ->icon(Heroicon::OutlinedPlusCircle)
@@ -66,5 +68,14 @@ class ListColors extends ListRecords
                     }
                 }),
         ];
+    }
+
+    protected function exportAction(): Action
+    {
+        return Action::make('exportColors')
+            ->label('تصدير')
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->color('success')
+            ->action(fn () => app(ColorExportService::class)->download());
     }
 }
