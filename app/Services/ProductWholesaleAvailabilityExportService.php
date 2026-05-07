@@ -14,7 +14,7 @@ class ProductWholesaleAvailabilityExportService
     public function download(): StreamedResponse
     {
         $spreadsheet = $this->spreadsheet();
-        $fileName = 'product-wholesale-availabilities-export-'.now()->format('Y-m-d-His').'.xlsx';
+        $fileName = 'product-wholesale-availabilities-import-format-'.now()->format('Y-m-d-His').'.xlsx';
 
         return response()->streamDownload(function () use ($spreadsheet): void {
             $writer = new Xlsx($spreadsheet);
@@ -28,7 +28,7 @@ class ProductWholesaleAvailabilityExportService
     {
         $availabilities = ProductWholesaleAvailability::query()
             ->with(['product', 'wholesaleColor', 'wholesaleCustomerGroup'])
-            ->latest('id')
+            ->orderByDesc('id')
             ->get();
 
         $spreadsheet = new Spreadsheet();
@@ -36,26 +36,22 @@ class ProductWholesaleAvailabilityExportService
         $sheet->setTitle('توافر الجملة');
 
         $rows = [[
-            'رمز المنتج',
-            'اسم المنتج بالعربي',
-            'رمز لون الجملة',
-            'اسم لون الجملة بالعربي',
-            'اسم لون الجملة بالانكليزي',
-            'فئة التاجر',
-            'فئة التاجر بالانكليزي',
-            'الحد الأقصى للكمية',
+            'الرمز',
+            'اسم الفئة',
+            'رمز اللون',
+            'اللون بالعربي',
+            'اللون بالإنكليزي',
+            'الكمية العظمى',
         ]];
 
         foreach ($availabilities as $availability) {
             $rows[] = [
                 $availability->product?->model_no ?: '',
-                $availability->product?->title_ar ?: '',
+                $availability->wholesaleCustomerGroup?->name_ar ?: '',
                 $availability->wholesaleColor?->color_code ?: '',
                 $availability->wholesaleColor?->color_name_ar ?: '',
                 $availability->wholesaleColor?->color_name_en ?: '',
-                $availability->wholesaleCustomerGroup?->name_ar ?: '',
-                $availability->wholesaleCustomerGroup?->name_en ?: '',
-                $availability->max_quantity ?? '',
+                $availability->max_quantity ?? 0,
             ];
         }
 
