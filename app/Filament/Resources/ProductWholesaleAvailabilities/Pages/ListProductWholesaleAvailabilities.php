@@ -6,6 +6,7 @@ use App\Filament\Resources\ProductWholesaleAvailabilities\ProductWholesaleAvaila
 use App\Filament\Resources\ProductWholesaleAvailabilities\Schemas\ProductWholesaleAvailabilityForm;
 use App\Models\ImportBatch;
 use App\Models\ProductWholesaleAvailability;
+use App\Services\ProductWholesaleAvailabilityExportService;
 use App\Services\ProductWholesaleAvailabilityImportService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -30,6 +31,7 @@ class ListProductWholesaleAvailabilities extends ListRecords
         return [
             $this->purgeAction(),
             $this->importAction(),
+            $this->exportAction(),
             $this->createAction(),
         ];
     }
@@ -140,6 +142,15 @@ class ListProductWholesaleAvailabilities extends ListRecords
                         ->send();
                 }
             });
+    }
+
+    protected function exportAction(): Action
+    {
+        return Action::make('exportWholesaleAvailabilities')
+            ->label('تصدير')
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->color('success')
+            ->action(fn () => app(ProductWholesaleAvailabilityExportService::class)->download());
     }
 
     protected function resolveUploadedPath(mixed $file): ?string
