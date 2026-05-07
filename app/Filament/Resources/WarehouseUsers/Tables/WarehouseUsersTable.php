@@ -4,6 +4,7 @@ namespace App\Filament\Resources\WarehouseUsers\Tables;
 
 use App\Filament\Resources\WarehouseUsers\Schemas\WarehouseUserForm;
 use App\Models\WarehouseUser;
+use App\Services\WarehouseExportService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -22,18 +23,23 @@ class WarehouseUsersTable
                 TextColumn::make('account_no')
                     ->label('رقم الحساب')
                     ->searchable(),
+
                 TextColumn::make('username')
                     ->label('اسم المستخدم')
                     ->searchable(),
+
                 TextColumn::make('name')
                     ->label('الاسم الكامل')
                     ->searchable(),
+
                 TextColumn::make('mobile')
                     ->label('رقم الموبايل')
                     ->searchable(),
+
                 TextColumn::make('email')
                     ->label('البريد الإلكتروني')
                     ->searchable(),
+
                 TextColumn::make('status')
                     ->label('الحالة')
                     ->badge()
@@ -42,6 +48,7 @@ class WarehouseUsersTable
                         'inactive' => 'غير فعال',
                         default => (string) $state,
                     }),
+
                 TextColumn::make('account_type')
                     ->label('الصنف')
                     ->badge()
@@ -51,6 +58,7 @@ class WarehouseUsersTable
                         'sales_manager' => 'مدير مبيعات',
                         default => (string) $state,
                     }),
+
                 TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime()
@@ -83,6 +91,12 @@ class WarehouseUsersTable
                                 ->send();
                         }
                     }),
+
+                Action::make('exportWarehouse')
+                    ->label('تصدير')
+                    ->icon(Heroicon::OutlinedArrowDownTray)
+                    ->color('success')
+                    ->action(fn () => app(WarehouseExportService::class)->download()),
             ])
             ->recordActions([
                 Action::make('editWarehouseUser')
@@ -127,6 +141,7 @@ class WarehouseUsersTable
                                 ->send();
                         }
                     }),
+
                 Action::make('deleteWarehouseUser')
                     ->label('حذف')
                     ->icon(Heroicon::OutlinedTrash)

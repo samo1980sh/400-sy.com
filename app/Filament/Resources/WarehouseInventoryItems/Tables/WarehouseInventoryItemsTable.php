@@ -4,12 +4,13 @@ namespace App\Filament\Resources\WarehouseInventoryItems\Tables;
 
 use App\Models\WarehouseInventoryItem;
 use App\Services\WarehouseExcelImportService;
+use App\Services\WarehouseExportService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -26,32 +27,40 @@ class WarehouseInventoryItemsTable
                     ->label('الكود المختصر')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('model_code')
                     ->label('رمز الموديل')
                     ->searchable()
                     ->toggleable(),
+
                 TextColumn::make('item_name')
                     ->label('اسم الصنف')
                     ->searchable(),
+
                 TextColumn::make('size_code')
                     ->label('القياس')
                     ->searchable()
                     ->badge(),
+
                 TextColumn::make('color_name')
                     ->label('اللون')
                     ->searchable(),
+
                 TextColumn::make('color_code')
                     ->label('رقم اللون')
                     ->searchable()
                     ->toggleable(),
+
                 TextColumn::make('warehouse_stock')
                     ->label('مخزن')
                     ->numeric(decimalPlaces: 0)
                     ->sortable(),
+
                 TextColumn::make('balances_count')
                     ->label('عدد الصالات')
                     ->badge()
                     ->state(fn (WarehouseInventoryItem $record): int => (int) ($record->balances_count ?? 0)),
+
                 TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime()
@@ -69,6 +78,7 @@ class WarehouseInventoryItemsTable
                         ->all())
                     ->searchable()
                     ->preload(),
+
                 SelectFilter::make('color_name')
                     ->label('اللون')
                     ->options(fn (): array => WarehouseInventoryItem::query()
@@ -125,6 +135,12 @@ class WarehouseInventoryItemsTable
                                 ->send();
                         }
                     }),
+
+                Action::make('exportWarehouse')
+                    ->label('تصدير')
+                    ->icon(Heroicon::OutlinedArrowDownTray)
+                    ->color('success')
+                    ->action(fn () => app(WarehouseExportService::class)->download()),
             ]);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\WarehouseHalls\Tables;
 
 use App\Filament\Resources\WarehouseHalls\Schemas\WarehouseHallForm;
 use App\Models\WarehouseHall;
+use App\Services\WarehouseExportService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -22,12 +23,15 @@ class WarehouseHallsTable
                 TextColumn::make('name')
                     ->label('اسم الصالة')
                     ->searchable(),
+
                 TextColumn::make('code')
                     ->label('الرمز')
                     ->searchable(),
+
                 TextColumn::make('sort_order')
                     ->label('الترتيب')
                     ->sortable(),
+
                 TextColumn::make('status')
                     ->label('الحالة')
                     ->badge()
@@ -36,6 +40,7 @@ class WarehouseHallsTable
                         'inactive' => 'غير فعال',
                         default => (string) $state,
                     }),
+
                 TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime()
@@ -68,6 +73,12 @@ class WarehouseHallsTable
                                 ->send();
                         }
                     }),
+
+                Action::make('exportWarehouse')
+                    ->label('تصدير')
+                    ->icon(Heroicon::OutlinedArrowDownTray)
+                    ->color('success')
+                    ->action(fn () => app(WarehouseExportService::class)->download()),
             ])
             ->recordActions([
                 Action::make('editWarehouseHall')
@@ -102,6 +113,7 @@ class WarehouseHallsTable
                                 ->send();
                         }
                     }),
+
                 Action::make('deleteWarehouseHall')
                     ->label('حذف')
                     ->icon(Heroicon::OutlinedTrash)
