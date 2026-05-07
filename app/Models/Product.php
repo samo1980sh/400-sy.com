@@ -124,6 +124,11 @@ class Product extends Model
         return $this->hasMany(ProductComplement::class);
     }
 
+    public function details(): HasMany
+    {
+        return $this->hasMany(ProductDetail::class)->orderBy('sort_order');
+    }
+
     public function scopeVisibleOnWeb(Builder $query): Builder
     {
         return $query->where('show_web', true);

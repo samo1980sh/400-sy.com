@@ -6,6 +6,7 @@ use App\Filament\Resources\Products\Pages\CreateProduct;
 use App\Filament\Resources\Products\Pages\EditProduct;
 use App\Filament\Resources\Products\Pages\ListProducts;
 use App\Filament\Resources\Products\RelationManagers\ComplementaryProductsRelationManager;
+use App\Filament\Resources\Products\RelationManagers\ProductDetailsRelationManager;
 use App\Filament\Resources\Products\RelationManagers\ProductImagesRelationManager;
 use App\Filament\Resources\Products\RelationManagers\VariantsRelationManager;
 use App\Filament\Resources\Products\RelationManagers\WholesaleQuantitiesRelationManager;
@@ -44,6 +45,7 @@ class ProductResource extends \App\Filament\Resources\RbacResource
     {
         return [
             ProductImagesRelationManager::class,
+            ProductDetailsRelationManager::class,
             VariantsRelationManager::class,
             WholesaleQuantitiesRelationManager::class,
             ComplementaryProductsRelationManager::class,
