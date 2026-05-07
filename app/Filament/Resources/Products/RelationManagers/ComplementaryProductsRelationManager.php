@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Products\RelationManagers;
 
+use App\Services\ComplementaryProductsExportService;
 use App\Services\RetailExcelImportService;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Actions\Action;
@@ -54,18 +55,22 @@ class ComplementaryProductsRelationManager extends RelationManager
                     ->label('الترتيب')
                     ->badge()
                     ->sortable(),
+
                 TextColumn::make('relatedProduct.model_no')
                     ->label('رمز الموديل')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('relatedProduct.title_ar')
                     ->label('الاسم بالعربي')
                     ->searchable()
                     ->toggleable(),
+
                 TextColumn::make('relatedProduct.title_en')
                     ->label('الاسم بالانكليزي')
                     ->searchable()
                     ->toggleable(),
+
                 TextColumn::make('relatedProduct.is_active')
                     ->label('الحالة')
                     ->badge()
@@ -84,6 +89,7 @@ class ComplementaryProductsRelationManager extends RelationManager
                     ->color('primary')
                     ->action(function () {
                         $spreadsheet = new Spreadsheet();
+
                         $sheet = $spreadsheet->getActiveSheet();
                         $sheet->setTitle('المنتجات المكملة');
                         $sheet->fromArray([
@@ -98,6 +104,13 @@ class ComplementaryProductsRelationManager extends RelationManager
                             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                         ]);
                     }),
+
+                Action::make('exportComplementaryProducts')
+                    ->label('تصدير')
+                    ->icon(Heroicon::OutlinedArrowDownTray)
+                    ->color('success')
+                    ->action(fn () => app(ComplementaryProductsExportService::class)->download()),
+
                 Action::make('importComplementaryProducts')
                     ->label('استيراد')
                     ->icon(Heroicon::OutlinedArrowUpTray)
