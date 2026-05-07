@@ -24,37 +24,29 @@ class ProductWholesaleAvailabilitiesTable
             ->defaultSort('id', 'desc')
             ->columns([
                 TextColumn::make('product.model_no')
-                    ->label('المنتج')
-                    ->formatStateUsing(function ($state, $record): string {
-                        $product = $record->product;
-
-                        if (! $product) {
-                            return '-';
-                        }
-
-                        return trim(implode(' - ', array_filter([
-                            $product->model_no,
-                            $product->title_ar,
-                        ])));
-                    })
+                    ->label('رمز المنتج')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('product.title_ar')
+                    ->label('اسم المنتج')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('wholesaleColor.color_code')
+                    ->label('رمز اللون')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('wholesaleColor.color_name_ar')
-                    ->label('اللون')
-                    ->formatStateUsing(function ($state, $record): string {
-                        $color = $record->wholesaleColor;
-                        if (! $color) {
-                            return '-';
-                        }
-
-                        return trim(implode(' - ', array_filter([
-                            $color->color_name_ar,
-                            $color->color_name_en,
-                            $color->color_code,
-                        ])));
-                    })
+                    ->label('لون الجملة')
+                    ->searchable()
+                    ->sortable()
                     ->toggleable(),
+                TextColumn::make('wholesaleColor.color_name_en')
+                    ->label('لون الجملة بالإنكليزي')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('wholesaleCustomerGroup.name_ar')
                     ->label('فئة التاجر')
                     ->searchable()
@@ -82,12 +74,12 @@ class ProductWholesaleAvailabilitiesTable
                 ->label('إظهار / إخفاء الأعمدة'))
             ->filters([
                 SelectFilter::make('product_id')
-                    ->label('المنتج')
+                    ->label('رمز المنتج')
                     ->options(fn (): array => Product::query()
                         ->orderBy('model_no')
                         ->get(['id', 'model_no', 'title_ar'])
                         ->mapWithKeys(fn (Product $product): array => [
-                            $product->id => trim(implode(' - ', array_filter([
+                            $product->id => trim(implode(' — ', array_filter([
                                 $product->model_no,
                                 $product->title_ar,
                             ]))),

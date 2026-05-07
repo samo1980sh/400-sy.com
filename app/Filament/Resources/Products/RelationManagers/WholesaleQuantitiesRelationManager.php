@@ -30,16 +30,16 @@ class WholesaleQuantitiesRelationManager extends RelationManager
     {
         return $schema->components([
             Select::make('product_wholesale_color_id')
-                ->label('اللون')
+                ->label('لون الجملة')
                 ->options(function (): array {
                     return $this->getOwnerRecord()
                         ->wholesaleColors()
                         ->orderBy('color_name_ar')
                         ->get()
                         ->mapWithKeys(fn ($color): array => [
-                            $color->id => trim(implode(' - ', array_filter([
-                                $color->color_name_ar,
+                            $color->id => trim(implode(' — ', array_filter([
                                 $color->color_code,
+                                $color->color_name_ar,
                             ]))),
                         ])
                         ->all();
@@ -48,13 +48,13 @@ class WholesaleQuantitiesRelationManager extends RelationManager
                 ->preload()
                 ->required(),
             TextInput::make('series_group')
-                ->label('المجموعة')
+                ->label('مجموعة السيرية')
                 ->numeric()
                 ->required()
                 ->default(1)
                 ->minValue(1),
             TextInput::make('size_text')
-                ->label('السيرية')
+                ->label('نص السيرية')
                 ->required()
                 ->maxLength(100),
             TextInput::make('quantity')
@@ -75,18 +75,18 @@ class WholesaleQuantitiesRelationManager extends RelationManager
             ->recordTitleAttribute('size_text')
             ->columns([
                 TextColumn::make('wholesaleColor.color_name_ar')
-                    ->label('اللون')
-                    ->formatStateUsing(fn ($state, $record): string => trim(implode(' - ', array_filter([
-                        $record?->wholesaleColor?->color_name_ar,
+                    ->label('لون الجملة')
+                    ->formatStateUsing(fn ($state, $record): string => trim(implode(' — ', array_filter([
                         $record?->wholesaleColor?->color_code,
+                        $record?->wholesaleColor?->color_name_ar,
                     ]))) ?: '-')
                     ->sortable(),
                 TextColumn::make('series_group')
-                    ->label('رقم المجموعة')
+                    ->label('مجموعة السيرية')
                     ->badge()
                     ->sortable(),
                 TextColumn::make('size_text')
-                    ->label('السيرية')
+                    ->label('نص السيرية')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('quantity')

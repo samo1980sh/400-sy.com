@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\TraderOrders\Tables;
 
+use App\Models\Trader;
 use App\Models\TraderOrder;
+use App\Models\WholesaleCustomerGroup;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Throwable;
 
@@ -40,6 +43,14 @@ class TraderOrdersTable
                         'delivered' => 'مُسلم',
                         'cancelled' => 'ملغى',
                         default => (string) $state,
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'confirmed' => 'info',
+                        'shipped' => 'primary',
+                        'delivered' => 'success',
+                        'cancelled' => 'danger',
+                        default => 'gray',
                     }),
                 TextColumn::make('payment_status')
                     ->label('حالة الدفع')
@@ -48,6 +59,11 @@ class TraderOrdersTable
                         'unpaid' => 'غير مدفوع',
                         'paid' => 'مدفوع',
                         default => (string) $state,
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'paid' => 'success',
+                        'unpaid' => 'warning',
+                        default => 'gray',
                     }),
                 TextColumn::make('items_count')
                     ->label('العناصر')
@@ -69,6 +85,49 @@ class TraderOrdersTable
                     ->label('تاريخ الطلب')
                     ->dateTime()
                     ->sortable(),
+            ])
+            ->filters([
+                SelectFilter::make('status')
+                    ->label('حالة الطلب')
+                    ->options([
+                        'pending' => 'قيد المراجعة',
+                        'confirmed' => 'مؤكد',
+                        'shipped' => 'مُشحن',
+                        'delivered' => 'مُسلم',
+                        'cancelled' => 'ملغى',
+                    ]),
+                SelectFilter::make('payment_status')
+                    ->label('حالة الدفع')
+                    ->options([
+                        'unpaid' => 'غير مدفوع',
+                        'paid' => 'مدفوع',
+                    ]),
+                SelectFilter::make('trader_id')
+                    ->label('التاجر')
+                    ->options(fn (): array => Trader::query()
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all())
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('wholesale_customer_group_id')
+                    ->label('فئة التاجر')
+                    ->options(fn (): array => WholesaleCustomerGroup::query()
+                        ->orderBy('name_ar')
+                        ->pluck('name_ar', 'id')
+                        ->all())
+                    ->query(function ($query, array $data) {
+                        $value = $data['value'] ?? null;
+
+                        if (blank($value)) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('trader', fn ($traderQuery) => $traderQuery
+                            ->where('wholesale_customer_group_id', $value));
+                    })
+                    ->searchable()
+                    ->preload(),
             ])
             ->recordActions([
                 Action::make('viewDetails')

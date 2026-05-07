@@ -110,23 +110,23 @@ class ProductsTable
                     ->boolean()
                     ->toggleable(),
                 IconColumn::make('show_web')
-                    ->label('موقع')
+                    ->label('الموقع')
                     ->boolean()
                     ->toggleable(),
                 IconColumn::make('show_app')
-                    ->label('تطبيق')
+                    ->label('التطبيق')
                     ->boolean()
                     ->toggleable(),
                 IconColumn::make('show_retail')
-                    ->label('زبون')
+                    ->label('للزبون')
                     ->boolean()
                     ->toggleable(),
                 IconColumn::make('show_wholesale')
-                    ->label('تاجر')
+                    ->label('للتاجر')
                     ->boolean()
                     ->toggleable(),
                 IconColumn::make('has_wholesale_series')
-                    ->label('سيريات الجملة')
+                    ->label('له سيريات جملة')
                     ->state(fn ($record): bool => (int) ($record->wholesale_series_count ?? 0) > 0)
                     ->boolean()
                     ->toggleable(),
@@ -187,15 +187,15 @@ class ProductsTable
                     ->searchable()
                     ->preload(),
                 TernaryFilter::make('show_web')
-                    ->label('موقع'),
+                    ->label('الموقع'),
                 TernaryFilter::make('show_app')
-                    ->label('تطبيق'),
+                    ->label('التطبيق'),
                 TernaryFilter::make('show_retail')
-                    ->label('زبون'),
+                    ->label('للزبون'),
                 TernaryFilter::make('show_wholesale')
-                    ->label('تاجر'),
+                    ->label('للتاجر'),
                 TernaryFilter::make('has_wholesale_series')
-                    ->label('سيريات الجملة')
+                    ->label('له سيريات جملة')
                     ->queries(
                         true: fn ($query) => $query->whereHas('wholesaleSeries'),
                         false: fn ($query) => $query->whereDoesntHave('wholesaleSeries'),

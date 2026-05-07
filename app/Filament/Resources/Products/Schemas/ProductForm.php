@@ -93,16 +93,18 @@ class ProductForm
                                         Grid::make(1)
                                             ->schema([
                                                 Toggle::make('show_web')
-                                                    ->label('موقع')
+                                                    ->label('يظهر على الموقع')
                                                     ->default(false),
                                                 Toggle::make('show_app')
-                                                    ->label('تطبيق')
+                                                    ->label('يظهر على التطبيق')
                                                     ->default(false),
                                                 Toggle::make('show_retail')
-                                                    ->label('زبون')
+                                                    ->label('يظهر للزبون')
+                                                    ->helperText('فعّل هذا الخيار إذا كان المنتج متاحاً لعملاء المفرق.')
                                                     ->default(false),
                                                 Toggle::make('show_wholesale')
-                                                    ->label('تاجر')
+                                                    ->label('يظهر للتاجر')
+                                                    ->helperText('فعّل هذا الخيار إذا كان المنتج متاحاً لتجار الجملة.')
                                                     ->default(false),
                                             ]),
                                     ]),

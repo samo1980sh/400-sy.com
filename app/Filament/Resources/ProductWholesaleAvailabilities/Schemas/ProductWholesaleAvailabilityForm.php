@@ -24,8 +24,18 @@ class ProductWholesaleAvailabilityForm
         return [
             Grid::make(2)->schema([
                 Select::make('product_id')
-                    ->label('المنتج')
-                    ->relationship('product', 'title_ar')
+                    ->label('رمز المنتج')
+                    ->options(fn (): array => Product::query()
+                        ->orderBy('model_no')
+                        ->orderBy('title_ar')
+                        ->get(['id', 'model_no', 'title_ar'])
+                        ->mapWithKeys(fn (Product $product): array => [
+                            $product->id => trim(implode(' — ', array_filter([
+                                $product->model_no,
+                                $product->title_ar,
+                            ]))),
+                        ])
+                        ->all())
                     ->live()
                     ->afterStateUpdated(fn (Set $set) => $set('product_wholesale_color_id', null))
                     ->searchable()
@@ -40,7 +50,7 @@ class ProductWholesaleAvailabilityForm
             ]),
             Grid::make(2)->schema([
                 Select::make('product_wholesale_color_id')
-                    ->label('لون التاجر')
+                    ->label('لون الجملة')
                     ->options(function (Get $get): array {
                         $productId = (int) ($get('product_id') ?? 0);
 
@@ -53,10 +63,9 @@ class ProductWholesaleAvailabilityForm
                             ->orderBy('id')
                             ->get()
                             ->mapWithKeys(function (ProductWholesaleColor $color): array {
-                                $label = trim(implode(' - ', array_filter([
-                                    $color->color_name_ar,
-                                    $color->color_name_en,
+                                $label = trim(implode(' — ', array_filter([
                                     $color->color_code,
+                                    $color->color_name_ar,
                                 ])));
 
                                 return [$color->id => $label !== '' ? $label : '#'.$color->id];
