@@ -175,6 +175,23 @@ class RetailExcelImportService
         ]));
     }
 
+    private function normalizeHexColor(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (! str_starts_with($value, '#')) {
+            $value = '#' . $value;
+        }
+
+        return preg_match('/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/', $value)
+            ? strtoupper($value)
+            : null;
+    }
+
     public function normalizeSize(?string $value): string
     {
         $value = $this->normalizeText($value);
@@ -1408,13 +1425,20 @@ class RetailExcelImportService
             $colorCode = $this->normalizeColorKey($this->value($row, 'رمز اللون', 'رمز اللون '));
             $colorNameAr = $this->normalizeColor($this->value($row, 'اللون بالعربي', 'اللون'));
             $colorNameEn = $this->normalizeText($this->value($row, 'اللون بالانكليزي'));
+            $colorHex = $this->normalizeHexColor($this->value(
+                $row,
+                'Color HEX',
+                'Color Hex',
+                'HEX',
+                'Hex',
+                'hex',
+                'كود HEX',
+                'هكس',
+                'لون HEX'
+            ));
             $status = $this->normalizeProductColorStatus($this->value($row, 'خاص'));
 
             if ($colorCode === '' || $colorNameAr === '') {
-                continue;
-            }
-
-            if (! isset($colorCodeMap[$colorCode])) {
                 continue;
             }
 
@@ -1423,12 +1447,17 @@ class RetailExcelImportService
                 $colors[$colorCode] = [
                     'color_name_ar' => $colorNameAr,
                     'color_name_en' => $colorNameEn !== '' ? $colorNameEn : null,
+                    'color_hex' => $colorHex,
                     'status' => $status,
                     'sort_order' => $sortOrder,
                 ];
             } else {
                 if (blank($colors[$colorCode]['color_name_en']) && $colorNameEn !== '') {
                     $colors[$colorCode]['color_name_en'] = $colorNameEn;
+                }
+
+                if (blank($colors[$colorCode]['color_hex']) && $colorHex !== null) {
+                    $colors[$colorCode]['color_hex'] = $colorHex;
                 }
 
                 if ($status === 'active') {

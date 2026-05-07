@@ -32,9 +32,9 @@ class ProductVariantsTable
                     ->label('وصف المنتج')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('productColor.color_name_ar')
+                TextColumn::make('productColor.color_code')
                     ->label('اللون')
-                    ->formatStateUsing(fn ($state, $record): string => trim(($record?->productColor?->color_name_ar ?? '-') . ' (' . ($record?->productColor?->color_code ?? '-') . ')'))
+                    ->formatStateUsing(fn ($state, $record): string => trim(($record?->productColor?->color_code ?? '-') . ' — ' . ($record?->productColor?->color_name_ar ?? '-')))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('size.code')
@@ -86,7 +86,7 @@ class ProductVariantsTable
                         ->get()
                         ->sortBy(fn (ProductColor $productColor): string => (string) ($productColor->color_name_ar ?? ''))
                         ->mapWithKeys(fn (ProductColor $productColor): array => [
-                            $productColor->id => trim(($productColor->color_name_ar ?: '-') . ' (' . ($productColor->color_code ?: '-') . ')'),
+                            $productColor->id => trim(($productColor->color_code ?: '-') . ' — ' . ($productColor->color_name_ar ?: '-')),
                         ])
                         ->all())
                     ->searchable()

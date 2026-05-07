@@ -44,7 +44,7 @@ class ProductVariantForm
                             ->get()
                             ->sortBy(fn (ProductColor $productColor): string => (string) ($productColor->color_name_ar ?? ''))
                             ->mapWithKeys(fn (ProductColor $productColor): array => [
-                                $productColor->id => trim(($productColor->color_name_ar ?: '-') . ' (' . ($productColor->color_code ?: '-') . ')'),
+                                $productColor->id => trim(($productColor->color_code ?: '-') . ' — ' . ($productColor->color_name_ar ?: '-')),
                             ])
                             ->all())
                         ->required()

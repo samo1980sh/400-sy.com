@@ -43,7 +43,7 @@ class VariantsRelationManager extends RelationManager
                     ->get()
                     ->sortBy(fn (ProductColor $productColor): string => (string) ($productColor->color_name_ar ?? ''))
                     ->mapWithKeys(fn (ProductColor $productColor): array => [
-                        $productColor->id => trim(($productColor->color_name_ar ?: '-') . ' (' . ($productColor->color_code ?: '-') . ')'),
+                        $productColor->id => trim(($productColor->color_code ?: '-') . ' — ' . ($productColor->color_name_ar ?: '-')),
                     ])
                     ->all())
                 ->required()
@@ -86,9 +86,9 @@ class VariantsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('id')
             ->columns([
-                TextColumn::make('productColor.color_name_ar')
+                TextColumn::make('productColor.color_code')
                     ->label('اللون')
-                    ->formatStateUsing(fn ($state, $record): string => trim(($record?->productColor?->color_name_ar ?? '-') . ' (' . ($record?->productColor?->color_code ?? '-') . ')'))
+                    ->formatStateUsing(fn ($state, $record): string => trim(($record?->productColor?->color_code ?? '-') . ' — ' . ($record?->productColor?->color_name_ar ?? '-')))
                     ->searchable(),
                 TextColumn::make('size.code')
                     ->label('القياس')
