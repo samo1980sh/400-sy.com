@@ -39,8 +39,18 @@ class CategoriesTable
                     ->badge()
                     ->sortable(),
                 ImageColumn::make('image')
-                    ->label('الصورة')
-                    ->disk('public'),
+                    ->label('صورة البطاقة')
+                    ->disk('public')
+                    ->height(48)
+                    ->width(48)
+                    ->square()
+                    ->toggleable(),
+                ImageColumn::make('banner')
+                    ->label('البانر')
+                    ->disk('public')
+                    ->height(48)
+                    ->width(96)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('slug')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -63,7 +73,7 @@ class CategoriesTable
                     ->color('gray')
                     ->modalHeading('تعديل تصنيف')
                     ->modalSubmitActionLabel('حفظ')
-                    ->modalWidth('4xl')
+                    ->modalWidth('5xl')
                     ->schema(fn (Category $record) => CategoryForm::components($record))
                     ->fillForm(fn (Category $record): array => $record->only([
                         'parent_id',
