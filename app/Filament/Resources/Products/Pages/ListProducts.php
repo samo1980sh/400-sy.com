@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Products\Pages;
 use App\Filament\Resources\ProductVariants\ProductVariantResource;
 use App\Filament\Resources\Products\ProductResource;
 use App\Models\ImportBatch;
+use App\Services\ProductCatalogExportService;
 use App\Services\RetailExcelImportService;
 use Filament\Actions\CreateAction;
 use Filament\Actions\Action;
@@ -28,6 +29,7 @@ class ListProducts extends ListRecords
         return [
             $this->purgeAction(),
             $this->importAction(),
+            $this->exportAction(),
             CreateAction::make()
                 ->label('إضافة منتج')
                 ->icon(Heroicon::OutlinedPlusCircle),
@@ -144,6 +146,15 @@ class ListProducts extends ListRecords
                         ->send();
                 }
             });
+    }
+
+    protected function exportAction(): Action
+    {
+        return Action::make('exportProducts')
+            ->label('تصدير')
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->color('success')
+            ->action(fn () => app(ProductCatalogExportService::class)->download());
     }
 
     protected function resolveUploadedPath(mixed $file): ?string
