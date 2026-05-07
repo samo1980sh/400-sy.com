@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Categories\Pages;
 use App\Filament\Resources\Categories\CategoryResource;
 use App\Filament\Resources\Categories\Schemas\CategoryForm;
 use App\Models\Category;
+use App\Services\CategoryExportService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
@@ -80,6 +81,8 @@ class ListCategories extends ListRecords
                 ->url(static::getResource()::getUrl('index'));
         }
 
+        $actions[] = $this->exportAction();
+
         $actions[] = Action::make('createCategory')
             ->label('إضافة تصنيف')
             ->icon(Heroicon::OutlinedPlus)
@@ -110,6 +113,15 @@ class ListCategories extends ListRecords
             });
 
         return $actions;
+    }
+
+    protected function exportAction(): Action
+    {
+        return Action::make('exportCategories')
+            ->label('تصدير')
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->color('success')
+            ->action(fn () => app(CategoryExportService::class)->download());
     }
 
     public function table(\Filament\Tables\Table $table): \Filament\Tables\Table
