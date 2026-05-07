@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\MeasurementChart;
-use App\Models\MeasurementChartGroup;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -15,7 +16,7 @@ class MeasurementChartExportService
     public function download(): StreamedResponse
     {
         $spreadsheet = $this->spreadsheet();
-        $fileName = 'measurement-charts-export-'.now()->format('Y-m-d-His').'.xlsx';
+        $fileName = 'measurement-charts-import-format-export-'.now()->format('Y-m-d-His').'.xlsx';
 
         return response()->streamDownload(function () use ($spreadsheet): void {
             $writer = new Xlsx($spreadsheet);
@@ -27,11 +28,6 @@ class MeasurementChartExportService
 
     public function spreadsheet(): Spreadsheet
     {
-        $groups = MeasurementChartGroup::query()
-            ->withCount('charts')
-            ->orderBy('name')
-            ->get();
-
         $charts = MeasurementChart::query()
             ->with('group')
             ->orderBy('name')
@@ -39,52 +35,28 @@ class MeasurementChartExportService
             ->get();
 
         $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('زمر القياس');
 
-        $groupsSheet = $spreadsheet->getActiveSheet();
-        $groupsSheet->setTitle('مجموعات القياس');
-        $this->buildGroupsSheet($groupsSheet, $groups);
-
-        $chartsSheet = $spreadsheet->createSheet();
-        $chartsSheet->setTitle('صفوف القياس');
-        $this->buildChartsSheet($chartsSheet, $charts);
-
+        $this->buildImportFormatSheet($sheet, $charts);
         $spreadsheet->setActiveSheetIndex(0);
 
         return $spreadsheet;
     }
 
-    protected function buildGroupsSheet(Worksheet $sheet, $groups): void
+    protected function buildImportFormatSheet(Worksheet $sheet, $charts): void
     {
         $rows = [[
-            'اسم المجموعة',
-            'صورة التوضيح',
-            'عدد صفوف القياس',
-        ]];
-
-        foreach ($groups as $group) {
-            $rows[] = [
-                $group->name,
-                $group->guide_image,
-                $group->charts_count,
-            ];
-        }
-
-        $this->fillSheet($sheet, $rows);
-    }
-
-    protected function buildChartsSheet(Worksheet $sheet, $charts): void
-    {
-        $rows = [[
-            'اسم المجموعة',
-            'رمز القياس',
+            'الاسم',
+            'القياس',
             'الصدر',
             'الكتف',
             'الوسط',
             'الطول',
             'الكم',
             'الياقة',
-            'طول الرجل الداخلي',
-            'محيط الخصر',
+            'وسط الرجل',
+            'الخاصرة',
             'عرض الفخذ',
             'عرض الرجل',
             'طول الرجل',
