@@ -699,6 +699,322 @@
             $('#find_size').modal('show');
         });
 
+        var filterRequest = null;
+        var filterRequestToken = 0;
+        var filterDebounceTimer = null;
+        var pendingCurrencyFilterSync = null;
+
+        function shopProductsUrl() {
+            return '{{ route('front.products.index') }}';
+        }
+
+        function currencyUpdateUrl() {
+            return '{{ route('front.currency') }}';
+        }
+
+        function getCurrencyRate(currencyCode) {
+            var code = String(currencyCode || '').toUpperCase();
+            var $option = $('.js-currency-select').find('option[value="' + code + '"]').first();
+            var rate = parseFloat($option.data('rate'));
+
+            if (!rate || rate <= 0) {
+                rate = 1;
+            }
+
+            return rate;
+        }
+
+        function convertFilterPriceBetweenCurrencies(amount, fromCurrency, toCurrency) {
+            var numericAmount = parseFloat(amount);
+
+            if (!isFinite(numericAmount)) {
+                return 0;
+            }
+
+            var baseAmount = numericAmount * getCurrencyRate(fromCurrency);
+            var converted = baseAmount / getCurrencyRate(toCurrency);
+
+            return Math.max(0, Math.round(converted));
+        }
+
+        function buildStateQueryString($filterForm, $sortForm) {
+            var params = new URLSearchParams();
+            var sortValue = $sortForm.find('select[name="sort"]').val() || 'featured';
+            var categories = [];
+            var colors = [];
+            var sizes = [];
+            var minPrice = '';
+            var maxPrice = '';
+
+            $filterForm.find('input, select, textarea').each(function () {
+                var $field = $(this);
+                var name = $field.attr('name');
+
+                if (!name || name === 'filter_ajax' || name === 'load_more' || name === 'page') {
+                    return;
+                }
+
+                if ($field.is(':checkbox') || $field.is(':radio')) {
+                    if (!$field.is(':checked')) {
+                        return;
+                    }
+                }
+
+                var value = $field.val();
+                if (value === null || value === '') {
+                    return;
+                }
+
+                if (name === 'category[]') {
+                    categories.push(String(value));
+                    return;
+                }
+
+                if (name === 'color[]') {
+                    colors.push(String(value));
+                    return;
+                }
+
+                if (name === 'size[]') {
+                    sizes.push(String(value));
+                    return;
+                }
+
+                if (name === 'min_price') {
+                    minPrice = String(value);
+                    return;
+                }
+
+                if (name === 'max_price') {
+                    maxPrice = String(value);
+                    return;
+                }
+
+                params.set(name, value);
+            });
+
+            if (categories.length) {
+                params.set('categories', categories.join(','));
+            }
+
+            if (colors.length) {
+                params.set('colors', colors.join(','));
+            }
+
+            if (sizes.length) {
+                params.set('sizes', sizes.join(','));
+            }
+
+            if (minPrice !== '' || maxPrice !== '') {
+                params.set('price', (minPrice || '0') + '-' + (maxPrice || minPrice || '0'));
+            }
+
+            params.set('sort', sortValue);
+
+            return params.toString();
+        }
+
+        function refreshShopProducts(queryString, options) {
+            options = options || {};
+
+            var url = shopProductsUrl();
+            var token = ++filterRequestToken;
+            var requestUrl = url + (queryString ? ('?' + queryString + '&filter_ajax=1') : '?filter_ajax=1');
+
+            if (filterRequest && filterRequest.readyState !== 4) {
+                filterRequest.abort();
+            }
+
+            filterRequest = $.ajax({
+                url: requestUrl,
+                type: 'GET',
+                dataType: 'json',
+                headers: {
+                    Accept: 'application/json'
+                }
+            }).done(function (response) {
+                if (token !== filterRequestToken || !response) {
+                    return;
+                }
+
+                if (response.toolbar_html) {
+                    var $toolbar = $(response.toolbar_html);
+                    $('[data-shop-toolbar]').replaceWith($toolbar);
+                }
+
+                if (response.filter_html) {
+                    var $filter = $(response.filter_html);
+                    var $existingFilter = $('[data-shop-filter]');
+                    $existingFilter.find('.canvas-body').replaceWith($filter.find('.canvas-body'));
+                }
+
+                if (response.products_html) {
+                    var $results = $(response.products_html);
+                    $('[data-shop-results]').replaceWith($results);
+                    $results.find('.card-product').each(function () {
+                        settleProductCardSkeleton($(this));
+                    });
+                }
+
+                if (typeof response.loadmore_html !== 'undefined') {
+                    var $loadmore = $(response.loadmore_html || '<div data-shop-loadmore></div>');
+                    $('[data-shop-loadmore]').replaceWith($loadmore);
+                }
+
+                if (options.pushState !== false) {
+                    var historyUrl = url + (queryString ? ('?' + queryString) : '');
+                    window.history.pushState({ queryString: queryString }, '', historyUrl);
+                }
+
+            });
+        }
+
+        function applyAjaxFilter(options) {
+            var $filterForm = $('[data-filter-form]').first();
+            var $sortForm = $('[data-sort-form]').first();
+
+            if (!$filterForm.length || !$sortForm.length) {
+                return;
+            }
+
+            var queryString = buildStateQueryString($filterForm, $sortForm);
+            refreshShopProducts(queryString, options);
+        }
+
+        function debounceAjaxFilter(delay) {
+            window.clearTimeout(filterDebounceTimer);
+            filterDebounceTimer = window.setTimeout(function () {
+                applyAjaxFilter();
+            }, delay || 250);
+        }
+
+        $(function () {
+            $('#filterShop')
+                .find('input.tf-check-color, input.tf-check-size, .range-min, .range-max')
+                .off('change');
+        });
+
+        $(document).on('submit', '[data-filter-form]', function (event) {
+            event.preventDefault();
+            applyAjaxFilter();
+        });
+
+        $(document).on('change', '[data-sort-form] select[name="sort"]', function () {
+            applyAjaxFilter();
+        });
+
+        $(document).on('change', '[data-filter-form] input[name="category[]"], [data-filter-form] input[name="color[]"], [data-filter-form] input[name="size[]"]', function () {
+            var $form = $(this).closest('[data-filter-form]');
+
+            if ($(this).attr('name') === 'category[]') {
+                $form.find('[data-reset-categories]').prop('checked', false);
+            }
+
+            debounceAjaxFilter(120);
+        });
+
+        $(document).on('input change', '[data-filter-form] .range-min, [data-filter-form] .range-max', function () {
+            debounceAjaxFilter(250);
+        });
+
+        $(document).on('change', '[data-reset-categories]', function () {
+            if (!$(this).is(':checked')) {
+                return;
+            }
+
+            var $form = $(this).closest('[data-filter-form]');
+            $form.find('input[name="category[]"]').prop('checked', false);
+            debounceAjaxFilter(50);
+        });
+
+        $(document).on('click', '[data-filter-reset]', function (event) {
+            event.preventDefault();
+
+            var url = $(this).attr('href') || shopProductsUrl();
+            var queryString = '';
+
+            try {
+                var parsed = new URL(url, window.location.origin);
+                queryString = parsed.searchParams.toString();
+            } catch (error) {
+                queryString = '';
+            }
+
+            refreshShopProducts(queryString, { pushState: true });
+        });
+
+        $(document).on('click', '[data-filter-chip]', function (event) {
+            event.preventDefault();
+
+            var $filterForm = $('[data-filter-form]').first();
+            var type = String($(this).data('filterChipType') || '');
+            var value = String($(this).data('filterChipValue') || '');
+
+            if (!$filterForm.length || !type) {
+                return;
+            }
+
+            if (type === 'category') {
+                $filterForm.find('input[name="category[]"][value="' + value.replace(/"/g, '\\"') + '"]').prop('checked', false);
+
+                if ($filterForm.find('input[name="category[]"]:checked').length === 0) {
+                    $filterForm.find('[data-reset-categories]').prop('checked', true);
+                }
+            } else if (type === 'color') {
+                $filterForm.find('input[name="color[]"][value="' + value.replace(/"/g, '\\"') + '"]').prop('checked', false);
+            } else if (type === 'size') {
+                $filterForm.find('input[name="size[]"][value="' + value.replace(/"/g, '\\"') + '"]').prop('checked', false);
+            } else if (type === 'price') {
+                var $minField = $filterForm.find('.range-min');
+                var $maxField = $filterForm.find('.range-max');
+
+                $minField.val($minField.attr('min') || 0);
+                $maxField.val($maxField.attr('max') || 0);
+            }
+
+            applyAjaxFilter();
+        });
+
+        window.addEventListener('popstate', function () {
+            var queryString = window.location.search.replace(/^\?/, '');
+            refreshShopProducts(queryString, { pushState: false });
+        });
+
+        $(document).on('change', '.js-currency-select', function () {
+            pendingCurrencyFilterSync = {
+                from: $(this).data('confirmed-currency') || $(this).find('option:selected').val() || '',
+                to: $(this).val() || ''
+            };
+        });
+
+        $(document).ajaxSuccess(function (event, xhr, settings) {
+            if (!$('[data-filter-form]').length || !pendingCurrencyFilterSync) {
+                return;
+            }
+
+            var requestUrl = String((settings && settings.url) || '');
+            if (!requestUrl || requestUrl.indexOf(currencyUpdateUrl()) === -1) {
+                return;
+            }
+
+            var $filterForm = $('[data-filter-form]').first();
+            var fromCurrency = pendingCurrencyFilterSync.from || 'SYP';
+            var toCurrency = pendingCurrencyFilterSync.to || fromCurrency;
+            var $minField = $filterForm.find('.range-min');
+            var $maxField = $filterForm.find('.range-max');
+
+            if ($minField.length) {
+                $minField.val(convertFilterPriceBetweenCurrencies($minField.val(), fromCurrency, toCurrency));
+            }
+
+            if ($maxField.length) {
+                $maxField.val(convertFilterPriceBetweenCurrencies($maxField.val(), fromCurrency, toCurrency));
+            }
+
+            pendingCurrencyFilterSync = null;
+            applyAjaxFilter();
+        });
+
         $(document).on('click', '.btn-loadmore-ajax', function (event) {
             event.preventDefault();
 

@@ -4,9 +4,12 @@
         : collect($products ?? []);
 @endphp
 
-<div class="wrapper-control-shop">
-    <div class="meta-filter-shop"></div>
-    <div class="grid-layout wrapper-shop loadmore-item" data-grid="grid-4">
+<div class="wrapper-control-shop" data-shop-results>
+    @include('frontend.partials.shop-active-filters', [
+        'active_filter_chips' => $active_filter_chips ?? [],
+        'filter_reset_url' => $filter_reset_url ?? route('front.products.index'),
+    ])
+    <div class="grid-layout wrapper-shop loadmore-item" data-grid="grid-4" data-shop-grid>
         @forelse ($items as $product)
             @include('frontend.partials.product-card', [
                 'product' => $product,

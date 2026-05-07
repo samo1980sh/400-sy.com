@@ -53,20 +53,27 @@
             <div class="container">
                 @include('frontend.partials.shop-toolbar', [
                     'result_count' => $resultCount,
-                    'sort_options' => $sortOptions,
+                    'sort_options' => $sort_options ?? $sortOptions,
                     'selected_sort' => $selectedSort,
                 ])
 
                 @include('frontend.partials.shop-filter', [
                     'filter_categories' => $filter_categories ?? [],
-                    'selected_category_slug' => $selected_category_slug ?? null,
+                    'selected_category_slugs' => $selected_category_slugs ?? [],
                     'selected_sort' => $selectedSort,
                     'selected_min_price' => $selected_min_price ?? null,
                     'selected_max_price' => $selected_max_price ?? null,
+                    'selected_colors' => $selected_colors ?? [],
+                    'selected_sizes' => $selected_sizes ?? [],
+                    'filter_color_options' => $filter_color_options ?? collect(),
+                    'filter_size_options' => $filter_size_options ?? collect(),
+                    'filter_price_stats' => $filter_price_stats ?? [],
                 ])
 
                 @include('frontend.partials.product-grid', [
                     'products' => $products,
+                    'active_filter_chips' => $active_filter_chips ?? [],
+                    'filter_reset_url' => $filter_reset_url ?? route('front.products.index'),
                 ])
 
                 @include('frontend.partials.loadmore', [

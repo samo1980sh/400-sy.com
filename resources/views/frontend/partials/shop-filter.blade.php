@@ -1,62 +1,139 @@
 @php
+    $locale = app()->getLocale();
+    $isArabic = $locale === 'ar';
+
     $categories = collect($filter_categories ?? []);
+    $selectedCategorySlugs = array_values(array_filter((array) ($selected_category_slugs ?? [])));
+    $selectedColors = array_values(array_filter((array) ($selected_colors ?? [])));
+    $selectedSizes = array_values(array_filter((array) ($selected_sizes ?? [])));
+
+    $priceStats = $filter_price_stats ?? [];
+    $priceCurrency = (string) ($priceStats['currency'] ?? 'SYP');
+    $priceUpperLimit = max(1, (int) ($priceStats['max_limit'] ?? 1));
+    $priceMinValue = min($priceUpperLimit, max(0, (int) ($priceStats['selected_min'] ?? 0)));
+    $priceMaxValue = min($priceUpperLimit, max($priceMinValue, (int) ($priceStats['selected_max'] ?? $priceUpperLimit)));
+
+    $filterAction = route('front.products.index');
+    $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'category', 'categories', 'filter_ajax', 'load_more']);
+    $resetUrl = route('front.products.index', \Illuminate\Support\Arr::except($queryWithoutPage, ['page']));
+
+    $categoryLabel = function ($category) use ($isArabic) {
+        return $isArabic
+            ? ($category->title_ar ?: $category->title_en ?: $category->slug)
+            : ($category->title_en ?: $category->title_ar ?: $category->slug);
+    };
+
+    $colorOptions = collect($filter_color_options ?? []);
+    $sizeOptions = collect($filter_size_options ?? []);
+
+    $colorClassFromValue = function (?string $value): string {
+        $normalized = \Illuminate\Support\Str::of((string) $value)
+            ->lower()
+            ->replace(['_', '/', '\\'], '-')
+            ->replaceMatches('/\s+/', '-')
+            ->trim('-')
+            ->value();
+
+        $map = [
+            'beige' => 'bg_beige',
+            'black' => 'bg_dark',
+            'blue' => 'bg_blue-2',
+            'brown' => 'bg_brown',
+            'cream' => 'bg_cream',
+            'dark-beige' => 'bg_dark-beige',
+            'dark-blue' => 'bg_dark-blue',
+            'dark-green' => 'bg_dark-green',
+            'dark-grey' => 'bg_dark-grey',
+            'dark-gray' => 'bg_dark-grey',
+            'grey' => 'bg_grey',
+            'gray' => 'bg_grey',
+            'light-blue' => 'bg_light-blue',
+            'light-green' => 'bg_light-green',
+            'light-grey' => 'bg_light-grey',
+            'light-gray' => 'bg_light-grey',
+            'light-pink' => 'bg_light-pink',
+            'light-purple' => 'bg_purple',
+            'purple' => 'bg_purple',
+            'light-yellow' => 'bg_light-yellow',
+            'orange' => 'bg_orange',
+            'pink' => 'bg_pink',
+            'taupe' => 'bg_taupe',
+            'white' => 'bg_white',
+            'yellow' => 'bg_yellow',
+            'berries' => 'bg_pink',
+            'red' => 'bg_pink',
+            'green' => 'bg_dark-green',
+        ];
+
+        return $map[$normalized] ?? '';
+    };
 @endphp
 
-<div class="offcanvas offcanvas-start canvas-filter" id="filterShop">
+<div class="offcanvas offcanvas-start canvas-filter" id="filterShop" data-shop-filter>
     <div class="canvas-wrapper">
         <header class="canvas-header">
             <div class="filter-icon">
                 <span class="icon icon-filter"></span>
-                <span>{{ app()->getLocale() === 'ar' ? 'فلتر' : 'Filter' }}</span>
+                <span>{{ $isArabic ? 'فلتر' : 'Filter' }}</span>
             </div>
             <span class="icon-close icon-close-popup" data-bs-dismiss="offcanvas" aria-label="Close"></span>
         </header>
         <div class="canvas-body">
-            <form action="{{ route('front.products.index') }}" id="facet-filter-form" class="facet-filter-form" method="get">
-                <input type="hidden" name="sort" value="{{ $selected_sort ?? 'featured' }}">
+            <form action="{{ $filterAction }}" id="facet-filter-form" class="facet-filter-form" method="GET" data-filter-form>
+                @foreach ($queryWithoutPage as $key => $value)
+                    @if (is_array($value))
+                        @foreach ($value as $item)
+                            <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                        @endforeach
+                    @else
+                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                    @endif
+                @endforeach
 
                 <div class="widget-facet wd-categories">
                     <div class="facet-title" data-bs-target="#categories" data-bs-toggle="collapse" aria-expanded="true" aria-controls="categories">
-                        <span>{{ app()->getLocale() === 'ar' ? 'تصنيفات المنتجات' : 'Product categories' }}</span>
+                        <span>{{ $isArabic ? 'تصنيفات المنتجات' : 'Product categories' }}</span>
                         <span class="icon icon-arrow-up"></span>
                     </div>
                     <div id="categories" class="collapse show">
                         <ul class="list-categoris current-scrollbar mb_36">
-                            <li class="cate-item {{ blank($selected_category_slug ?? null) ? 'current' : '' }}">
-                                <label class="d-flex align-items-center gap-2">
-                                    <input type="radio" name="category" value="" @checked(blank($selected_category_slug ?? null))>
-                                    <span>{{ app()->getLocale() === 'ar' ? 'كل المنتجات' : 'All products' }}</span>
-                                </label>
+                            <li class="cate-item">
+                                <div class="list-item d-flex gap-12 align-items-center">
+                                    <input type="checkbox" class="tf-check" id="category-all" data-reset-categories {{ $selectedCategorySlugs === [] ? 'checked' : '' }}>
+                                    <label for="category-all" class="label"><span>{{ $isArabic ? 'كل المنتجات' : 'All products' }}</span></label>
+                                </div>
                             </li>
                             @foreach ($categories as $category)
                                 @php
-                                    $label = app()->getLocale() === 'ar'
-                                        ? ($category->title_ar ?: $category->title_en ?: $category->slug)
-                                        : ($category->title_en ?: $category->title_ar ?: $category->slug);
+                                    $categorySelected = in_array((string) $category->slug, $selectedCategorySlugs, true);
                                 @endphp
-                                <li class="cate-item {{ ($selected_category_slug ?? '') === $category->slug ? 'current' : '' }}">
-                                    <label class="d-flex align-items-center gap-2">
-                                        <input type="radio" name="category" value="{{ $category->slug }}" @checked(($selected_category_slug ?? '') === $category->slug)>
-                                        <span>{{ $label }}</span>
-                                    </label>
-                                    @if ($category->children->isNotEmpty())
-                                        <ul class="list-categoris ms-4 mt-2">
-                                            @foreach ($category->children as $child)
-                                                @php
-                                                    $childLabel = app()->getLocale() === 'ar'
-                                                        ? ($child->title_ar ?: $child->title_en ?: $child->slug)
-                                                        : ($child->title_en ?: $child->title_ar ?: $child->slug);
-                                                @endphp
-                                                <li class="cate-item {{ ($selected_category_slug ?? '') === $child->slug ? 'current' : '' }}">
-                                                    <label class="d-flex align-items-center gap-2">
-                                                        <input type="radio" name="category" value="{{ $child->slug }}" @checked(($selected_category_slug ?? '') === $child->slug)>
-                                                        <span>{{ $childLabel }}</span>
-                                                    </label>
-                                                </li>
-                                            @endforeach
-                                        </ul>
-                                    @endif
+                                <li class="cate-item {{ $categorySelected ? 'active' : '' }}">
+                                    <div class="list-item d-flex gap-12 align-items-center">
+                                        <input type="checkbox" name="category[]" class="tf-check" id="category-{{ $category->id }}" value="{{ $category->slug }}" @checked($categorySelected)>
+                                        <label for="category-{{ $category->id }}" class="label">
+                                            <span>{{ $categoryLabel($category) }}</span>
+                                            @if (isset($category->products_count))
+                                                &nbsp;<span>({{ $category->products_count }})</span>
+                                            @endif
+                                        </label>
+                                    </div>
                                 </li>
+                                @foreach ($category->children as $child)
+                                    @php
+                                        $childSelected = in_array((string) $child->slug, $selectedCategorySlugs, true);
+                                    @endphp
+                                    <li class="cate-item {{ $childSelected ? 'active' : '' }}">
+                                        <div class="list-item d-flex gap-12 align-items-center">
+                                            <input type="checkbox" name="category[]" class="tf-check" id="category-{{ $child->id }}" value="{{ $child->slug }}" @checked($childSelected)>
+                                            <label for="category-{{ $child->id }}" class="label">
+                                                <span>{{ $categoryLabel($child) }}</span>
+                                                @if (isset($child->products_count))
+                                                    &nbsp;<span>({{ $child->products_count }})</span>
+                                                @endif
+                                            </label>
+                                        </div>
+                                    </li>
+                                @endforeach
                             @endforeach
                         </ul>
                     </div>
@@ -64,31 +141,96 @@
 
                 <div class="widget-facet">
                     <div class="facet-title" data-bs-target="#price" data-bs-toggle="collapse" aria-expanded="true" aria-controls="price">
-                        <span>{{ app()->getLocale() === 'ar' ? 'السعر' : 'Price' }}</span>
+                        <span>{{ $isArabic ? 'السعر' : 'Price' }}</span>
                         <span class="icon icon-arrow-up"></span>
                     </div>
                     <div id="price" class="collapse show">
                         <div class="widget-price filter-price">
-                            <div class="box-title-price d-grid gap-3">
-                                <div class="d-grid gap-2">
-                                    <label class="title-price" for="min_price">{{ app()->getLocale() === 'ar' ? 'الحد الأدنى' : 'Min' }}</label>
-                                    <input class="tf-input" id="min_price" type="number" name="min_price" min="0" step="1" value="{{ $selected_min_price ?? '' }}">
-                                </div>
-                                <div class="d-grid gap-2">
-                                    <label class="title-price" for="max_price">{{ app()->getLocale() === 'ar' ? 'الحد الأعلى' : 'Max' }}</label>
-                                    <input class="tf-input" id="max_price" type="number" name="max_price" min="0" step="1" value="{{ $selected_max_price ?? '' }}">
+                            <div class="tow-bar-block">
+                                <div class="progress-price" style="left: {{ ($priceMinValue / max(1, $priceUpperLimit)) * 100 }}%; right: {{ 100 - (($priceMaxValue / max(1, $priceUpperLimit)) * 100) }}%;"></div>
+                            </div>
+                            <div class="range-input">
+                                <input class="range-min" type="range" name="min_price" min="0" max="{{ $priceUpperLimit }}" value="{{ $priceMinValue }}" />
+                                <input class="range-max" type="range" name="max_price" min="0" max="{{ $priceUpperLimit }}" value="{{ $priceMaxValue }}" />
+                            </div>
+                            <div class="box-title-price">
+                                <span class="title-price">{{ $isArabic ? 'السعر' : 'Price' }} :</span>
+                                <div class="caption-price">
+                                    <div>
+                                        <span class="min-price">{{ $priceMinValue }}</span>
+                                        <span>{{ $priceCurrency }}</span>
+                                    </div>
+                                    <span>-</span>
+                                    <div>
+                                        <span class="max-price">{{ $priceMaxValue }}</span>
+                                        <span>{{ $priceCurrency }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="d-flex gap-2 mt-4">
-                    <button type="submit" class="tf-btn btn-fill animate-hover-btn flex-grow-1">
-                        {{ app()->getLocale() === 'ar' ? 'تطبيق' : 'Apply' }}
+                @if ($colorOptions->isNotEmpty())
+                    <div class="widget-facet">
+                        <div class="facet-title" data-bs-target="#color" data-bs-toggle="collapse" aria-expanded="true" aria-controls="color">
+                            <span>{{ $isArabic ? 'اللون' : 'Color' }}</span>
+                            <span class="icon icon-arrow-up"></span>
+                        </div>
+                        <div id="color" class="collapse show">
+                            <ul class="tf-filter-group filter-color current-scrollbar mb_36">
+                                @foreach ($colorOptions as $index => $color)
+                                    @php
+                                        $colorClass = $colorClassFromValue($color['label'] ?? $color['value'] ?? '');
+                                        $colorStyle = !empty($color['hex']) ? 'background-color: ' . $color['hex'] . ';' : '';
+                                    @endphp
+                                    <li class="list-item d-flex gap-12 align-items-center">
+                                        <input
+                                            type="checkbox"
+                                            name="color[]"
+                                            class="tf-check-color{{ $colorClass !== '' ? ' ' . $colorClass : '' }}"
+                                            id="color-{{ $index }}"
+                                            value="{{ $color['value'] }}"
+                                            @checked(!empty($color['selected']))
+                                            @if ($colorStyle !== '') style="{{ $colorStyle }}" @endif
+                                        >
+                                        <label for="color-{{ $index }}" class="label">
+                                            <span>{{ $color['label'] }}</span>&nbsp;<span>({{ $color['count'] }})</span>
+                                        </label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+
+                @if ($sizeOptions->isNotEmpty())
+                    <div class="widget-facet">
+                        <div class="facet-title" data-bs-target="#size" data-bs-toggle="collapse" aria-expanded="true" aria-controls="size">
+                            <span>{{ $isArabic ? 'القياس' : 'Size' }}</span>
+                            <span class="icon icon-arrow-up"></span>
+                        </div>
+                        <div id="size" class="collapse show">
+                            <ul class="tf-filter-group current-scrollbar">
+                                @foreach ($sizeOptions as $index => $size)
+                                    <li class="list-item d-flex gap-12 align-items-center">
+                                        <input type="checkbox" name="size[]" class="tf-check tf-check-size" value="{{ $size['value'] }}" id="size-{{ $index }}" @checked(!empty($size['selected']))>
+                                        <label for="size-{{ $index }}" class="label">
+                                            <span>{{ $size['label'] }}</span>&nbsp;<span>({{ $size['count'] }})</span>
+                                        </label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+
+                <div class="d-flex gap-12 mt_20">
+                    <button type="submit" class="tf-btn btn-fill animate-hover-btn w-100">
+                        <span>{{ $isArabic ? 'تطبيق' : 'Apply' }}</span>
                     </button>
-                    <a href="{{ route('front.products.index') }}" class="tf-btn btn-outline animate-hover-btn flex-grow-1">
-                        {{ app()->getLocale() === 'ar' ? 'إعادة ضبط' : 'Reset' }}
+                    <a href="{{ $resetUrl }}" class="tf-btn btn-outline animate-hover-btn w-100" data-filter-reset>
+                        <span>{{ $isArabic ? 'إعادة ضبط' : 'Reset' }}</span>
                     </a>
                 </div>
             </form>
