@@ -5,10 +5,11 @@ namespace App\Filament\Resources\ProductVariants\Pages;
 use App\Filament\Resources\ProductVariants\ProductVariantResource;
 use App\Filament\Resources\ProductVariants\Schemas\ProductVariantForm;
 use App\Models\ProductVariant;
+use App\Services\ProductVariantExportService;
 use App\Services\ProductVariantImportService;
 use Filament\Actions\Action;
-use Filament\Notifications\Notification;
 use Filament\Forms\Components\FileUpload;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,7 @@ class ListProductVariants extends ListRecords
         return [
             $this->purgeAction(),
             $this->importAction(),
+            $this->exportAction(),
             $this->createAction(),
         ];
     }
@@ -137,6 +139,15 @@ class ListProductVariants extends ListRecords
                         ->send();
                 }
             });
+    }
+
+    protected function exportAction(): Action
+    {
+        return Action::make('exportProductVariants')
+            ->label('تصدير')
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->color('success')
+            ->action(fn () => app(ProductVariantExportService::class)->download());
     }
 
     protected function resolveUploadedPath(mixed $file): ?string
