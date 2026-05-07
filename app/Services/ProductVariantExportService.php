@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\ProductVariant;
@@ -11,10 +13,15 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductVariantExportService
 {
+    /**
+     * Download Product Variants using the same column structure accepted by
+     * ProductVariantImportService. This makes the file suitable for:
+     * Export -> edit -> Import.
+     */
     public function download(): StreamedResponse
     {
         $spreadsheet = $this->spreadsheet();
-        $fileName = 'product-variants-export-'.now()->format('Y-m-d-His').'.xlsx';
+        $fileName = 'product-variants-import-format-'.now()->format('Y-m-d-His').'.xlsx';
 
         return response()->streamDownload(function () use ($spreadsheet): void {
             $writer = new Xlsx($spreadsheet);
@@ -28,44 +35,41 @@ class ProductVariantExportService
     {
         $variants = ProductVariant::query()
             ->with(['product', 'productColor', 'size'])
-            ->latest('id')
-            ->get();
+            ->get()
+            ->sortBy([
+                fn (ProductVariant $a, ProductVariant $b): int => strcmp((string) $a->product?->model_no, (string) $b->product?->model_no),
+                fn (ProductVariant $a, ProductVariant $b): int => strcmp((string) $a->productColor?->color_code, (string) $b->productColor?->color_code),
+                fn (ProductVariant $a, ProductVariant $b): int => strcmp((string) $a->size?->code, (string) $b->size?->code),
+            ])
+            ->values();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('توافر القياسات');
 
+        // These headers intentionally match ProductVariantImportService:
+        // الرمز / رمز اللون / اللون / القياس / بيع / كرت / الكمية / إيقاف
         $rows = [[
-            'رمز المنتج',
-            'وصف المنتج',
+            'الرمز',
             'رمز اللون',
-            'اسم اللون بالعربي',
-            'اسم اللون بالانكليزي',
-            'HEX',
-            'رمز القياس',
-            'اسم القياس بالعربي',
-            'اسم القياس بالانكليزي',
-            'سعر البيع',
-            'السعر قبل الحسم',
+            'اللون',
+            'القياس',
+            'بيع',
+            'كرت',
             'الكمية',
-            'الحالة',
+            'إيقاف',
         ]];
 
         foreach ($variants as $variant) {
             $rows[] = [
                 $variant->product?->model_no ?: '',
-                $variant->product?->title_ar ?: '',
                 $variant->productColor?->color_code ?: '',
                 $variant->productColor?->color_name_ar ?: '',
-                $variant->productColor?->color_name_en ?: '',
-                $variant->productColor?->color_hex ?: '',
-                $variant->size?->code ?: '',
-                $variant->size?->name_ar ?: '',
-                $variant->size?->name_en ?: '',
-                $variant->price ?? '',
-                $variant->compare_price ?? '',
-                $variant->quantity ?? '',
-                $variant->status === 'active' ? 'فعال' : 'غير فعال',
+                $variant->size?->code ?: ($variant->size?->name_ar ?: ''),
+                $this->decimalValue($variant->price),
+                $this->decimalValue($variant->compare_price),
+                $variant->quantity ?? 0,
+                $variant->status === 'inactive' ? 'نعم' : 'لا',
             ];
         }
 
@@ -86,5 +90,16 @@ class ProductVariantExportService
         foreach (range(1, $highestColumnIndex) as $columnIndex) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($columnIndex))->setAutoSize(true);
         }
+    }
+
+    protected function decimalValue(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        $value = (float) $value;
+
+        return rtrim(rtrim(number_format($value, 4, '.', ''), '0'), '.');
     }
 }
