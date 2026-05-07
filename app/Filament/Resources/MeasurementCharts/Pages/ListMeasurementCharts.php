@@ -6,6 +6,7 @@ use App\Filament\Resources\MeasurementCharts\MeasurementChartResource;
 use App\Filament\Resources\MeasurementCharts\Schemas\MeasurementChartForm;
 use App\Models\MeasurementChart;
 use App\Models\MeasurementChartGroup;
+use App\Services\MeasurementChartExportService;
 use App\Services\MeasurementChartImportService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -25,6 +26,7 @@ class ListMeasurementCharts extends ListRecords
     {
         return [
             $this->importAction(),
+            $this->exportAction(),
             $this->createAction(),
         ];
     }
@@ -117,6 +119,15 @@ class ListMeasurementCharts extends ListRecords
                         ->send();
                 }
             });
+    }
+
+    protected function exportAction(): Action
+    {
+        return Action::make('exportMeasurementCharts')
+            ->label('تصدير')
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->color('success')
+            ->action(fn () => app(MeasurementChartExportService::class)->download());
     }
 
     protected function resolveUploadedPath(mixed $file): ?string

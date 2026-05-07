@@ -5,6 +5,7 @@ namespace App\Filament\Resources\MeasurementChartGroups\Pages;
 use App\Filament\Resources\MeasurementChartGroups\MeasurementChartGroupResource;
 use App\Filament\Resources\MeasurementChartGroups\Schemas\MeasurementChartGroupForm;
 use App\Models\MeasurementChartGroup;
+use App\Services\MeasurementChartExportService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
@@ -20,6 +21,7 @@ class ListMeasurementChartGroups extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            $this->exportAction(),
             Action::make('createMeasurementChartGroup')
                 ->label('إضافة مجموعة قياس')
                 ->icon(Heroicon::OutlinedPlusCircle)
@@ -47,5 +49,14 @@ class ListMeasurementChartGroups extends ListRecords
                     }
                 }),
         ];
+    }
+
+    protected function exportAction(): Action
+    {
+        return Action::make('exportMeasurementCharts')
+            ->label('تصدير')
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->color('success')
+            ->action(fn () => app(MeasurementChartExportService::class)->download());
     }
 }
