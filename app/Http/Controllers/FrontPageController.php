@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\Color;
 use App\Models\CompanyPage;
 use App\Models\ExchangeRateSetting;
 use App\Models\Product;
+use App\Models\ProductColor;
 use App\Models\ProductVariant;
 use App\Models\Size;
 use App\Services\FrontCartService;
@@ -119,9 +119,7 @@ class FrontPageController extends Controller
             }
         }
 
-        $categories = collect($shell['nav_categories'] ?? [])
-            ->filter(fn ($item): bool => $item instanceof Category && $item->parent_id === null)
-            ->values();
+        $categories = $this->filterCategoriesTree();
 
         $filterCategories = $this->buildFilterCategories($categories, [
             'category_ids' => [],
@@ -524,7 +522,7 @@ class FrontPageController extends Controller
         $categoryIds = array_values(array_filter(array_map('intval', $filters['category_ids'] ?? [])));
         $minPrice = $this->displayPriceToBase($filters['min_price'] ?? null);
         $maxPrice = $this->displayPriceToBase($filters['max_price'] ?? null);
-        $colorIds = $this->resolveStructureColorIds($this->normalizeStringArray($filters['colors'] ?? []));
+        $colorIds = $this->resolveActiveProductColorIds($this->normalizeStringArray($filters['colors'] ?? []));
         $sizes = $this->resolveSizeFilterTerms($this->normalizeStringArray($filters['sizes'] ?? []));
 
         if ($categoryIds !== []) {
@@ -540,7 +538,11 @@ class FrontPageController extends Controller
         }
 
         if ($colorIds !== []) {
-            $query->whereIn('structure_color_id', $colorIds);
+            $query->whereHas('productColors', function (Builder $colorQuery) use ($colorIds): void {
+                $colorQuery
+                    ->where('status', 'active')
+                    ->whereIn('product_colors.id', $colorIds);
+            });
         }
 
         if ($sizes !== []) {
@@ -565,38 +567,11 @@ class FrontPageController extends Controller
         $baseQuery = $this->newProductsListingQuery();
         $this->applyProductsFilters($baseQuery, $filters);
 
-        return $categories->map(function (Category $category) use ($baseQuery) {
-            $category->setAttribute('products_count', (clone $baseQuery)->whereIn('category_id', $this->collectCategoryBranchIds($category))->count());
-
-            if ($category->relationLoaded('children')) {
-                $category->setRelation('children', $category->children->map(function (Category $child) use ($baseQuery) {
-                    $child->setAttribute('products_count', (clone $baseQuery)->whereIn('category_id', $this->collectCategoryBranchIds($child))->count());
-
-                    return $child;
-                }));
-            }
-
-            return $category;
-        })->values();
+        return $this->applyCategoryCounts($categories, $baseQuery);
     }
 
     protected function buildColorOptions(array $filters, string $locale, array $selectedColors): Collection
     {
-        $baseProductQuery = $this->newProductsListingQuery();
-        $this->applyProductsFilters($baseProductQuery, array_merge($filters, [
-            'colors' => [],
-        ]));
-
-        $colorCounts = (clone $baseProductQuery)
-            ->whereNotNull('structure_color_id')
-            ->selectRaw('structure_color_id, COUNT(DISTINCT products.id) as products_count')
-            ->groupBy('structure_color_id')
-            ->pluck('products_count', 'structure_color_id');
-
-        if ($colorCounts->isEmpty()) {
-            return collect();
-        }
-
         $selected = collect($selectedColors)
             ->map(fn ($value) => $this->makeFilterSlug((string) $value))
             ->filter()
@@ -604,23 +579,35 @@ class FrontPageController extends Controller
             ->values()
             ->all();
 
-        return Color::query()
-            ->whereIn('id', $colorCounts->keys()->all())
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get(['id', 'code', 'name_ar', 'name_en', 'hex', 'sort_order'])
-            ->map(function (Color $color) use ($locale, $colorCounts, $selected): array {
-                $value = $this->makeFilterSlug((string) ($color->code ?: $color->name_en ?: $color->name_ar ?: $color->id));
+        $colors = ProductColor::query()
+            ->select(['id', 'product_id', 'color_name_ar', 'color_name_en', 'color_code', 'color_hex'])
+            ->where('status', 'active')
+            ->whereHas('product', function (Builder $query) use ($filters): void {
+                $this->applyProductsFilters($query, array_merge($filters, [
+                    'colors' => [],
+                ]));
+            })
+            ->get();
+
+        return $colors
+            ->groupBy(fn (ProductColor $color): string => $this->productColorFilterKey($color))
+            ->map(function (Collection $group) use ($locale, $selected): array {
+                /** @var ProductColor|null $first */
+                $first = $group->first();
+                $value = $first instanceof ProductColor ? $this->productColorFilterKey($first) : '';
                 $label = trim((string) ($locale === 'ar'
-                    ? ($color->name_ar ?: $color->name_en ?: $color->code ?: $color->id)
-                    : ($color->name_en ?: $color->name_ar ?: $color->code ?: $color->id)));
+                    ? ($first?->color_name_ar ?: $first?->color_name_en ?: $first?->color_code)
+                    : ($first?->color_name_en ?: $first?->color_name_ar ?: $first?->color_code)));
 
                 return [
                     'value' => $value,
                     'label' => $label,
-                    'hex' => trim((string) ($color->hex ?: '')),
-                    'fallback_key' => trim((string) ($color->code ?: $color->name_en ?: '')),
-                    'count' => (int) ($colorCounts[$color->id] ?? 0),
+                    'hex' => (string) ($group
+                        ->map(fn (ProductColor $color): ?string => $this->normalizeHexColor($color->color_hex))
+                        ->filter()
+                        ->first() ?? ''),
+                    'fallback_key' => trim((string) ($first?->color_name_en ?: $first?->color_code ?: '')),
+                    'count' => $group->pluck('product_id')->unique()->count(),
                     'selected' => in_array($value, $selected, true),
                 ];
             })
@@ -796,33 +783,24 @@ class FrontPageController extends Controller
         return $basePrice / $rate;
     }
 
-    protected function resolveStructureColorIds(array $selectedColors): array
+    protected function resolveActiveProductColorIds(array $selectedColors): array
     {
         $selected = collect($selectedColors)
             ->map(fn ($value) => $this->makeFilterSlug((string) $value))
             ->filter()
             ->unique()
-            ->values();
+            ->values()
+            ->all();
 
-        if ($selected->isEmpty()) {
+        if ($selected === []) {
             return [];
         }
 
-        return Color::query()
-            ->get(['id', 'code', 'name_ar', 'name_en', 'hex'])
-            ->filter(function (Color $color) use ($selected): bool {
-                $keys = collect([
-                    $color->id,
-                    $color->code,
-                    $color->name_ar,
-                    $color->name_en,
-                ])
-                    ->map(fn ($value) => $this->makeFilterSlug((string) $value))
-                    ->filter()
-                    ->unique();
-
-                return $keys->intersect($selected)->isNotEmpty();
-            })
+        return ProductColor::query()
+            ->select(['id', 'color_name_ar', 'color_name_en', 'color_code', 'color_hex'])
+            ->where('status', 'active')
+            ->get()
+            ->filter(fn (ProductColor $color): bool => in_array($this->productColorFilterKey($color), $selected, true))
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->values()
@@ -831,29 +809,92 @@ class FrontPageController extends Controller
 
     protected function resolveColorChipLabel(string $value, string $locale): string
     {
-        $slug = $this->makeFilterSlug($value);
+        $slug = $this->makeFilterSlug((string) $value);
 
-        $color = Color::query()
-            ->get(['id', 'code', 'name_ar', 'name_en'])
-            ->first(function (Color $color) use ($slug): bool {
-                return collect([
-                    $color->id,
-                    $color->code,
-                    $color->name_ar,
-                    $color->name_en,
-                ])
-                    ->map(fn ($candidate) => $this->makeFilterSlug((string) $candidate))
-                    ->filter()
-                    ->contains($slug);
-            });
+        $color = ProductColor::query()
+            ->select(['id', 'color_name_ar', 'color_name_en', 'color_code', 'color_hex'])
+            ->where('status', 'active')
+            ->get()
+            ->first(fn (ProductColor $color): bool => $this->productColorFilterKey($color) === $slug);
 
-        if (! $color instanceof Color) {
+        if (! $color instanceof ProductColor) {
             return $value;
         }
 
         return trim((string) ($locale === 'ar'
-            ? ($color->name_ar ?: $color->name_en ?: $color->code ?: $value)
-            : ($color->name_en ?: $color->name_ar ?: $color->code ?: $value)));
+            ? ($color->color_name_ar ?: $color->color_name_en ?: $color->color_code ?: $value)
+            : ($color->color_name_en ?: $color->color_name_ar ?: $color->color_code ?: $value)));
+    }
+
+    protected function productColorFilterKey(ProductColor $color): string
+    {
+        $hex = $this->normalizeHexColor($color->color_hex);
+
+        if ($hex !== null) {
+            return $this->makeFilterSlug($hex);
+        }
+
+        if (filled($color->color_name_en)) {
+            return $this->makeFilterSlug((string) $color->color_name_en);
+        }
+
+        if (filled($color->color_name_ar)) {
+            return $this->makeFilterSlug((string) $color->color_name_ar);
+        }
+
+        return $this->makeFilterSlug((string) $color->color_code);
+    }
+
+    protected function normalizeHexColor(?string $hex): ?string
+    {
+        $hex = trim((string) $hex);
+
+        if ($hex === '') {
+            return null;
+        }
+
+        if (! str_starts_with($hex, '#')) {
+            $hex = '#' . $hex;
+        }
+
+        return preg_match('/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/', $hex) === 1
+            ? strtoupper($hex)
+            : null;
+    }
+
+    protected function filterCategoriesTree(): Collection
+    {
+        $categories = Category::query()
+            ->orderBy('sort_order')
+            ->orderBy('title_ar')
+            ->get();
+
+        return $this->nestFilterCategories($categories);
+    }
+
+    protected function nestFilterCategories(Collection $categories, ?int $parentId = null): Collection
+    {
+        return $categories
+            ->filter(fn (Category $category): bool => (int) ($category->parent_id ?? 0) === (int) ($parentId ?? 0))
+            ->values()
+            ->map(function (Category $category) use ($categories): Category {
+                $category->setRelation('children', $this->nestFilterCategories($categories, (int) $category->getKey()));
+
+                return $category;
+            });
+    }
+
+    protected function applyCategoryCounts(Collection $categories, Builder $baseQuery): Collection
+    {
+        return $categories->map(function (Category $category) use ($baseQuery): Category {
+            $category->setAttribute('products_count', (clone $baseQuery)->whereIn('category_id', $this->collectCategoryBranchIds($category))->count());
+
+            if ($category->relationLoaded('children')) {
+                $category->setRelation('children', $this->applyCategoryCounts($category->children, $baseQuery));
+            }
+
+            return $category;
+        })->values();
     }
 
     protected function resolveSizeFilterTerms(array $selectedSizes): array

@@ -13,7 +13,7 @@
     $priceMinValue = min($priceUpperLimit, max(0, (int) ($priceStats['selected_min'] ?? 0)));
     $priceMaxValue = min($priceUpperLimit, max($priceMinValue, (int) ($priceStats['selected_max'] ?? $priceUpperLimit)));
 
-    $filterAction = route('front.products.index');
+    $filterAction = request()->url();
     $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
     $resetUrl = $filter_reset_url ?? request()->url();
 
@@ -67,6 +67,34 @@
 
         return $map[$normalized] ?? '';
     };
+
+    $renderCategoryItems = function ($items) use (&$renderCategoryItems, $selectedCategorySlugs, $categoryLabel) {
+        $html = '';
+
+        foreach (collect($items) as $category) {
+            $categorySelected = in_array((string) $category->slug, $selectedCategorySlugs, true);
+
+            $html .= '<li class="cate-item ' . ($categorySelected ? 'active' : '') . '">';
+            $html .= '<div class="list-item d-flex gap-12 align-items-center">';
+            $html .= '<input type="checkbox" name="category[]" class="tf-check" id="category-' . e((string) $category->id) . '" value="' . e((string) $category->slug) . '"' . ($categorySelected ? ' checked' : '') . '>';
+            $html .= '<label for="category-' . e((string) $category->id) . '" class="label">';
+            $html .= '<span>' . e($categoryLabel($category)) . '</span>';
+
+            if (isset($category->products_count)) {
+                $html .= '&nbsp;<span>(' . e((string) $category->products_count) . ')</span>';
+            }
+
+            $html .= '</label>';
+            $html .= '</div>';
+            $html .= '</li>';
+
+            if ($category->relationLoaded('children') && $category->children->isNotEmpty()) {
+                $html .= $renderCategoryItems($category->children);
+            }
+        }
+
+        return $html;
+    };
 @endphp
 
 <div class="offcanvas offcanvas-start canvas-filter" id="filterShop" data-shop-filter>
@@ -103,38 +131,7 @@
                                     <label for="category-all" class="label"><span>{{ $isArabic ? 'كل المنتجات' : 'All products' }}</span></label>
                                 </div>
                             </li>
-                            @foreach ($categories as $category)
-                                @php
-                                    $categorySelected = in_array((string) $category->slug, $selectedCategorySlugs, true);
-                                @endphp
-                                <li class="cate-item {{ $categorySelected ? 'active' : '' }}">
-                                    <div class="list-item d-flex gap-12 align-items-center">
-                                        <input type="checkbox" name="category[]" class="tf-check" id="category-{{ $category->id }}" value="{{ $category->slug }}" @checked($categorySelected)>
-                                        <label for="category-{{ $category->id }}" class="label">
-                                            <span>{{ $categoryLabel($category) }}</span>
-                                            @if (isset($category->products_count))
-                                                &nbsp;<span>({{ $category->products_count }})</span>
-                                            @endif
-                                        </label>
-                                    </div>
-                                </li>
-                                @foreach ($category->children as $child)
-                                    @php
-                                        $childSelected = in_array((string) $child->slug, $selectedCategorySlugs, true);
-                                    @endphp
-                                    <li class="cate-item {{ $childSelected ? 'active' : '' }}">
-                                        <div class="list-item d-flex gap-12 align-items-center">
-                                            <input type="checkbox" name="category[]" class="tf-check" id="category-{{ $child->id }}" value="{{ $child->slug }}" @checked($childSelected)>
-                                            <label for="category-{{ $child->id }}" class="label">
-                                                <span>{{ $categoryLabel($child) }}</span>
-                                                @if (isset($child->products_count))
-                                                    &nbsp;<span>({{ $child->products_count }})</span>
-                                                @endif
-                                            </label>
-                                        </div>
-                                    </li>
-                                @endforeach
-                            @endforeach
+                            {!! $renderCategoryItems($categories) !!}
                         </ul>
                     </div>
                 </div>
