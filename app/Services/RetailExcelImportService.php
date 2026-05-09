@@ -44,14 +44,23 @@ class RetailExcelImportService
 
         foreach ($rows as $index => $row) {
             if ($index === 1) {
-                $headers = array_values($row);
+                $headers = array_map(
+                    fn($header) => $this->normalizeText((string) $header),
+                    array_values($row)
+                );
                 continue;
             }
 
             $item = [];
             foreach ($headers as $i => $header) {
                 $column = $this->excelColumn($i + 1);
-                $item[(string) $header] = isset($row[$column]) ? trim((string) $row[$column]) : '';
+                $header = $this->normalizeText((string) $header);
+
+                if ($header === '') {
+                    continue;
+                }
+
+                $item[$header] = isset($row[$column]) ? $this->normalizeText((string) $row[$column]) : '';
             }
 
             $item['__row_number'] = $index;
@@ -154,19 +163,82 @@ class RetailExcelImportService
 
         return match ($value) {
             'ابيض' => 'أبيض',
+            'أبيض' => 'أبيض',
+
             'اسود' => 'أسود',
+            'أسود' => 'أسود',
+
             'ازرق' => 'أزرق',
+            'أزرق' => 'أزرق',
+
             'ازرق فاتح' => 'أزرق فاتح',
+            'أزرق فاتح' => 'أزرق فاتح',
+
             'ازرق غامق' => 'أزرق غامق',
+            'أزرق غامق' => 'أزرق غامق',
+
+            'اوف وايت' => 'أوف وايت',
+            'أوف وايت' => 'أوف وايت',
+
+            'زيتي ف' => 'زيتي فاتح',
+            'زيتي فاتح' => 'زيتي فاتح',
+
+            'عفني فاتح' => 'عفني فاتح',
+            'ورق مقوى' => 'ورق مقوى',
+
             default => $value,
         };
     }
-
     public function normalizeStructureColor(?string $value): string
     {
         return $this->normalizeColor($value);
     }
+    private function structureValueFromRow(array $row): string
+    {
+        return $this->normalizeText($this->value(
+            $row,
+            'التركيب',
+            'تركيب',
+            'لون الفلترة',
+            'لون الفلتر',
+            'لون الفلترة - التركيب',
+            'Filter Color',
+            'Filter color',
+            'filter_color',
+            'Structure',
+            'structure'
+        ));
+    }
 
+    /**
+     * يبحث عن لون الفلترة داخل كل أسطر المنتج، وليس أول سطر فقط.
+     *
+     * @param array<int, array<string, mixed>> $rows
+     */
+    private function productStructureColor(array $rows): string
+    {
+        $firstNonEmpty = '';
+
+        foreach ($rows as $row) {
+            $value = $this->structureValueFromRow($row);
+
+            if ($value === '') {
+                continue;
+            }
+
+            if ($firstNonEmpty === '') {
+                $firstNonEmpty = $value;
+            }
+
+            $normalized = $this->normalizeStructureColor($value);
+
+            if (! $this->structureLooksComposite($normalized)) {
+                return $value;
+            }
+        }
+
+        return $firstNonEmpty;
+    }
     public function normalizeColorKey(?string $value): string
     {
         $value = $this->normalizeText($value);
@@ -202,13 +274,20 @@ class RetailExcelImportService
             return false;
         }
 
+        /*
+     * ملاحظة مهمة:
+     * أزرق غامق، أوف وايت، زيتي فاتح، عفني فاتح
+     * هذه ألوان واحدة صالحة للفلترة حتى لو كانت من كلمتين.
+     *
+     * نرفض فقط القيم التي تبدو تركيبة ألوان واضحة.
+     */
         return preg_match('/\s+و\s+|\/|\\\\|\||،|,|&|\+|-/u', $value) === 1;
     }
 
     private function structureEnglishName(array $rows, string $normalizedKey): ?string
     {
         foreach ($rows as $row) {
-            $structure = $this->normalizeStructureColor($this->value($row, 'التركيب'));
+            $structure = $this->normalizeStructureColor($this->structureValueFromRow($row));
 
             if ($this->normalizeColorKey($structure) !== $normalizedKey) {
                 continue;
@@ -730,10 +809,22 @@ class RetailExcelImportService
 
     public function syncColorsFromProducts(array $productRows, array &$summary = []): void
     {
-        $structures = [];
+        $productGroups = [];
 
         foreach ($productRows as $row) {
-            $structure = $this->normalizeStructureColor($this->value($row, 'التركيب'));
+            $code = $this->normalizeText($this->value($row, 'الكود'));
+
+            if ($code === '') {
+                continue;
+            }
+
+            $productGroups[$code][] = $row;
+        }
+
+        $structures = [];
+
+        foreach ($productGroups as $rows) {
+            $structure = $this->normalizeStructureColor($this->productStructureColor($rows));
 
             if ($structure === '') {
                 $summary['empty_structure_rows'] = ($summary['empty_structure_rows'] ?? 0) + 1;
@@ -751,9 +842,7 @@ class RetailExcelImportService
         foreach (array_values($structures) as $structure) {
             $this->resolveOrCreateCatalogColorId($productRows, $structure, $summary);
         }
-
     }
-
     public function sizeMap(): array
     {
         if ($this->cachedSizeMap !== null) {
@@ -877,7 +966,7 @@ class RetailExcelImportService
         ];
     }
 
-        public function importProductsFile(string $productsPath, ?int $batchId = null): array
+    public function importProductsFile(string $productsPath, ?int $batchId = null): array
     {
         $productRows = $this->readRows($productsPath);
         $hierarchyIndex = $this->categoryHierarchyIndex();
@@ -914,7 +1003,7 @@ class RetailExcelImportService
                 $productComparePrice = (float) $this->value($first, 'السعر قبل الحسم', 'السعر قبل الحسم ');
                 $categoryId = $this->resolveProductCategoryId($rows, $hierarchyIndex);
                 $displayColorDescription = $this->productDisplayColorDescription($first);
-                $rawStructureColor = $this->value($first, 'التركيب');
+                $rawStructureColor = $this->productStructureColor($rows);
                 $normalizedStructureColor = $this->normalizeStructureColor($rawStructureColor);
                 $isVisibleInFrontend = $visibility['show_web'] || $visibility['show_app'];
 
@@ -1080,7 +1169,7 @@ class RetailExcelImportService
                 $productComparePrice = (float) $this->value($first, 'السعر قبل الحسم', 'السعر قبل الحسم ');
                 $categoryId = $this->resolveProductCategoryId($rows, $hierarchyIndex);
                 $displayColorDescription = $this->productDisplayColorDescription($first);
-                $rawStructureColor = $this->value($first, 'التركيب');
+                $rawStructureColor = $this->productStructureColor($rows);
                 $normalizedStructureColor = $this->normalizeStructureColor($rawStructureColor);
                 $isVisibleInFrontend = $visibility['show_web'] || $visibility['show_app'];
 
