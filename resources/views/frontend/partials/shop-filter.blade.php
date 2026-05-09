@@ -184,9 +184,7 @@
                                         $colorClass = $colorClassFromValue($color['fallback_key'] ?? $color['label'] ?? $color['value'] ?? '');
                                         $colorStyle = '';
 
-                                        if (!empty($color['image'])) {
-                                            $colorStyle = "background-image: url('" . e($color['image']) . "'); background-size: cover; background-position: center; background-repeat: no-repeat;";
-                                        } elseif (!empty($color['hex'])) {
+                                        if (!empty($color['hex'])) {
                                             $colorStyle = 'background-color: ' . $color['hex'] . ';';
                                         }
                                     @endphp
