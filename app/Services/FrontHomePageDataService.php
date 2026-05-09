@@ -236,12 +236,12 @@ class FrontHomePageDataService
         return $products->map(fn (Product $product): array => $this->presentProduct($product, $locale))->values();
     }
 
-    public function presentProduct(Product $product, ?string $locale = null): array
+    public function presentProduct(Product $product, ?string $locale = null, array $preferredFilterColorIds = []): array
     {
         $locale ??= app()->getLocale();
 
         $imagePath = $this->imageCatalog->mainImagePath($product);
-        $imageUrl = filled($imagePath)
+        $fallbackImageUrl = filled($imagePath)
             ? Storage::disk('public')->url($imagePath)
             : asset('images/products/4brouwn1.jpg');
 
@@ -254,15 +254,22 @@ class FrontHomePageDataService
         $sizePricing = $this->buildSizePricing($product, $locale, $currency);
         $sizeOptions = array_values($sizePricing);
         $sizes = $this->productSizes($sizeOptions, $product, $locale);
-        $colors = $this->productColors($product, $locale, $currency, $pricing);
+        $colors = $this->productColors($product, $locale, $currency, $pricing, $preferredFilterColorIds);
         $defaultColor = $colors[0] ?? [];
-        $defaultSize = $this->selectDefaultSize($sizeOptions) ?: (array_key_first($sizePricing) ?: ($sizes[0] ?? null));
-        $displayPricing = $defaultSize && isset($sizePricing[$defaultSize]) ? $sizePricing[$defaultSize] : [
+        $defaultSize = ($defaultColor['default_size'] ?? null)
+            ?: ($this->selectDefaultSize($sizeOptions) ?: (array_key_first($sizePricing) ?: ($sizes[0] ?? null)));
+        $displayPricing = filled($defaultColor['price_current_label'] ?? null) ? [
+            'price_current' => $defaultColor['price_current'] ?? $pricing['current'],
+            'compare_price' => $defaultColor['compare_price'] ?? $pricing['compare'],
+            'price_current_label' => $defaultColor['price_current_label'] ?? $pricing['current_label'],
+            'compare_price_label' => $defaultColor['compare_price_label'] ?? $pricing['compare_label'],
+        ] : ($defaultSize && isset($sizePricing[$defaultSize]) ? $sizePricing[$defaultSize] : [
             'price_current' => $pricing['current'],
             'compare_price' => $pricing['compare'],
             'price_current_label' => $pricing['current_label'],
             'compare_price_label' => $pricing['compare_label'],
-        ];
+        ]);
+        $imageUrl = filled($defaultColor['image'] ?? null) ? (string) $defaultColor['image'] : $fallbackImageUrl;
         $gallery = collect(array_merge([$imageUrl], array_map(fn (array $color): string => $color['image'] ?? '', $colors)))
             ->filter()
             ->unique()
@@ -360,16 +367,39 @@ class FrontHomePageDataService
         ];
     }
 
-    protected function productColors(Product $product, string $locale, string $currency, array $pricing): array
+    protected function productColors(Product $product, string $locale, string $currency, array $pricing, array $preferredFilterColorIds = []): array
     {
         $variantsByColor = $this->variantsByColor($product);
-        $activeColorIds = $product->relationLoaded('productColors')
-            ? $product->productColors
-                ->where('status', 'active')
-                ->pluck('id')
-                ->map(fn ($id): int => (int) $id)
-                ->all()
-            : [];
+        $productColorsById = $product->relationLoaded('productColors')
+            ? $product->productColors->keyBy('id')
+            : collect();
+        $activeColorIds = $productColorsById
+            ->where('status', 'active')
+            ->keys()
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+        $preferredFilterColorIds = collect($preferredFilterColorIds)
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $rankColor = function (array $color) use ($productColorsById, $preferredFilterColorIds): array {
+            $id = (int) ($color['id'] ?? 0);
+            $productColor = $productColorsById->get($id);
+            $filterColorId = (int) ($productColor?->filter_color_id ?? 0);
+            $preferredIndex = $filterColorId > 0
+                ? array_search($filterColorId, $preferredFilterColorIds, true)
+                : false;
+
+            return [
+                $preferredIndex === false ? 1 : 0,
+                $preferredIndex === false ? 9999 : (int) $preferredIndex,
+                (int) ($productColor?->sort_order ?? $color['sort_order'] ?? 9999),
+                $id,
+            ];
+        };
 
         return collect($this->imageCatalog->availableColors($product))
             ->filter(function (array $color) use ($activeColorIds, $variantsByColor): bool {
@@ -378,6 +408,20 @@ class FrontHomePageDataService
                 return $id > 0
                     && in_array($id, $activeColorIds, true)
                     && $variantsByColor->has($id);
+            })
+            ->sort(function (array $first, array $second) use ($rankColor): int {
+                $firstRank = $rankColor($first);
+                $secondRank = $rankColor($second);
+
+                foreach ([0, 1, 2, 3] as $index) {
+                    if ($firstRank[$index] === $secondRank[$index]) {
+                        continue;
+                    }
+
+                    return $firstRank[$index] <=> $secondRank[$index];
+                }
+
+                return 0;
             })
             ->take(4)
             ->values()

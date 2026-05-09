@@ -111,8 +111,10 @@ class FrontPageController extends Controller
         $paginator = $query->paginate(16)->appends(
             Arr::except($request->query(), ['page', 'load_more', 'filter_ajax'])
         );
+        $selectedFilterColorIds = $this->resolveStructureColorIds($selectedColors);
+
         $products = $paginator->getCollection()
-            ->map(fn (Product $product): array => $this->homePageData->presentProduct($product, $locale))
+            ->map(fn (Product $product): array => $this->homePageData->presentProduct($product, $locale, $selectedFilterColorIds))
             ->values();
 
         $paginator->setCollection($products);
