@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasWebpMedia;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -42,6 +43,15 @@ class Category extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');
+    }
+
+    public function isLeaf(): bool
+    {
+        if ($this->relationLoaded('children')) {
+            return $this->children->isEmpty();
+        }
+
+        return ! $this->children()->exists();
     }
 
     /**
@@ -114,6 +124,45 @@ class Category extends Model
     public static function breadcrumbOptions(?int $exceptId = null): array
     {
         $categories = static::query()
+            ->orderBy('sort_order')
+            ->orderBy('title_ar')
+            ->get();
+
+        $options = [];
+
+        foreach ($categories as $category) {
+            if ($exceptId && $category->id === $exceptId) {
+                continue;
+            }
+
+            $trail = $category->breadcrumbTrail()
+                ->pluck('title_ar')
+                ->filter()
+                ->values()
+                ->all();
+
+            if ($trail === []) {
+                continue;
+            }
+
+            $options[$category->id] = implode(' > ', $trail);
+        }
+
+        asort($options, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $options;
+    }
+
+    public function scopeLeaf(Builder $query): Builder
+    {
+        return $query->whereDoesntHave('children');
+    }
+
+    public static function leafBreadcrumbOptions(?int $exceptId = null): array
+    {
+        $categories = static::query()
+            ->leaf()
+            ->with('parent')
             ->orderBy('sort_order')
             ->orderBy('title_ar')
             ->get();

@@ -746,17 +746,6 @@ class RetailExcelImportService
             $this->resolveOrCreateCatalogColorId($productRows, $structure, $summary);
         }
 
-        return;
-        foreach ($productRows as $row) {
-            $structure = $this->normalizeColor($this->value($row, 'التركيب'));
-            if ($structure !== '') {
-                $structures[$this->normalizeColorKey($structure)] = $structure;
-            }
-        }
-
-        foreach (array_values($structures) as $structure) {
-            $this->resolveOrCreateCatalogColorId($productRows, $structure);
-        }
     }
 
     public function sizeMap(): array

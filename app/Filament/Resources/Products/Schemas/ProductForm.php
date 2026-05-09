@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Products\Schemas;
 
 use App\Models\Color;
-use App\Models\Product;
+use App\Models\Category;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -29,9 +29,22 @@ class ProductForm
                                     ->schema([
                                         Select::make('category_id')
                                             ->label('التصنيف')
-                                            ->options(fn (): array => \App\Models\Category::breadcrumbOptions())
+                                            ->options(fn (): array => Category::leafBreadcrumbOptions())
                                             ->native()
-                                            ->required(),
+                                            ->required()
+                                            ->rule(function () {
+                                                return function (string $attribute, mixed $value, \Closure $fail): void {
+                                                    if (! $value) {
+                                                        return;
+                                                    }
+
+                                                    $category = Category::query()->find($value);
+
+                                                    if (! $category || ! $category->isLeaf()) {
+                                                        $fail('يجب اختيار تصنيف نهائي لا يحتوي على تصنيفات فرعية.');
+                                                    }
+                                                };
+                                            }),
                                         TextInput::make('model_no')
                                             ->label('الكود')
                                             ->maxLength(50)
@@ -59,13 +72,14 @@ class ProductForm
                                             ->numeric()
                                             ->default(null),
                                         TextInput::make('structure')
-                                            ->label('وصف لون المنتج')
+                                            ->label('لون المنتج المعروض / المواصفة')
                                             ->maxLength(100)
                                             ->default(null)
                                             ->helperText('هذا النص للعرض والمواصفات فقط، ويمكن أن يكون مركبًا مثل أسود ورمادي.'),
                                         Select::make('structure_color_id')
-                                            ->label('لون الفلترة (التركيب)')
+                                            ->label('لون الفلترة - التركيب')
                                             ->options(fn (): array => Color::query()
+                                                ->where('status', 'active')
                                                 ->orderBy('sort_order')
                                                 ->orderBy('name_ar')
                                                 ->get(['id', 'name_ar', 'name_en', 'code'])
