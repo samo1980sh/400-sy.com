@@ -1137,6 +1137,12 @@ class RetailExcelImportService
             'variants_created' => 0,
             'variants_updated' => 0,
             'variants_skipped' => 0,
+            'variants_skipped_missing_code' => 0,
+            'variants_skipped_unknown_product' => 0,
+            'variants_skipped_unknown_color' => 0,
+            'variants_skipped_missing_size' => 0,
+            'variants_skipped_unknown_size' => 0,
+            'variant_skip_details' => [],
             'empty_structure_rows' => 0,
             'composite_structure_rows' => 0,
             'new_structure_colors_created' => 0,
@@ -1251,12 +1257,28 @@ class RetailExcelImportService
 
             foreach ($variantRows as $row) {
                 $code = $this->normalizeText($this->value($row, 'الرمز'));
-                if ($code === '' || ! isset($productIdsByCode[$code])) {
+
+                if ($code === '') {
                     $summary['variants_skipped']++;
+                    $summary['variants_skipped_missing_code']++;
+                    $this->pushVariantSkipDetail($summary, 'missing_variant_code', [
+                        'row_number' => $this->importRowNumber($row),
+                    ]);
                     continue;
                 }
 
-                $sizeCode = $this->normalizeSize($this->value($row, 'القياس'));
+                if (! isset($productIdsByCode[$code])) {
+                    $summary['variants_skipped']++;
+                    $summary['variants_skipped_unknown_product']++;
+                    $this->pushVariantSkipDetail($summary, 'unknown_product_code', [
+                        'row_number' => $this->importRowNumber($row),
+                        'الرمز' => $code,
+                    ]);
+                    continue;
+                }
+
+                $rawSizeValue = $this->value($row, 'القياس');
+                $sizeCode = $this->normalizeSize($rawSizeValue);
                 $rawPrice = (float) $this->value($row, 'بيع');
                 $rawCompare = (float) $this->value($row, 'كرت');
                 $product = $productsByCode[$code] ?? null;
@@ -1264,9 +1286,43 @@ class RetailExcelImportService
                 $variantCompare = $rawCompare > 0 ? $rawCompare : (float) ($product?->compare_price ?? 0);
                 $normalizedSizeCode = $this->normalizeSizeKey($sizeCode);
                 $productColor = $this->resolveProductColor((int) $productIdsByCode[$code], $row);
-                $sizeId = $sizeMap[$normalizedSizeCode] ?? null;
-                if (! $productColor || ! $sizeId) {
+
+                if (! $productColor) {
                     $summary['variants_skipped']++;
+                    $summary['variants_skipped_unknown_color']++;
+                    $this->pushVariantSkipDetail($summary, 'unknown_product_color', [
+                        'row_number' => $this->importRowNumber($row),
+                        'الرمز' => $code,
+                        'اللون' => $this->normalizeColor($this->value($row, 'اللون', 'اللون بالعربي')),
+                        'رمز اللون' => $this->normalizeText($this->value($row, 'رمز اللون', 'رمز اللون ')),
+                        'normalized_color' => $this->normalizeColorKey($this->normalizeColor($this->value($row, 'اللون', 'اللون بالعربي'))),
+                        'normalized_color_code' => $this->normalizeColorKey($this->value($row, 'رمز اللون', 'رمز اللون ')),
+                    ]);
+                    continue;
+                }
+
+                if ($sizeCode === '') {
+                    $summary['variants_skipped']++;
+                    $summary['variants_skipped_missing_size']++;
+                    $this->pushVariantSkipDetail($summary, 'missing_size', [
+                        'row_number' => $this->importRowNumber($row),
+                        'الرمز' => $code,
+                    ]);
+                    continue;
+                }
+
+                $sizeId = $sizeMap[$normalizedSizeCode] ?? null;
+
+                if (! $sizeId) {
+                    $summary['variants_skipped']++;
+                    $summary['variants_skipped_unknown_size']++;
+                    $this->pushVariantSkipDetail($summary, 'unknown_size', [
+                        'row_number' => $this->importRowNumber($row),
+                        'الرمز' => $code,
+                        'raw_size' => $rawSizeValue,
+                        'normalized_size' => $sizeCode,
+                        'normalized_size_key' => $normalizedSizeCode,
+                    ]);
                     continue;
                 }
 
@@ -1300,6 +1356,17 @@ class RetailExcelImportService
         $summary['products_imported'] = ($summary['products_created'] ?? 0) + ($summary['products_updated'] ?? 0);
 
         return $summary;
+    }
+
+    private function pushVariantSkipDetail(array &$summary, string $reason, array $context): void
+    {
+        $summary['variant_skip_details'][$reason] ??= [];
+
+        if (count($summary['variant_skip_details'][$reason]) >= 25) {
+            return;
+        }
+
+        $summary['variant_skip_details'][$reason][] = $context;
     }
 
     /**
