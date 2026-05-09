@@ -7,12 +7,15 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
 
 class ProductColorsRelationManager extends RelationManager
 {
@@ -34,13 +37,21 @@ class ProductColorsRelationManager extends RelationManager
                 ->required()
                 ->maxLength(255),
             TextInput::make('color_name_en')
-                ->label('اسم اللون بالانكليزي')
+                ->label('اسم اللون بالإنكليزي')
                 ->maxLength(255),
+            FileUpload::make('swatch_image')
+                ->label('صورة السواش')
+                ->disk('public')
+                ->directory('product-colors/swatches')
+                ->visibility('public')
+                ->deleteUploadedFileUsing(fn (string $file): bool => Storage::disk('public')->delete($file))
+                ->image()
+                ->imageEditor(),
             TextInput::make('color_hex')
                 ->label('HEX')
                 ->maxLength(20)
                 ->placeholder('#000000')
-                ->helperText('اختياري، يستخدم لعرض اللون بصرياً إن توفر.')
+                ->helperText('اختياري، يستخدم لعرض اللون بصريًا إذا لم تتوفر صورة سواش.')
                 ->extraInputAttributes(['dir' => 'ltr']),
             TextInput::make('sort_order')
                 ->label('الترتيب')
@@ -70,9 +81,12 @@ class ProductColorsRelationManager extends RelationManager
                     ->label('اللون بالعربي')
                     ->searchable(),
                 TextColumn::make('color_name_en')
-                    ->label('اللون بالانكليزي')
+                    ->label('اللون بالإنكليزي')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                ImageColumn::make('swatch_image')
+                    ->label('صورة السواش')
+                    ->toggleable(),
                 TextColumn::make('color_hex')
                     ->label('HEX')
                     ->searchable()

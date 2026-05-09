@@ -16,6 +16,7 @@ class ProductColor extends Model
         'color_name_ar',
         'color_name_en',
         'color_hex',
+        'swatch_image',
         'status',
         'sort_order',
     ];

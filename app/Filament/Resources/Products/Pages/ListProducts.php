@@ -2,13 +2,12 @@
 
 namespace App\Filament\Resources\Products\Pages;
 
-use App\Filament\Resources\ProductVariants\ProductVariantResource;
 use App\Filament\Resources\Products\ProductResource;
 use App\Models\ImportBatch;
 use App\Services\ProductCatalogExportService;
 use App\Services\RetailExcelImportService;
-use Filament\Actions\CreateAction;
 use Filament\Actions\Action;
+use Filament\Actions\CreateAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
@@ -113,21 +112,32 @@ class ListProducts extends ListRecords
                 ]);
 
                 try {
-                    $summary = app(RetailExcelImportService::class)->importProductsFile($productsPath);
+                    $summary = app(RetailExcelImportService::class)->importProductsFile($productsPath, $batch->id);
 
                     $batch->fill([
                         'status' => 'completed',
                         'finished_at' => Carbon::now(),
                         'note' => implode("\n", [
                             'اكتمل استيراد المنتجات.',
+                            'إجمالي المنتجات المستوردة: ' . ($summary['products_imported'] ?? 0),
                             'المنتجات المنشأة: ' . ($summary['products_created'] ?? 0),
                             'المنتجات المحدثة: ' . ($summary['products_updated'] ?? 0),
+                            'الألوان الجديدة من عمود التركيب: ' . ($summary['new_structure_colors_created'] ?? 0),
+                            'السطور ذات تركيب فارغ: ' . ($summary['empty_structure_rows'] ?? 0),
+                            'السطور ذات تركيب مركب: ' . ($summary['composite_structure_rows'] ?? 0),
+                            'المنتجات المتجاوزة: ' . ($summary['products_skipped'] ?? 0),
                         ]),
                     ])->save();
 
                     Notification::make()
                         ->title('اكتمل استيراد المنتجات بنجاح.')
-                        ->body('المنتجات المنشأة: ' . ($summary['products_created'] ?? 0) . ' | المنتجات المحدثة: ' . ($summary['products_updated'] ?? 0))
+                        ->body(implode(' | ', [
+                            'إجمالي المنتجات: ' . ($summary['products_imported'] ?? 0),
+                            'ألوان جديدة: ' . ($summary['new_structure_colors_created'] ?? 0),
+                            'تركيب فارغ: ' . ($summary['empty_structure_rows'] ?? 0),
+                            'تركيب مركب: ' . ($summary['composite_structure_rows'] ?? 0),
+                            'منتجات متجاوزة: ' . ($summary['products_skipped'] ?? 0),
+                        ]))
                         ->success()
                         ->send();
                 } catch (Throwable $exception) {

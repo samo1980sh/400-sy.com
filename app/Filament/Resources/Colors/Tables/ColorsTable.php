@@ -8,10 +8,10 @@ use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Notifications\Notification;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Support\Icons\Heroicon;
 use Throwable;
 
 class ColorsTable
@@ -21,19 +21,19 @@ class ColorsTable
         return $table
             ->columns([
                 TextColumn::make('name_ar')
-                    ->label('الاسم بالعربية')
+                    ->label('الاسم بالعربي')
                     ->searchable(),
                 TextColumn::make('name_en')
-                    ->label('الاسم بالانكليزية')
+                    ->label('الاسم بالإنكليزي')
                     ->searchable(),
                 TextColumn::make('code')
-                    ->label('الرمز')
+                    ->label('رمز اللون')
                     ->searchable(),
                 TextColumn::make('hex')
-                    ->label('Hex')
+                    ->label('Hex Code')
                     ->searchable(),
                 ImageColumn::make('image')
-                    ->label('الصورة'),
+                    ->label('صورة السواش'),
                 TextColumn::make('sort_order')
                     ->label('الترتيب')
                     ->numeric()

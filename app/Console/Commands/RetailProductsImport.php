@@ -40,8 +40,13 @@ class RetailProductsImport extends Command
         $summary = $service->importRetailFiles($productsPath, $variantsPath);
 
         $this->info('Retail import completed.');
+        $this->line('Products imported: ' . ($summary['products_imported'] ?? (($summary['products_created'] ?? 0) + ($summary['products_updated'] ?? 0))));
         $this->line('Products created: ' . $summary['products_created']);
         $this->line('Products updated: ' . $summary['products_updated']);
+        $this->line('Products skipped: ' . ($summary['products_skipped'] ?? 0));
+        $this->line('New structure colors created: ' . ($summary['new_structure_colors_created'] ?? 0));
+        $this->line('Rows with empty structure: ' . ($summary['empty_structure_rows'] ?? 0));
+        $this->line('Rows with composite structure: ' . ($summary['composite_structure_rows'] ?? 0));
         $this->line('Variants created: ' . $summary['variants_created']);
         $this->line('Variants updated: ' . $summary['variants_updated']);
         $this->line('Variants skipped: ' . $summary['variants_skipped']);

@@ -24,18 +24,18 @@ class ColorForm
                 ->columns(2)
                 ->schema([
                     TextInput::make('name_ar')
-                        ->label('الاسم بالعربية')
+                        ->label('الاسم بالعربي')
                         ->required(),
                     TextInput::make('name_en')
-                        ->label('الاسم بالانكليزية'),
+                        ->label('الاسم بالإنكليزي'),
                     TextInput::make('code')
-                        ->label('الرمز')
+                        ->label('رمز اللون')
                         ->nullable(),
                     TextInput::make('hex')
-                        ->label('Hex')
+                        ->label('Hex Code')
                         ->nullable(),
                     FileUpload::make('image')
-                        ->label('الصورة')
+                        ->label('صورة السواش')
                         ->disk('public')
                         ->directory('colors/images')
                         ->visibility('public')

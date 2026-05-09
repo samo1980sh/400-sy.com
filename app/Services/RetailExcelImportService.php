@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Category;
 use App\Models\Color;
+use App\Models\ImportRow;
 use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\ProductComplement;
@@ -52,6 +53,8 @@ class RetailExcelImportService
                 $column = $this->excelColumn($i + 1);
                 $item[(string) $header] = isset($row[$column]) ? trim((string) $row[$column]) : '';
             }
+
+            $item['__row_number'] = $index;
 
             $result[] = $item;
         }
@@ -159,6 +162,11 @@ class RetailExcelImportService
         };
     }
 
+    public function normalizeStructureColor(?string $value): string
+    {
+        return $this->normalizeColor($value);
+    }
+
     public function normalizeColorKey(?string $value): string
     {
         $value = $this->normalizeText($value);
@@ -173,6 +181,82 @@ class RetailExcelImportService
             'ئ' => 'ي',
             'ة' => 'ه',
         ]));
+    }
+
+    private function productDisplayColorDescription(array $row): ?string
+    {
+        return $this->normalizeOptionalText($this->value(
+            $row,
+            'اللون بالعربي',
+            'اللون',
+            'لون المنتج',
+            'الوصف اللوني',
+        ));
+    }
+
+    private function structureLooksComposite(?string $value): bool
+    {
+        $value = $this->normalizeStructureColor($value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        return preg_match('/\s+و\s+|\/|\\\\|\||،|,|&|\+/u', $value) === 1;
+    }
+
+    private function structureEnglishName(array $rows, string $normalizedKey): ?string
+    {
+        foreach ($rows as $row) {
+            $structure = $this->normalizeStructureColor($this->value($row, 'التركيب'));
+
+            if ($this->normalizeColorKey($structure) !== $normalizedKey) {
+                continue;
+            }
+
+            $english = $this->normalizeOptionalText($this->value(
+                $row,
+                'التركيب بالانكليزي',
+                'التركيب بالإنكليزي',
+                'Structure EN',
+                'Structure English',
+                'Filter Color EN',
+                'Filter Color English',
+            ));
+
+            if ($english !== null) {
+                return $english;
+            }
+        }
+
+        return null;
+    }
+
+    private function resetColorCaches(): void
+    {
+        $this->cachedColorCodeMap = null;
+        $this->cachedColorNameMap = null;
+        $this->cachedColorDictionary = null;
+    }
+
+    private function importRowNumber(array $row): int
+    {
+        return max(0, (int) ($row['__row_number'] ?? 0));
+    }
+
+    private function logImportIssue(?int $batchId, array $row, string $status, string $message): void
+    {
+        if (! $batchId) {
+            return;
+        }
+
+        ImportRow::create([
+            'batch_id' => $batchId,
+            'row_number' => $this->importRowNumber($row),
+            'raw_payload' => json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'status' => $status,
+            'error_message' => $message,
+        ]);
     }
 
     private function normalizeHexColor(?string $value): ?string
@@ -638,22 +722,31 @@ class RetailExcelImportService
         };
     }
 
-    public function syncColorsFromProducts(array $productRows): void
+    public function syncColorsFromProducts(array $productRows, array &$summary = []): void
     {
-        $catalog = $this->productColorCatalog($productRows);
+        $structures = [];
 
-        foreach ($catalog as $colorCode => $colorName) {
-            Color::updateOrCreate(
-                ['code' => $colorCode],
-                [
-                    'name_ar' => $colorName,
-                    'name_en' => Str::slug($colorName, ' '),
-                    'status' => 'active',
-                ],
-            );
+        foreach ($productRows as $row) {
+            $structure = $this->normalizeStructureColor($this->value($row, 'التركيب'));
+
+            if ($structure === '') {
+                $summary['empty_structure_rows'] = ($summary['empty_structure_rows'] ?? 0) + 1;
+                continue;
+            }
+
+            if ($this->structureLooksComposite($structure)) {
+                $summary['composite_structure_rows'] = ($summary['composite_structure_rows'] ?? 0) + 1;
+                continue;
+            }
+
+            $structures[$this->normalizeColorKey($structure)] = $structure;
         }
 
-        $structures = [];
+        foreach (array_values($structures) as $structure) {
+            $this->resolveOrCreateCatalogColorId($productRows, $structure, $summary);
+        }
+
+        return;
         foreach ($productRows as $row) {
             $structure = $this->normalizeColor($this->value($row, 'التركيب'));
             if ($structure !== '') {
@@ -789,11 +882,20 @@ class RetailExcelImportService
         ];
     }
 
-    public function importProductsFile(string $productsPath): array
+    public function importProductsFile(string $productsPath, ?int $batchId = null): array
     {
         $productRows = $this->readRows($productsPath);
         $hierarchyIndex = $this->categoryHierarchyIndex();
-        $this->syncColorsFromProducts($productRows);
+        $summary = [
+            'products_created' => 0,
+            'products_updated' => 0,
+            'products_skipped' => 0,
+            'empty_structure_rows' => 0,
+            'composite_structure_rows' => 0,
+            'new_structure_colors_created' => 0,
+        ];
+
+        $this->syncColorsFromProducts($productRows, $summary);
         $colorCodeMap = $this->colorCodeMap();
 
         $productGroups = [];
@@ -807,12 +909,7 @@ class RetailExcelImportService
             $productGroups[$code][] = $row;
         }
 
-        $summary = [
-            'products_created' => 0,
-            'products_updated' => 0,
-        ];
-
-        DB::transaction(function () use ($productGroups, $hierarchyIndex, $colorCodeMap, &$summary): void {
+        DB::transaction(function () use ($batchId, $productGroups, $hierarchyIndex, $colorCodeMap, &$summary): void {
             $productsByCode = [];
 
             foreach ($productGroups as $code => $rows) {
@@ -822,6 +919,54 @@ class RetailExcelImportService
                 $customerGroups = $this->parseCustomerGroupTokens($this->value($first, 'تخصيص العرض'));
                 $productPrice = (float) $this->value($first, 'السعر بعد الحسم', 'السعر بعد الحسم ');
                 $productComparePrice = (float) $this->value($first, 'السعر قبل الحسم', 'السعر قبل الحسم ');
+
+                $displayColorDescription = $this->productDisplayColorDescription($first);
+                $rawStructureColor = $this->value($first, 'التركيب');
+                $normalizedStructureColor = $this->normalizeStructureColor($rawStructureColor);
+                $isVisibleInFrontend = $visibility['show_web'] || $visibility['show_app'];
+
+                if ($normalizedStructureColor === '') {
+                    $summary['products_skipped']++;
+                    $this->logImportIssue($batchId, $first, 'invalid', 'قيمة التركيب فارغة، ولا يمكن ربط لون الفلترة لهذا المنتج.');
+
+                    if ($isVisibleInFrontend) {
+                        continue;
+                    }
+                }
+
+                if ($this->structureLooksComposite($normalizedStructureColor)) {
+                    $summary['products_skipped']++;
+                    $this->logImportIssue($batchId, $first, 'invalid', 'قيمة التركيب تبدو مركبة. اختر لون فلترة واحدًا فقط مثل أسود.');
+
+                    if ($isVisibleInFrontend) {
+                        continue;
+                    }
+                }
+
+                $structureColorId = $this->resolveOrCreateCatalogColorId($rows, $rawStructureColor, $summary);
+
+                if ($structureColorId === null && $isVisibleInFrontend) {
+                    $summary['products_skipped']++;
+                    $this->logImportIssue($batchId, $first, 'invalid', 'تعذر مطابقة لون الفلترة من عمود التركيب في قاموس الألوان.');
+                    continue;
+                }
+
+                $displayColorDescription = $this->productDisplayColorDescription($first);
+                $rawStructureColor = $this->value($first, 'التركيب');
+                $normalizedStructureColor = $this->normalizeStructureColor($rawStructureColor);
+                $isVisibleInFrontend = $visibility['show_web'] || $visibility['show_app'];
+
+                if ($normalizedStructureColor === '' || $this->structureLooksComposite($normalizedStructureColor)) {
+                    $summary['products_skipped']++;
+                    continue;
+                }
+
+                $structureColorId = $this->resolveOrCreateCatalogColorId($rows, $rawStructureColor, $summary);
+
+                if ($structureColorId === null && $isVisibleInFrontend) {
+                    $summary['products_skipped']++;
+                    continue;
+                }
 
                 $product = Product::updateOrCreate(
                     ['model_no' => $code],
@@ -834,6 +979,8 @@ class RetailExcelImportService
                         'structure' => $this->normalizeText($this->value($first, 'التركيب')),
                         'structure_color_id' => $this->resolveOrCreateCatalogColorId($rows, $this->value($first, 'التركيب')),
                         'collection' => $this->normalizeText($this->value($first, 'التشكيلة')),
+                        'structure' => $displayColorDescription,
+                        'structure_color_id' => $structureColorId,
                         'body_fit' => $this->productBodyFit($first),
                         'drop_type' => $this->productDropType($first),
                         'measurement_group' => $this->normalizeText($this->value($first, 'زمر وحدة القياس')) ?: null,
@@ -867,6 +1014,8 @@ class RetailExcelImportService
             }
 
         });
+
+        $summary['products_imported'] = ($summary['products_created'] ?? 0) + ($summary['products_updated'] ?? 0);
 
         return $summary;
     }
@@ -915,7 +1064,19 @@ class RetailExcelImportService
         $productRows = $this->readRows($productsPath);
         $variantRows = $this->readRows($variantsPath);
         $hierarchyIndex = $this->categoryHierarchyIndex();
-        $this->syncColorsFromProducts($productRows);
+        $summary = [
+            'products_created' => 0,
+            'products_updated' => 0,
+            'products_skipped' => 0,
+            'variants_created' => 0,
+            'variants_updated' => 0,
+            'variants_skipped' => 0,
+            'empty_structure_rows' => 0,
+            'composite_structure_rows' => 0,
+            'new_structure_colors_created' => 0,
+        ];
+
+        $this->syncColorsFromProducts($productRows, $summary);
         $colorCodeMap = $this->colorCodeMap();
         $sizeMap = $this->sizeMap();
 
@@ -928,14 +1089,6 @@ class RetailExcelImportService
 
             $productGroups[$code][] = $row;
         }
-
-        $summary = [
-            'products_created' => 0,
-            'products_updated' => 0,
-            'variants_created' => 0,
-            'variants_updated' => 0,
-            'variants_skipped' => 0,
-        ];
 
         DB::transaction(function () use ($productGroups, $variantRows, $hierarchyIndex, $colorCodeMap, $sizeMap, &$summary): void {
             $productIdsByCode = [];
@@ -1309,8 +1462,43 @@ class RetailExcelImportService
         return null;
     }
 
-    public function resolveOrCreateCatalogColorId(array $rows, ?string $value): ?int
+    public function resolveOrCreateCatalogColorId(array $rows, ?string $value, array &$summary = []): ?int
     {
+        $colorName = $this->normalizeStructureColor($value);
+        $normalized = $this->normalizeColorKey($colorName);
+
+        if ($normalized === '' || $this->structureLooksComposite($colorName)) {
+            return null;
+        }
+
+        $colors = $this->cachedColorDictionary();
+        $color = $colors[$normalized] ?? null;
+
+        if ($color) {
+            return $color->id;
+        }
+
+        $englishName = $this->structureEnglishName($rows, $normalized);
+        $codeSource = $englishName ?: $colorName;
+        $code = Str::slug($codeSource, '-');
+
+        if ($code === '') {
+            $code = 'structure-color-' . substr(sha1($normalized), 0, 8);
+        }
+
+        $created = Color::create([
+            'code' => $code,
+            'name_ar' => $colorName,
+            'name_en' => $englishName,
+            'status' => 'active',
+            'sort_order' => ((int) (Color::max('sort_order') ?? 0)) + 1,
+        ]);
+
+        $summary['new_structure_colors_created'] = ($summary['new_structure_colors_created'] ?? 0) + 1;
+        $this->resetColorCaches();
+
+        return $created->id;
+
         $normalized = $this->normalizeColorKey($this->normalizeColor($value));
 
         if ($normalized === '') {
