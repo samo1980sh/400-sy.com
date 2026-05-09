@@ -705,7 +705,7 @@
         var pendingCurrencyFilterSync = null;
 
         function shopProductsUrl() {
-            return '{{ route('front.products.index') }}';
+            return window.location.origin + window.location.pathname;
         }
 
         function currencyUpdateUrl() {

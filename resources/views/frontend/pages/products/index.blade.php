@@ -55,6 +55,7 @@
                     'result_count' => $resultCount,
                     'sort_options' => $sort_options ?? $sortOptions,
                     'selected_sort' => $selectedSort,
+                    'selected_grid' => $selected_grid ?? 'grid-4',
                 ])
 
                 @include('frontend.partials.shop-filter', [
@@ -72,12 +73,15 @@
                     'filter_body_fit_options' => $filter_body_fit_options ?? collect(),
                     'filter_drop_options' => $filter_drop_options ?? collect(),
                     'filter_price_stats' => $filter_price_stats ?? [],
+                    'selected_grid' => $selected_grid ?? 'grid-4',
                 ])
 
                 @include('frontend.partials.product-grid', [
                     'products' => $products,
                     'active_filter_chips' => $active_filter_chips ?? [],
-                    'filter_reset_url' => $filter_reset_url ?? route('front.products.index'),
+                    'category_context_chip' => $category_context_chip ?? null,
+                    'filter_reset_url' => $filter_reset_url ?? request()->url(),
+                    'selected_grid' => $selected_grid ?? 'grid-4',
                 ])
 
                 @include('frontend.partials.loadmore', [

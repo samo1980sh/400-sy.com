@@ -1,10 +1,17 @@
 @php
     $chips = collect($active_filter_chips ?? [])->filter(fn ($chip) => filled($chip['label'] ?? null))->values();
-    $resetUrl = $filter_reset_url ?? route('front.products.index');
+    $contextChip = filled($category_context_chip['label'] ?? null) ? $category_context_chip : null;
+    $resetUrl = $filter_reset_url ?? request()->url();
 @endphp
 
-@if ($chips->isNotEmpty())
+@if ($chips->isNotEmpty() || $contextChip !== null)
     <div class="meta-filter-shop">
+        @if ($contextChip !== null)
+            <span class="tf-btn style-2 btn-outline-2 radius-60">
+                <span>{{ $contextChip['label'] }}</span>
+            </span>
+        @endif
+
         @foreach ($chips as $chip)
             <a
                 href="#"

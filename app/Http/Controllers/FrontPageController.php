@@ -62,20 +62,19 @@ class FrontPageController extends Controller
 
         $shell = $this->homePageData->build();
         $locale = app()->getLocale();
+        $selectedGrid = $this->normalizeProductsGrid((string) $request->query('grid', 'grid-4'));
         $baseCategory = $category;
+        $filterScopeCategory = $this->determineCategoryFilterScope($baseCategory);
         $selectedCategorySlugs = $this->resolveSelectedCategorySlugs($request);
         $selectedCategoryModels = $this->scopeSelectedCategoryModelsToBase(
             $this->resolveSelectedCategoryModels($selectedCategorySlugs),
-            $baseCategory,
+            $filterScopeCategory,
         );
         $selectedCategorySlugs = $selectedCategoryModels
             ->pluck('slug')
             ->filter()
             ->values()
             ->all();
-        $effectiveCategoryModels = $selectedCategoryModels->isNotEmpty()
-            ? $selectedCategoryModels
-            : ($baseCategory instanceof Category ? new EloquentCollection([$baseCategory]) : new EloquentCollection());
         $selectedColors = $this->requestList($request, 'colors', 'color');
         $selectedSizes = $this->requestList($request, 'sizes', 'size');
         $selectedBodyFit = $this->requestList($request, 'body_fit', 'body_fit');
@@ -87,8 +86,8 @@ class FrontPageController extends Controller
             ? $baseCategory
             : ($selectedCategoryModels->count() === 1 ? $selectedCategoryModels->first() : null);
         $categoryTrail = $primaryCategory instanceof Category ? $primaryCategory->breadcrumbTrail() : collect();
-        $baseCategoryLeafIds = $baseCategory instanceof Category
-            ? $this->collectLeafCategoryIds($baseCategory)
+        $baseCategoryLeafIds = $filterScopeCategory instanceof Category
+            ? $this->collectLeafCategoryIds($filterScopeCategory)
             : [];
         $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             ? $this->collectCategoriesLeafIds($selectedCategoryModels)
@@ -129,7 +128,6 @@ class FrontPageController extends Controller
 
         $breadcrumbItems = [
             ['label' => __('front.nav.home'), 'url' => route('front.home')],
-            ['label' => $locale === 'ar' ? 'المنتجات' : 'Products', 'url' => route('front.products.index')],
         ];
 
         if ($primaryCategory instanceof Category) {
@@ -143,7 +141,7 @@ class FrontPageController extends Controller
             }
         }
 
-        $categories = $this->filterCategoriesTree($baseCategory);
+        $categories = $this->filterCategoriesTree($filterScopeCategory);
 
         $filterCategories = $this->buildFilterCategories($categories, [
             'category_ids' => $baseCategoryLeafIds,
@@ -210,6 +208,13 @@ class FrontPageController extends Controller
             $maxPrice,
             $locale,
         );
+        $categoryContextChip = $filterScopeCategory instanceof Category
+            ? [
+                'label' => $locale === 'ar'
+                    ? ($filterScopeCategory->title_ar ?: $filterScopeCategory->title_en ?: $filterScopeCategory->slug)
+                    : ($filterScopeCategory->title_en ?: $filterScopeCategory->title_ar ?: $filterScopeCategory->slug),
+            ]
+            : null;
 
         $pageTitle = $locale === 'ar' ? 'المنتجات' : 'Products';
 
@@ -236,6 +241,7 @@ class FrontPageController extends Controller
             'breadcrumb_items' => $breadcrumbItems,
             'products' => $paginator,
             'selected_sort' => $sort,
+            'selected_grid' => $selectedGrid,
             'sort_options' => $sortOptions,
             'selected_category_slugs' => $selectedCategorySlugs,
             'selected_min_price' => $minPrice,
@@ -251,6 +257,7 @@ class FrontPageController extends Controller
             'filter_drop_options' => $filterDropOptions,
             'filter_price_stats' => $filterPriceStats,
             'active_filter_chips' => $activeFilterChips,
+            'category_context_chip' => $categoryContextChip,
             'filter_reset_url' => $resetUrl,
         ]);
 
@@ -260,12 +267,15 @@ class FrontPageController extends Controller
                     'result_count' => $paginator->total(),
                     'sort_options' => $sortOptions,
                     'selected_sort' => $sort,
+                    'selected_grid' => $selectedGrid,
                 ])->render(),
                 'filter_html' => view('frontend.partials.shop-filter', $viewData)->render(),
                 'products_html' => view('frontend.partials.product-grid', [
                     'products' => $paginator,
                     'active_filter_chips' => $activeFilterChips,
+                    'category_context_chip' => $categoryContextChip,
                     'filter_reset_url' => $resetUrl,
+                    'selected_grid' => $selectedGrid,
                 ])->render(),
                 'loadmore_html' => view('frontend.partials.loadmore', [
                     'products' => $paginator,
@@ -460,11 +470,35 @@ class FrontPageController extends Controller
             ->all();
     }
 
+    protected function determineCategoryFilterScope(?Category $baseCategory): ?Category
+    {
+        if (! $baseCategory instanceof Category) {
+            return null;
+        }
+
+        if (! $baseCategory->isLeaf()) {
+            return $baseCategory;
+        }
+
+        $trail = $baseCategory->breadcrumbTrail();
+
+        return $trail->first() instanceof Category
+            ? $trail->first()
+            : $baseCategory;
+    }
+
     protected function normalizeProductsSort(string $sort): string
     {
         return in_array($sort, ['featured', 'best_selling', 'price_asc', 'price_desc', 'newest', 'oldest'], true)
             ? $sort
             : 'featured';
+    }
+
+    protected function normalizeProductsGrid(string $grid): string
+    {
+        return in_array($grid, ['grid-2', 'grid-3', 'grid-4', 'grid-5', 'grid-6'], true)
+            ? $grid
+            : 'grid-4';
     }
 
     protected function applyProductsSort($query, string $sort): void

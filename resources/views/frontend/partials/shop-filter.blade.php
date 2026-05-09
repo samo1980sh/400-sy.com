@@ -128,24 +128,21 @@
                         <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                     @endif
                 @endforeach
+                <input type="hidden" name="grid" value="{{ $selected_grid ?? 'grid-4' }}" data-grid-input>
 
-                <div class="widget-facet wd-categories">
-                    <div class="facet-title" data-bs-target="#categories" data-bs-toggle="collapse" aria-expanded="true" aria-controls="categories">
-                        <span>{{ $isArabic ? 'تصنيفات المنتجات' : 'Product categories' }}</span>
-                        <span class="icon icon-arrow-up"></span>
+                @if ($categories->isNotEmpty())
+                    <div class="widget-facet wd-categories">
+                        <div class="facet-title" data-bs-target="#categories" data-bs-toggle="collapse" aria-expanded="true" aria-controls="categories">
+                            <span>{{ $isArabic ? 'تصنيفات المنتجات' : 'Product categories' }}</span>
+                            <span class="icon icon-arrow-up"></span>
+                        </div>
+                        <div id="categories" class="collapse show">
+                            <ul class="list-categoris current-scrollbar mb_36">
+                                {!! $renderCategoryItems($categories) !!}
+                            </ul>
+                        </div>
                     </div>
-                    <div id="categories" class="collapse show">
-                        <ul class="list-categoris current-scrollbar mb_36">
-                            <li class="cate-item">
-                                <div class="list-item d-flex gap-12 align-items-center">
-                                    <input type="checkbox" class="tf-check" id="category-all" data-reset-categories {{ $selectedCategorySlugs === [] ? 'checked' : '' }}>
-                                    <label for="category-all" class="label"><span>{{ $isArabic ? 'كل المنتجات' : 'All products' }}</span></label>
-                                </div>
-                            </li>
-                            {!! $renderCategoryItems($categories) !!}
-                        </ul>
-                    </div>
-                </div>
+                @endif
 
                 <div class="widget-facet">
                     <div class="facet-title" data-bs-target="#price" data-bs-toggle="collapse" aria-expanded="true" aria-controls="price">
