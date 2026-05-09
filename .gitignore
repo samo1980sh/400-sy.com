@@ -8,3 +8,6 @@
 /storage/logs/*
 /public/storage
 _draft/
+
+/bootstrap/cache/*.php
+!/bootstrap/cache/.gitignore
