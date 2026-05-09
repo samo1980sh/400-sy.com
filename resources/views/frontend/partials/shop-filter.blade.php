@@ -14,8 +14,8 @@
     $priceMaxValue = min($priceUpperLimit, max($priceMinValue, (int) ($priceStats['selected_max'] ?? $priceUpperLimit)));
 
     $filterAction = route('front.products.index');
-    $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'category', 'categories', 'filter_ajax', 'load_more']);
-    $resetUrl = route('front.products.index', \Illuminate\Support\Arr::except($queryWithoutPage, ['page']));
+    $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
+    $resetUrl = $filter_reset_url ?? request()->url();
 
     $categoryLabel = function ($category) use ($isArabic) {
         return $isArabic
@@ -181,7 +181,7 @@
                             <ul class="tf-filter-group filter-color current-scrollbar mb_36">
                                 @foreach ($colorOptions as $index => $color)
                                     @php
-                                        $colorClass = $colorClassFromValue($color['label'] ?? $color['value'] ?? '');
+                                        $colorClass = $colorClassFromValue($color['fallback_key'] ?? $color['label'] ?? $color['value'] ?? '');
                                         $colorStyle = !empty($color['hex']) ? 'background-color: ' . $color['hex'] . ';' : '';
                                     @endphp
                                     <li class="list-item d-flex gap-12 align-items-center">
@@ -229,7 +229,7 @@
                     <button type="submit" class="tf-btn btn-fill animate-hover-btn w-100">
                         <span>{{ $isArabic ? 'تطبيق' : 'Apply' }}</span>
                     </button>
-                    <a href="{{ $resetUrl }}" class="tf-btn btn-outline animate-hover-btn w-100" data-filter-reset>
+                    <a href="{{ $resetUrl }}" class="tf-btn btn-outline animate-hover-btn w-100">
                         <span>{{ $isArabic ? 'إعادة ضبط' : 'Reset' }}</span>
                     </a>
                 </div>

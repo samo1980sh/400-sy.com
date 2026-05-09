@@ -67,8 +67,8 @@ class FrontPageController extends Controller
         $selectedColors = $this->requestList($request, 'colors', 'color');
         $selectedSizes = $this->requestList($request, 'sizes', 'size');
         [$minPrice, $maxPrice] = $this->requestPriceRange($request);
-        $queryWithoutFilters = Arr::except($request->query(), ['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'category', 'categories', 'filter_ajax', 'load_more']);
-        $resetUrl = route('front.products.index', Arr::except($queryWithoutFilters, ['page']));
+        $queryWithoutFilters = Arr::except($request->query(), ['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
+        $resetUrl = $request->url();
         $primaryCategory = $selectedCategoryModels->count() === 1 ? $selectedCategoryModels->first() : $category;
         $categoryTrail = $primaryCategory instanceof Category ? $primaryCategory->breadcrumbTrail() : collect();
 
@@ -503,13 +503,17 @@ class FrontPageController extends Controller
     {
         return Product::query()
             ->with([
-                'productColors' => fn ($query) => $query->orderBy('sort_order')->orderBy('id'),
+                'productColors' => fn ($query) => $query
+                    ->where('status', 'active')
+                    ->orderBy('sort_order')
+                    ->orderBy('id'),
                 'variants.size',
                 'productColors.variants.size',
                 'measurementCharts',
                 'category',
             ])
             ->where('show_web', true)
+            ->whereHas('productColors', fn (Builder $query) => $query->where('status', 'active'))
             ->where('is_active', true);
     }
 
@@ -535,11 +539,13 @@ class FrontPageController extends Controller
 
         if ($colors !== []) {
             $query->whereHas('productColors', function (Builder $colorQuery) use ($colors): void {
-                $colorQuery->where(function (Builder $nested) use ($colors): void {
-                    $nested->whereIn('color_name_ar', $colors)
-                        ->orWhereIn('color_name_en', $colors)
-                        ->orWhereIn('color_code', $colors);
-                });
+                $colorQuery
+                    ->where('status', 'active')
+                    ->where(function (Builder $nested) use ($colors): void {
+                        $nested->whereIn('color_name_ar', $colors)
+                            ->orWhereIn('color_name_en', $colors)
+                            ->orWhereIn('color_code', $colors);
+                    });
             });
         }
 
@@ -580,6 +586,7 @@ class FrontPageController extends Controller
     {
         $colors = ProductColor::query()
             ->select(['product_id', 'color_name_ar', 'color_name_en', 'color_code', 'color_hex'])
+            ->where('status', 'active')
             ->whereHas('product', function (Builder $query) use ($filters): void {
                 $this->applyProductsFilters($query, $filters);
             })
@@ -603,6 +610,7 @@ class FrontPageController extends Controller
                     'value' => $slug,
                     'label' => $label,
                     'hex' => trim((string) ($first?->color_hex ?? '')),
+                    'fallback_key' => trim((string) ($first?->color_code ?: $first?->color_name_en ?: '')),
                     'count' => $group->pluck('product_id')->unique()->count(),
                     'selected' => in_array($slug, $selectedColors, true),
                 ];
@@ -786,6 +794,7 @@ class FrontPageController extends Controller
 
         $matching = ProductColor::query()
             ->select(['color_name_ar', 'color_name_en', 'color_code'])
+            ->where('status', 'active')
             ->get()
             ->filter(function (ProductColor $color) use ($selectedColors): bool {
                 return in_array($this->makeFilterSlug($color->color_name_ar), $selectedColors, true)
@@ -810,6 +819,7 @@ class FrontPageController extends Controller
     {
         $match = ProductColor::query()
             ->select(['color_name_ar', 'color_name_en', 'color_code'])
+            ->where('status', 'active')
             ->get()
             ->first(function (ProductColor $color) use ($slug): bool {
                 return $this->makeFilterSlug($color->color_name_ar) === $slug

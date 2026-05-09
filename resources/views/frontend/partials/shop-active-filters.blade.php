@@ -18,7 +18,7 @@
             </a>
         @endforeach
 
-        <a href="{{ $resetUrl }}" class="tf-btn style-2 btn-outline-dark radius-60 animate-hover-btn" data-filter-reset>
+        <a href="{{ $resetUrl }}" class="tf-btn style-2 btn-outline-dark radius-60 animate-hover-btn">
             <span>{{ app()->getLocale() === 'ar' ? 'إزالة الكل' : 'Clear all' }}</span>
         </a>
     </div>

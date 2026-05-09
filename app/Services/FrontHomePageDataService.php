@@ -35,13 +35,17 @@ class FrontHomePageDataService
 
         $productsQuery = Product::query()
             ->with([
-                'productColors' => fn ($query) => $query->orderBy('sort_order')->orderBy('id'),
+                'productColors' => fn ($query) => $query
+                    ->where('status', 'active')
+                    ->orderBy('sort_order')
+                    ->orderBy('id'),
                 'variants.size',
                 'productColors.variants.size',
                 'measurementCharts',
                 'category',
             ])
             ->where('show_web', true)
+            ->whereHas('productColors', fn ($query) => $query->where('status', 'active'))
             ->where('is_active', true);
 
         if ($categoryIds !== []) {
