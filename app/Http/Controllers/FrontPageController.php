@@ -62,8 +62,20 @@ class FrontPageController extends Controller
 
         $shell = $this->homePageData->build();
         $locale = app()->getLocale();
-        $selectedCategorySlugs = $this->resolveSelectedCategorySlugs($request, $category);
-        $selectedCategoryModels = $this->resolveSelectedCategoryModels($selectedCategorySlugs);
+        $baseCategory = $category;
+        $selectedCategorySlugs = $this->resolveSelectedCategorySlugs($request);
+        $selectedCategoryModels = $this->scopeSelectedCategoryModelsToBase(
+            $this->resolveSelectedCategoryModels($selectedCategorySlugs),
+            $baseCategory,
+        );
+        $selectedCategorySlugs = $selectedCategoryModels
+            ->pluck('slug')
+            ->filter()
+            ->values()
+            ->all();
+        $effectiveCategoryModels = $selectedCategoryModels->isNotEmpty()
+            ? $selectedCategoryModels
+            : ($baseCategory instanceof Category ? new EloquentCollection([$baseCategory]) : new EloquentCollection());
         $selectedColors = $this->requestList($request, 'colors', 'color');
         $selectedSizes = $this->requestList($request, 'sizes', 'size');
         $selectedBodyFit = $this->requestList($request, 'body_fit', 'body_fit');
@@ -71,11 +83,19 @@ class FrontPageController extends Controller
         [$minPrice, $maxPrice] = $this->requestPriceRange($request);
         $queryWithoutFilters = Arr::except($request->query(), ['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
         $resetUrl = $request->url();
-        $primaryCategory = $selectedCategoryModels->count() === 1 ? $selectedCategoryModels->first() : $category;
+        $primaryCategory = $baseCategory instanceof Category
+            ? $baseCategory
+            : ($selectedCategoryModels->count() === 1 ? $selectedCategoryModels->first() : null);
         $categoryTrail = $primaryCategory instanceof Category ? $primaryCategory->breadcrumbTrail() : collect();
+        $baseCategoryLeafIds = $baseCategory instanceof Category
+            ? $this->collectLeafCategoryIds($baseCategory)
+            : [];
+        $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
+            ? $this->collectCategoriesLeafIds($selectedCategoryModels)
+            : $baseCategoryLeafIds;
 
         $filters = [
-            'category_ids' => $this->collectCategoriesLeafIds($selectedCategoryModels),
+            'category_ids' => $effectiveCategoryIds,
             'min_price' => $minPrice,
             'max_price' => $maxPrice,
             'colors' => $selectedColors,
@@ -112,7 +132,7 @@ class FrontPageController extends Controller
             ['label' => $locale === 'ar' ? 'المنتجات' : 'Products', 'url' => route('front.products.index')],
         ];
 
-        if ($primaryCategory instanceof Category && $selectedCategoryModels->count() === 1) {
+        if ($primaryCategory instanceof Category) {
             foreach ($categoryTrail as $trailCategory) {
                 $breadcrumbItems[] = [
                     'label' => $locale === 'ar'
@@ -123,10 +143,10 @@ class FrontPageController extends Controller
             }
         }
 
-        $categories = $this->filterCategoriesTree();
+        $categories = $this->filterCategoriesTree($baseCategory);
 
         $filterCategories = $this->buildFilterCategories($categories, [
-            'category_ids' => [],
+            'category_ids' => $baseCategoryLeafIds,
             'min_price' => $minPrice,
             'max_price' => $maxPrice,
             'colors' => $selectedColors,
@@ -193,7 +213,7 @@ class FrontPageController extends Controller
 
         $pageTitle = $locale === 'ar' ? 'المنتجات' : 'Products';
 
-        if ($primaryCategory instanceof Category && $selectedCategoryModels->count() === 1) {
+        if ($primaryCategory instanceof Category) {
             $pageTitle = $locale === 'ar'
                 ? ($primaryCategory->title_ar ?: $primaryCategory->title_en ?: $pageTitle)
                 : ($primaryCategory->title_en ?: $primaryCategory->title_ar ?: $pageTitle);
@@ -210,7 +230,7 @@ class FrontPageController extends Controller
 
         $viewData = array_merge($shell, [
             'page_title' => $pageTitle,
-            'page_subtitle' => $primaryCategory instanceof Category && $selectedCategoryModels->count() === 1
+            'page_subtitle' => $primaryCategory instanceof Category
                 ? ($locale === 'ar' ? 'تصفح منتجات هذا التصنيف' : 'Browse products in this category')
                 : ($locale === 'ar' ? 'تصفح مجموعة المنتجات مع الفلتر والفرز' : 'Browse the product catalog with filters and sorting'),
             'breadcrumb_items' => $breadcrumbItems,
@@ -484,15 +504,9 @@ class FrontPageController extends Controller
             ->all();
     }
 
-    protected function resolveSelectedCategorySlugs(Request $request, ?Category $category = null): array
+    protected function resolveSelectedCategorySlugs(Request $request): array
     {
-        $selected = $this->requestList($request, 'categories', 'category');
-
-        if ($selected === [] && $category instanceof Category) {
-            $selected = [$category->slug];
-        }
-
-        return $selected;
+        return $this->requestList($request, 'categories', 'category');
     }
 
     protected function resolveSelectedCategoryModels(array $slugs): EloquentCollection
@@ -1023,14 +1037,24 @@ class FrontPageController extends Controller
             : null;
     }
 
-    protected function filterCategoriesTree(): Collection
+    protected function filterCategoriesTree(?Category $baseCategory = null): Collection
     {
         $categories = Category::query()
             ->orderBy('sort_order')
             ->orderBy('title_ar')
             ->get();
 
-        return $this->nestFilterCategories($categories);
+        $tree = $this->nestFilterCategories($categories);
+
+        if (! $baseCategory instanceof Category) {
+            return $tree;
+        }
+
+        if ($baseCategory->isLeaf()) {
+            return collect();
+        }
+
+        return $this->extractFilterSubtree($tree, (int) $baseCategory->getKey());
     }
 
     protected function nestFilterCategories(Collection $categories, ?int $parentId = null): Collection
@@ -1043,6 +1067,27 @@ class FrontPageController extends Controller
 
                 return $category;
             });
+    }
+
+    protected function extractFilterSubtree(Collection $tree, int $baseCategoryId): Collection
+    {
+        foreach ($tree as $category) {
+            if ((int) $category->getKey() === $baseCategoryId) {
+                return $category->relationLoaded('children')
+                    ? $category->children->values()
+                    : collect();
+            }
+
+            if ($category->relationLoaded('children') && $category->children->isNotEmpty()) {
+                $found = $this->extractFilterSubtree($category->children, $baseCategoryId);
+
+                if ($found->isNotEmpty()) {
+                    return $found;
+                }
+            }
+        }
+
+        return collect();
     }
 
     protected function applyCategoryCounts(Collection $categories, Builder $baseQuery): Collection
@@ -1082,6 +1127,23 @@ class FrontPageController extends Controller
                 return $category;
             })
             ->filter()
+            ->values();
+    }
+
+    protected function scopeSelectedCategoryModelsToBase(EloquentCollection $selectedCategories, ?Category $baseCategory): EloquentCollection
+    {
+        if (! $baseCategory instanceof Category || $selectedCategories->isEmpty()) {
+            return $selectedCategories;
+        }
+
+        $allowedLeafIds = $this->collectLeafCategoryIds($baseCategory);
+
+        if ($allowedLeafIds === []) {
+            return new EloquentCollection();
+        }
+
+        return $selectedCategories
+            ->filter(fn (Category $category): bool => in_array((int) $category->getKey(), $allowedLeafIds, true))
             ->values();
     }
 
