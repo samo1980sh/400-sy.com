@@ -39,7 +39,9 @@ class FrontHomePageDataService
                     ->where('status', 'active')
                     ->orderBy('sort_order')
                     ->orderBy('id'),
-                'variants.size',
+                'variants' => fn ($query) => $query
+                    ->whereHas('productColor', fn ($colorQuery) => $colorQuery->where('status', 'active'))
+                    ->with('size'),
                 'productColors.variants.size',
                 'measurementCharts',
                 'category',
@@ -481,15 +483,27 @@ class FrontHomePageDataService
 
     protected function variantsCollection(Product $product): Collection
     {
+        $activeColorIds = $product->relationLoaded('productColors')
+            ? $product->productColors
+                ->where('status', 'active')
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->all()
+            : [];
+
         if ($product->relationLoaded('variants')) {
             $variants = $product->getRelation('variants');
 
             if ($variants instanceof Collection) {
-                return $variants->values();
+                return $variants
+                    ->filter(fn (ProductVariant $variant): bool => $activeColorIds === []
+                        || in_array((int) ($variant->product_color_id ?? 0), $activeColorIds, true))
+                    ->values();
             }
         }
 
         return $product->variants()
+            ->whereHas('productColor', fn ($query) => $query->where('status', 'active'))
             ->with('size')
             ->get()
             ->values();

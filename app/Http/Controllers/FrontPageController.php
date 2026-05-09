@@ -507,7 +507,9 @@ class FrontPageController extends Controller
                     ->where('status', 'active')
                     ->orderBy('sort_order')
                     ->orderBy('id'),
-                'variants.size',
+                'variants' => fn ($query) => $query
+                    ->whereHas('productColor', fn (Builder $colorQuery) => $colorQuery->where('status', 'active'))
+                    ->with('size'),
                 'productColors.variants.size',
                 'measurementCharts',
                 'category',
@@ -550,13 +552,17 @@ class FrontPageController extends Controller
         }
 
         if ($sizes !== []) {
-            $query->whereHas('variants.size', function (Builder $sizeQuery) use ($sizes): void {
-                $sizeQuery->where(function (Builder $nested) use ($sizes): void {
-                    $nested->whereIn('code', $sizes)
-                        ->orWhereIn('name_ar', $sizes)
-                        ->orWhereIn('name_en', $sizes);
+            $query->whereHas('variants', function (Builder $variantQuery) use ($sizes): void {
+                $variantQuery
+                    ->whereHas('productColor', fn (Builder $colorQuery) => $colorQuery->where('status', 'active'))
+                    ->whereHas('size', function (Builder $sizeQuery) use ($sizes): void {
+                        $sizeQuery->where(function (Builder $nested) use ($sizes): void {
+                            $nested->whereIn('code', $sizes)
+                                ->orWhereIn('name_ar', $sizes)
+                                ->orWhereIn('name_en', $sizes);
+                        });
+                    });
                 });
-            });
         }
 
         return $query;
@@ -625,6 +631,7 @@ class FrontPageController extends Controller
         $variants = ProductVariant::query()
             ->with('size')
             ->select(['product_id', 'size_id'])
+            ->whereHas('productColor', fn (Builder $query) => $query->where('status', 'active'))
             ->whereHas('product', function (Builder $query) use ($filters): void {
                 $this->applyProductsFilters($query, $filters);
             })
