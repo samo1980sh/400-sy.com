@@ -809,22 +809,10 @@ class RetailExcelImportService
 
     public function syncColorsFromProducts(array $productRows, array &$summary = []): void
     {
-        $productGroups = [];
-
-        foreach ($productRows as $row) {
-            $code = $this->normalizeText($this->value($row, 'الكود'));
-
-            if ($code === '') {
-                continue;
-            }
-
-            $productGroups[$code][] = $row;
-        }
-
         $structures = [];
 
-        foreach ($productGroups as $rows) {
-            $structure = $this->normalizeStructureColor($this->productStructureColor($rows));
+        foreach ($productRows as $row) {
+            $structure = $this->normalizeStructureColor($this->structureValueFromRow($row));
 
             if ($structure === '') {
                 $summary['empty_structure_rows'] = ($summary['empty_structure_rows'] ?? 0) + 1;
@@ -1073,7 +1061,7 @@ class RetailExcelImportService
                     ],
                 );
 
-                $this->syncProductColors($product, $rows, $colorCodeMap);
+                $this->syncProductColors($product, $rows, $colorCodeMap, $summary);
                 $this->syncRetailCustomerGroups($product, $visibility['show_retail'] ? $customerGroups : []);
                 $this->syncWholesaleCustomerGroups($product, $visibility['show_wholesale'] ? $customerGroups : []);
                 $this->syncWholesaleColors($product, $visibility['show_wholesale'] ? $rows : []);
@@ -1247,7 +1235,7 @@ class RetailExcelImportService
 
                 $productIdsByCode[$code] = $product->id;
                 $productsByCode[$code] = $product;
-                $this->syncProductColors($product, $rows, $colorCodeMap);
+                $this->syncProductColors($product, $rows, $colorCodeMap, $summary);
                 $this->syncRetailCustomerGroups($product, $visibility['show_retail'] ? $customerGroups : []);
                 $this->syncWholesaleCustomerGroups($product, $visibility['show_wholesale'] ? $customerGroups : []);
                 $this->syncWholesaleColors($product, $visibility['show_wholesale'] ? $rows : []);
@@ -1726,7 +1714,7 @@ class RetailExcelImportService
         ]);
     }
 
-    protected function syncProductColors(Product $product, array $rows, array $colorCodeMap): void
+    protected function syncProductColors(Product $product, array $rows, array $colorCodeMap, array &$summary): void
     {
         $colors = [];
         $sortOrder = 0;
@@ -1734,7 +1722,8 @@ class RetailExcelImportService
         foreach ($rows as $row) {
             $colorCode = $this->normalizeColorKey($this->value($row, 'رمز اللون', 'رمز اللون '));
             $colorNameAr = $this->normalizeColor($this->value($row, 'اللون بالعربي', 'اللون'));
-            $colorNameEn = $this->normalizeText($this->value($row, 'اللون بالانكليزي'));
+            $colorNameEn = $this->normalizeText($this->value($row, 'اللون بالانكليزي', 'اللون بالإنكليزي'));
+
             $colorHex = $this->normalizeHexColor($this->value(
                 $row,
                 'Color HEX',
@@ -1746,15 +1735,24 @@ class RetailExcelImportService
                 'هكس',
                 'لون HEX'
             ));
+
             $status = $this->normalizeProductColorStatus($this->value($row, 'خاص'));
 
             if ($colorCode === '' || $colorNameAr === '') {
                 continue;
             }
 
+            $filterColorId = $this->resolveOrCreateCatalogColorId(
+                [$row],
+                $this->structureValueFromRow($row),
+                $summary
+            );
+
             if (! isset($colors[$colorCode])) {
                 $sortOrder++;
+
                 $colors[$colorCode] = [
+                    'filter_color_id' => $filterColorId,
                     'color_name_ar' => $colorNameAr,
                     'color_name_en' => $colorNameEn !== '' ? $colorNameEn : null,
                     'color_hex' => $colorHex,
@@ -1762,6 +1760,10 @@ class RetailExcelImportService
                     'sort_order' => $sortOrder,
                 ];
             } else {
+                if (blank($colors[$colorCode]['filter_color_id']) && $filterColorId !== null) {
+                    $colors[$colorCode]['filter_color_id'] = $filterColorId;
+                }
+
                 if (blank($colors[$colorCode]['color_name_en']) && $colorNameEn !== '') {
                     $colors[$colorCode]['color_name_en'] = $colorNameEn;
                 }

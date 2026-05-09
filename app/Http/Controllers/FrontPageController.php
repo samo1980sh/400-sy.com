@@ -7,6 +7,7 @@ use App\Models\Color;
 use App\Models\CompanyPage;
 use App\Models\ExchangeRateSetting;
 use App\Models\Product;
+use App\Models\ProductColor;
 use App\Models\ProductVariant;
 use App\Models\Size;
 use App\Services\FrontCartService;
@@ -634,8 +635,11 @@ class FrontPageController extends Controller
         }
 
         if ($colorIds !== []) {
-            $query->whereIn('structure_color_id', $colorIds);
-            $this->applyStructureColorActiveSwatchConstraint($query, $colorIds);
+            $query->whereHas('productColors', function (Builder $colorQuery) use ($colorIds): void {
+                $colorQuery
+                    ->where('status', 'active')
+                    ->whereIn('filter_color_id', $colorIds);
+            });
         }
 
         if ($sizes !== []) {
@@ -684,17 +688,31 @@ class FrontPageController extends Controller
 
         $baseQuery = $this->newProductsListingQuery();
         $this->applyProductsFilters($baseQuery, array_merge($filters, ['colors' => []]));
-        $this->applyStructureColorActiveSwatchConstraint($baseQuery);
 
-        $colorCounts = (clone $baseQuery)
-            ->whereNotNull('structure_color_id')
-            ->selectRaw('structure_color_id, COUNT(DISTINCT products.id) as products_count')
-            ->groupBy('structure_color_id')
-            ->pluck('products_count', 'structure_color_id');
+        $productIds = (clone $baseQuery)->select('products.id');
+
+        $colorCounts = ProductColor::query()
+            ->where('status', 'active')
+            ->whereNotNull('filter_color_id')
+            ->whereIn('product_id', $productIds)
+            ->selectRaw('filter_color_id, COUNT(DISTINCT product_id) as products_count')
+            ->groupBy('filter_color_id')
+            ->pluck('products_count', 'filter_color_id');
 
         if ($colorCounts->isEmpty()) {
             return collect();
         }
+
+        $fallbackHexByColorId = ProductColor::query()
+            ->where('status', 'active')
+            ->whereIn('filter_color_id', $colorCounts->keys()->all())
+            ->whereNotNull('color_hex')
+            ->where('color_hex', '!=', '')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['filter_color_id', 'color_hex'])
+            ->groupBy('filter_color_id')
+            ->map(fn (Collection $items): string => (string) $items->first()->color_hex);
 
         return Color::query()
             ->where('status', 'active')
@@ -702,16 +720,19 @@ class FrontPageController extends Controller
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get(['id', 'code', 'name_ar', 'name_en', 'hex'])
-            ->map(function (Color $color) use ($locale, $selected, $colorCounts): array {
+            ->map(function (Color $color) use ($locale, $selected, $colorCounts, $fallbackHexByColorId): array {
                 $value = $this->structureColorFilterKey($color);
                 $label = trim((string) ($locale === 'ar'
                     ? ($color->name_ar ?: $color->name_en ?: $color->code ?: $color->id)
                     : ($color->name_en ?: $color->name_ar ?: $color->code ?: $color->id)));
 
+                $hex = $this->normalizeHexColor($color->hex)
+                    ?? $this->normalizeHexColor($fallbackHexByColorId[$color->id] ?? null);
+
                 return [
                     'value' => $value,
                     'label' => $label,
-                    'hex' => (string) ($this->normalizeHexColor($color->hex) ?? ''),
+                    'hex' => (string) ($hex ?? ''),
                     'fallback_key' => trim((string) ($color->code ?: $color->name_en ?: $color->name_ar ?: '')),
                     'count' => (int) ($colorCounts[$color->id] ?? 0),
                     'selected' => in_array($value, $selected, true),

@@ -12,6 +12,7 @@ class ProductColor extends Model
 
     protected $fillable = [
         'product_id',
+        'filter_color_id',
         'color_code',
         'color_name_ar',
         'color_name_en',
@@ -22,6 +23,7 @@ class ProductColor extends Model
     ];
 
     protected $casts = [
+        'filter_color_id' => 'integer',
         'status' => 'string',
         'sort_order' => 'integer',
     ];
@@ -34,5 +36,10 @@ class ProductColor extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function filterColor(): BelongsTo
+    {
+        return $this->belongsTo(Color::class, 'filter_color_id');
     }
 }
