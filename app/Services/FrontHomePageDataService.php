@@ -363,8 +363,22 @@ class FrontHomePageDataService
     protected function productColors(Product $product, string $locale, string $currency, array $pricing): array
     {
         $variantsByColor = $this->variantsByColor($product);
+        $activeColorIds = $product->relationLoaded('productColors')
+            ? $product->productColors
+                ->where('status', 'active')
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->all()
+            : [];
 
         return collect($this->imageCatalog->availableColors($product))
+            ->filter(function (array $color) use ($activeColorIds, $variantsByColor): bool {
+                $id = (int) ($color['id'] ?? 0);
+
+                return $id > 0
+                    && in_array($id, $activeColorIds, true)
+                    && $variantsByColor->has($id);
+            })
             ->take(4)
             ->values()
             ->map(function (array $color, int $index) use ($product, $locale, $currency, $pricing, $variantsByColor): array {

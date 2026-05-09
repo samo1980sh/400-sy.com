@@ -182,7 +182,13 @@
                                 @foreach ($colorOptions as $index => $color)
                                     @php
                                         $colorClass = $colorClassFromValue($color['fallback_key'] ?? $color['label'] ?? $color['value'] ?? '');
-                                        $colorStyle = !empty($color['hex']) ? 'background-color: ' . $color['hex'] . ';' : '';
+                                        $colorStyle = '';
+
+                                        if (!empty($color['image'])) {
+                                            $colorStyle = "background-image: url('" . e($color['image']) . "'); background-size: cover; background-position: center; background-repeat: no-repeat;";
+                                        } elseif (!empty($color['hex'])) {
+                                            $colorStyle = 'background-color: ' . $color['hex'] . ';';
+                                        }
                                     @endphp
                                     <li class="list-item d-flex gap-12 align-items-center">
                                         <input
