@@ -1,0 +1,81 @@
+warning: in the working copy of 'resources/views/frontend/partials/shop-filter.blade.php', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/resources/views/frontend/partials/shop-filter.blade.php b/resources/views/frontend/partials/shop-filter.blade.php[m
+[1mindex b7270704..48818195 100644[m
+[1m--- a/resources/views/frontend/partials/shop-filter.blade.php[m
+[1m+++ b/resources/views/frontend/partials/shop-filter.blade.php[m
+[36m@@ -6,6 +6,8 @@[m
+     $selectedCategorySlugs = array_values(array_filter((array) ($selected_category_slugs ?? [])));[m
+     $selectedColors = array_values(array_filter((array) ($selected_colors ?? [])));[m
+     $selectedSizes = array_values(array_filter((array) ($selected_sizes ?? [])));[m
+[32m+[m[32m    $selectedBodyFit = array_values(array_filter((array) ($selected_body_fit ?? [])));[m
+[32m+[m[32m    $selectedDropType = array_values(array_filter((array) ($selected_drop_type ?? [])));[m
+ [m
+     $priceStats = $filter_price_stats ?? [];[m
+     $priceCurrency = (string) ($priceStats['currency'] ?? 'SYP');[m
+[36m@@ -14,7 +16,7 @@[m
+     $priceMaxValue = min($priceUpperLimit, max($priceMinValue, (int) ($priceStats['selected_max'] ?? $priceUpperLimit)));[m
+ [m
+     $filterAction = request()->url();[m
+[31m-    $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);[m
+[32m+[m[32m    $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);[m
+     $resetUrl = $filter_reset_url ?? request()->url();[m
+ [m
+     $categoryLabel = function ($category) use ($isArabic) {[m
+[36m@@ -25,6 +27,8 @@[m
+ [m
+     $colorOptions = collect($filter_color_options ?? []);[m
+     $sizeOptions = collect($filter_size_options ?? []);[m
+[32m+[m[32m    $bodyFitOptions = collect($filter_body_fit_options ?? []);[m
+[32m+[m[32m    $dropOptions = collect($filter_drop_options ?? []);[m
+ [m
+     $colorClassFromValue = function (?string $value): string {[m
+         $normalized = \Illuminate\Support\Str::of((string) $value)[m
+[36m@@ -226,6 +230,48 @@[m
+                     </div>[m
+                 @endif[m
+ [m
+[32m+[m[32m                @if ($bodyFitOptions->isNotEmpty())[m
+[32m+[m[32m                    <div class="widget-facet">[m
+[32m+[m[32m                        <div class="facet-title" data-bs-target="#body-fit" data-bs-toggle="collapse" aria-expanded="true" aria-controls="body-fit">[m
+[32m+[m[32m                            <span>Body Fit</span>[m
+[32m+[m[32m                            <span class="icon icon-arrow-up"></span>[m
+[32m+[m[32m                        </div>[m
+[32m+[m[32m                        <div id="body-fit" class="collapse show">[m
+[32m+[m[32m                            <ul class="tf-filter-group current-scrollbar">[m
+[32m+[m[32m                                @foreach ($bodyFitOptions as $index => $option)[m
+[32m+[m[32m                                    <li class="list-item d-flex gap-12 align-items-center">[m
+[32m+[m[32m                                        <input type="checkbox" name="body_fit[]" class="tf-check" value="{{ $option['value'] }}" id="body-fit-{{ $index }}" @checked(!empty($option['selected']))>[m
+[32m+[m[32m                                        <label for="body-fit-{{ $index }}" class="label">[m
+[32m+[m[32m                                            <span>{{ $option['label'] }}</span>&nbsp;<span>({{ $option['count'] }})</span>[m
+[32m+[m[32m                                        </label>[m
+[32m+[m[32m                                    </li>[m
+[32m+[m[32m                                @endforeach[m
+[32m+[m[32m                            </ul>[m
+[32m+[m[32m                        </div>[m
+[32m+[m[32m                    </div>[m
+[32m+[m[32m                @endif[m
+[32m+[m
+[32m+[m[32m                @if ($dropOptions->isNotEmpty())[m
+[32m+[m[32m                    <div class="widget-facet">[m
+[32m+[m[32m                        <div class="facet-title" data-bs-target="#drop-type" data-bs-toggle="collapse" aria-expanded="true" aria-controls="drop-type">[m
+[32m+[m[32m                            <span>Drop</span>[m
+[32m+[m[32m                            <span class="icon icon-arrow-up"></span>[m
+[32m+[m[32m                        </div>[m
+[32m+[m[32m                        <div id="drop-type" class="collapse show">[m
+[32m+[m[32m                            <ul class="tf-filter-group current-scrollbar">[m
+[32m+[m[32m                                @foreach ($dropOptions as $index => $option)[m
+[32m+[m[32m                                    <li class="list-item d-flex gap-12 align-items-center">[m
+[32m+[m[32m                                        <input type="checkbox" name="drop_type[]" class="tf-check" value="{{ $option['value'] }}" id="drop-type-{{ $index }}" @checked(!empty($option['selected']))>[m
+[32m+[m[32m                                        <label for="drop-type-{{ $index }}" class="label">[m
+[32m+[m[32m                                            <span>{{ $option['label'] }}</span>&nbsp;<span>({{ $option['count'] }})</span>[m
+[32m+[m[32m                                        </label>[m
+[32m+[m[32m                                    </li>[m
+[32m+[m[32m                                @endforeach[m
+[32m+[m[32m                            </ul>[m
+[32m+[m[32m                        </div>[m
+[32m+[m[32m                    </div>[m
+[32m+[m[32m                @endif[m
+[32m+[m
+                 <div class="d-flex gap-12 mt_20">[m
+                     <button type="submit" class="tf-btn btn-fill animate-hover-btn w-100">[m
+                         <span>{{ $isArabic ? 'تطبيق' : 'Apply' }}</span>[m

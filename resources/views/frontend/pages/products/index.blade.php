@@ -65,8 +65,12 @@
                     'selected_max_price' => $selected_max_price ?? null,
                     'selected_colors' => $selected_colors ?? [],
                     'selected_sizes' => $selected_sizes ?? [],
+                    'selected_body_fit' => $selected_body_fit ?? [],
+                    'selected_drop_type' => $selected_drop_type ?? [],
                     'filter_color_options' => $filter_color_options ?? collect(),
                     'filter_size_options' => $filter_size_options ?? collect(),
+                    'filter_body_fit_options' => $filter_body_fit_options ?? collect(),
+                    'filter_drop_options' => $filter_drop_options ?? collect(),
                     'filter_price_stats' => $filter_price_stats ?? [],
                 ])
 

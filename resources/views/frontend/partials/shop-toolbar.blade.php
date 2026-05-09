@@ -17,8 +17,8 @@
     </div>
 
     <div class="tf-control-sorting d-flex justify-content-end">
-        <form action="{{ route('front.products.index') }}" method="get" class="d-flex align-items-center gap-2" data-sort-form>
-            @foreach (request()->except(['sort', 'page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'category', 'categories']) as $key => $value)
+        <form action="{{ request()->url() }}" method="get" class="d-flex align-items-center gap-2" data-sort-form>
+            @foreach (request()->except(['sort', 'page', 'filter_ajax', 'load_more']) as $key => $value)
                 @if (is_array($value))
                     @foreach ($value as $nestedValue)
                         <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">

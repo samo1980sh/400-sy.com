@@ -6,6 +6,8 @@
     $selectedCategorySlugs = array_values(array_filter((array) ($selected_category_slugs ?? [])));
     $selectedColors = array_values(array_filter((array) ($selected_colors ?? [])));
     $selectedSizes = array_values(array_filter((array) ($selected_sizes ?? [])));
+    $selectedBodyFit = array_values(array_filter((array) ($selected_body_fit ?? [])));
+    $selectedDropType = array_values(array_filter((array) ($selected_drop_type ?? [])));
 
     $priceStats = $filter_price_stats ?? [];
     $priceCurrency = (string) ($priceStats['currency'] ?? 'SYP');
@@ -14,7 +16,7 @@
     $priceMaxValue = min($priceUpperLimit, max($priceMinValue, (int) ($priceStats['selected_max'] ?? $priceUpperLimit)));
 
     $filterAction = request()->url();
-    $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
+    $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
     $resetUrl = $filter_reset_url ?? request()->url();
 
     $categoryLabel = function ($category) use ($isArabic) {
@@ -25,6 +27,8 @@
 
     $colorOptions = collect($filter_color_options ?? []);
     $sizeOptions = collect($filter_size_options ?? []);
+    $bodyFitOptions = collect($filter_body_fit_options ?? []);
+    $dropOptions = collect($filter_drop_options ?? []);
 
     $colorClassFromValue = function (?string $value): string {
         $normalized = \Illuminate\Support\Str::of((string) $value)
@@ -218,6 +222,48 @@
                                         <input type="checkbox" name="size[]" class="tf-check tf-check-size" value="{{ $size['value'] }}" id="size-{{ $index }}" @checked(!empty($size['selected']))>
                                         <label for="size-{{ $index }}" class="label">
                                             <span>{{ $size['label'] }}</span>&nbsp;<span>({{ $size['count'] }})</span>
+                                        </label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+
+                @if ($bodyFitOptions->isNotEmpty())
+                    <div class="widget-facet">
+                        <div class="facet-title" data-bs-target="#body-fit" data-bs-toggle="collapse" aria-expanded="true" aria-controls="body-fit">
+                            <span>Body Fit</span>
+                            <span class="icon icon-arrow-up"></span>
+                        </div>
+                        <div id="body-fit" class="collapse show">
+                            <ul class="tf-filter-group current-scrollbar">
+                                @foreach ($bodyFitOptions as $index => $option)
+                                    <li class="list-item d-flex gap-12 align-items-center">
+                                        <input type="checkbox" name="body_fit[]" class="tf-check" value="{{ $option['value'] }}" id="body-fit-{{ $index }}" @checked(!empty($option['selected']))>
+                                        <label for="body-fit-{{ $index }}" class="label">
+                                            <span>{{ $option['label'] }}</span>&nbsp;<span>({{ $option['count'] }})</span>
+                                        </label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+
+                @if ($dropOptions->isNotEmpty())
+                    <div class="widget-facet">
+                        <div class="facet-title" data-bs-target="#drop-type" data-bs-toggle="collapse" aria-expanded="true" aria-controls="drop-type">
+                            <span>Drop</span>
+                            <span class="icon icon-arrow-up"></span>
+                        </div>
+                        <div id="drop-type" class="collapse show">
+                            <ul class="tf-filter-group current-scrollbar">
+                                @foreach ($dropOptions as $index => $option)
+                                    <li class="list-item d-flex gap-12 align-items-center">
+                                        <input type="checkbox" name="drop_type[]" class="tf-check" value="{{ $option['value'] }}" id="drop-type-{{ $index }}" @checked(!empty($option['selected']))>
+                                        <label for="drop-type-{{ $index }}" class="label">
+                                            <span>{{ $option['label'] }}</span>&nbsp;<span>({{ $option['count'] }})</span>
                                         </label>
                                     </li>
                                 @endforeach
