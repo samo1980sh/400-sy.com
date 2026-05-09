@@ -77,18 +77,25 @@
 
         foreach (collect($items) as $category) {
             $categorySelected = in_array((string) $category->slug, $selectedCategorySlugs, true);
+            $isSelectableLeaf = (bool) ($category->is_selectable_leaf ?? false);
 
             $html .= '<li class="cate-item ' . ($categorySelected ? 'active' : '') . '">';
             $html .= '<div class="list-item d-flex gap-12 align-items-center">';
-            $html .= '<input type="checkbox" name="category[]" class="tf-check" id="category-' . e((string) $category->id) . '" value="' . e((string) $category->slug) . '"' . ($categorySelected ? ' checked' : '') . '>';
-            $html .= '<label for="category-' . e((string) $category->id) . '" class="label">';
+
+            if ($isSelectableLeaf) {
+                $html .= '<input type="checkbox" name="category[]" class="tf-check" id="category-' . e((string) $category->id) . '" value="' . e((string) $category->slug) . '"' . ($categorySelected ? ' checked' : '') . '>';
+                $html .= '<label for="category-' . e((string) $category->id) . '" class="label">';
+            } else {
+                $html .= '<span class="label">';
+            }
+
             $html .= '<span>' . e($categoryLabel($category)) . '</span>';
 
             if (isset($category->products_count)) {
                 $html .= '&nbsp;<span>(' . e((string) $category->products_count) . ')</span>';
             }
 
-            $html .= '</label>';
+            $html .= $isSelectableLeaf ? '</label>' : '</span>';
             $html .= '</div>';
             $html .= '</li>';
 

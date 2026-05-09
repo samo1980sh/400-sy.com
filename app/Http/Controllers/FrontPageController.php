@@ -75,7 +75,7 @@ class FrontPageController extends Controller
         $categoryTrail = $primaryCategory instanceof Category ? $primaryCategory->breadcrumbTrail() : collect();
 
         $filters = [
-            'category_ids' => $this->collectCategoriesBranchIds($selectedCategoryModels),
+            'category_ids' => $this->collectCategoriesLeafIds($selectedCategoryModels),
             'min_price' => $minPrice,
             'max_price' => $maxPrice,
             'colors' => $selectedColors,
@@ -413,23 +413,27 @@ class FrontPageController extends Controller
         ]);
     }
 
-    protected function collectCategoryBranchIds(Category $category): array
+    protected function collectLeafCategoryIds(Category $category): array
     {
-        $ids = [$category->getKey()];
-
         $children = $category->children()->get();
 
+        if ($children->isEmpty()) {
+            return [(int) $category->getKey()];
+        }
+
+        $ids = [];
+
         foreach ($children as $child) {
-            $ids = array_merge($ids, $this->collectCategoryBranchIds($child));
+            $ids = array_merge($ids, $this->collectLeafCategoryIds($child));
         }
 
         return array_values(array_unique(array_map('intval', $ids)));
     }
 
-    protected function collectCategoriesBranchIds(Collection|EloquentCollection $categories): array
+    protected function collectCategoriesLeafIds(Collection|EloquentCollection $categories): array
     {
         return $categories
-            ->flatMap(fn (Category $item): array => $this->collectCategoryBranchIds($item))
+            ->flatMap(fn (Category $item): array => $this->collectLeafCategoryIds($item))
             ->unique()
             ->map(fn ($id): int => (int) $id)
             ->values()
@@ -616,7 +620,9 @@ class FrontPageController extends Controller
         $baseQuery = $this->newProductsListingQuery();
         $this->applyProductsFilters($baseQuery, $filters);
 
-        return $this->applyCategoryCounts($categories, $baseQuery);
+        return $this->pruneFilterCategories(
+            $this->applyCategoryCounts($categories, $baseQuery)
+        );
     }
 
     protected function buildColorOptions(array $filters, string $locale, array $selectedColors): Collection
@@ -1042,14 +1048,41 @@ class FrontPageController extends Controller
     protected function applyCategoryCounts(Collection $categories, Builder $baseQuery): Collection
     {
         return $categories->map(function (Category $category) use ($baseQuery): Category {
-            $category->setAttribute('products_count', (clone $baseQuery)->whereIn('category_id', $this->collectCategoryBranchIds($category))->count());
-
             if ($category->relationLoaded('children')) {
                 $category->setRelation('children', $this->applyCategoryCounts($category->children, $baseQuery));
             }
 
+            $leafIds = $this->collectLeafCategoryIds($category);
+            $category->setAttribute('products_count', $leafIds === []
+                ? 0
+                : (clone $baseQuery)->whereIn('category_id', $leafIds)->count());
+            $category->setAttribute('is_selectable_leaf', $category->relationLoaded('children')
+                ? $category->children->isEmpty()
+                : $category->children()->doesntExist());
+
             return $category;
         })->values();
+    }
+
+    protected function pruneFilterCategories(Collection $categories): Collection
+    {
+        return $categories
+            ->map(function (Category $category): ?Category {
+                if ($category->relationLoaded('children')) {
+                    $category->setRelation('children', $this->pruneFilterCategories($category->children));
+                }
+
+                $hasChildren = $category->relationLoaded('children') && $category->children->isNotEmpty();
+                $count = (int) ($category->getAttribute('products_count') ?? 0);
+
+                if ($count <= 0 && ! $hasChildren) {
+                    return null;
+                }
+
+                return $category;
+            })
+            ->filter()
+            ->values();
     }
 
     protected function resolveSizeFilterTerms(array $selectedSizes): array
