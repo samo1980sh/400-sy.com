@@ -64,9 +64,12 @@
         </div>
         <ul class="list-color-product">
             @foreach (($product['colors'] ?? []) as $index => $color)
-                <li class="list-color-item color-swatch {{ $index === 0 ? 'active' : '' }}" data-color-id="{{ $color['id'] ?? '' }}" data-color-name="{{ $color['name'] ?? '' }}" data-color-code="{{ $color['color_code'] ?? '' }}" data-color-class="{{ $color['class_name'] ?? '' }}" data-color-image="{{ $color['image'] ?? '' }}">
+                @php
+                    $swatchStyle = trim((string) ($color['swatch_style'] ?? ''));
+                @endphp
+                <li class="list-color-item color-swatch {{ $index === 0 ? 'active' : '' }}" data-color-id="{{ $color['id'] ?? '' }}" data-color-name="{{ $color['name'] ?? '' }}" data-color-code="{{ $color['color_code'] ?? '' }}" data-color-class="{{ $color['class_name'] ?? '' }}" data-color-hex="{{ $color['hex'] ?? '' }}" data-color-swatch="{{ $color['swatch_image'] ?? '' }}" data-color-image="{{ $color['image'] ?? '' }}">
                     <span class="tooltip">{{ $color['name'] ?? '' }}</span>
-                    <span class="swatch-value {{ $color['class_name'] ?? 'four-Black' }}"></span>
+                    <span class="swatch-value {{ $color['class_name'] ?? 'four-Black' }}" @if ($swatchStyle !== '') style="{{ $swatchStyle }}" @endif></span>
                     <img class="lazyload" data-src="{{ $color['image'] ?? '' }}" src="{{ $color['image'] ?? '' }}" alt="image-product">
                 </li>
             @endforeach

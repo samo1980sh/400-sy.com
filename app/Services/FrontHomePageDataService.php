@@ -39,6 +39,7 @@ class FrontHomePageDataService
                     ->where('status', 'active')
                     ->orderBy('sort_order')
                     ->orderBy('id'),
+                'productColors.filterColor',
                 'variants' => fn ($query) => $query
                     ->whereHas('productColor', fn ($colorQuery) => $colorQuery->where('status', 'active'))
                     ->with('size'),
@@ -425,10 +426,17 @@ class FrontHomePageDataService
             })
             ->take(4)
             ->values()
-            ->map(function (array $color, int $index) use ($product, $locale, $currency, $pricing, $variantsByColor): array {
+            ->map(function (array $color, int $index) use ($product, $locale, $currency, $pricing, $variantsByColor, $productColorsById): array {
                 $fallbackImage = asset('images/products/4brouwn1.jpg');
                 $gallery = $color['detail_urls'] ?? $color['thumb_urls'] ?? [];
-                $colorVariants = $variantsByColor->get((int) ($color['id'] ?? 0), collect());
+                $productColorId = (int) ($color['id'] ?? 0);
+                $productColor = $productColorsById->get($productColorId);
+                $filterColor = $productColor instanceof ProductColor ? $productColor->filterColor : null;
+                $swatchImage = $this->swatchImageUrl($productColor?->swatch_image ?? null);
+                $hex = $this->normalizeHexColor($productColor?->color_hex ?? null)
+                    ?? $this->normalizeHexColor($filterColor?->hex ?? null);
+                $swatchStyle = $this->swatchStyle($swatchImage, $hex);
+                $colorVariants = $variantsByColor->get($productColorId, collect());
                 $defaultVariant = $this->selectDefaultVariant($colorVariants);
                 $colorPricing = $this->resolveVariantPricing($product, $defaultVariant, $currency, $pricing);
                 $sizeOptions = $this->buildSizeOptions($product, $colorVariants, $locale, $currency);
@@ -436,10 +444,14 @@ class FrontHomePageDataService
                 $defaultSize = $this->selectDefaultSize($sizeOptions) ?: ($this->variantSizeLabel($defaultVariant, $locale) ?: ($sizes[0] ?? null));
 
                 return [
-                    'id' => (int) ($color['id'] ?? 0),
+                    'id' => $productColorId,
                     'name' => $this->localizedValue($color['name_ar'] ?? null, $color['name_en'] ?? null, $locale) ?: ($color['name'] ?? '-'),
                     'class_name' => $color['class_name'] ?? 'four-Black',
                     'color_code' => $color['color_code'] ?? null,
+                    'filter_color_id' => (int) ($productColor?->filter_color_id ?? 0),
+                    'hex' => $hex,
+                    'swatch_image' => $swatchImage,
+                    'swatch_style' => $swatchStyle,
                     'image' => $color['primary_thumb_url'] ?? $fallbackImage,
                     'gallery' => is_array($gallery) && $gallery !== [] ? array_values($gallery) : [$color['primary_thumb_url'] ?? $fallbackImage],
                     'active' => $index === 0,
@@ -454,6 +466,54 @@ class FrontHomePageDataService
                 ];
             })
             ->all();
+    }
+
+    protected function normalizeHexColor(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (! str_starts_with($value, '#')) {
+            $value = '#'.$value;
+        }
+
+        return preg_match('/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/', $value) === 1
+            ? strtoupper($value)
+            : null;
+    }
+
+    protected function swatchImageUrl(?string $path): ?string
+    {
+        $path = trim((string) $path);
+
+        if ($path === '') {
+            return null;
+        }
+
+        if (preg_match('~^(https?:)?//~i', $path) || str_starts_with($path, 'data:')) {
+            return $path;
+        }
+
+        return Storage::disk('public')->url($path);
+    }
+
+    protected function swatchStyle(?string $swatchImage, ?string $hex): string
+    {
+        if (filled($swatchImage)) {
+            return sprintf(
+                "background-image: url('%s'); background-size: cover; background-position: center; background-color: transparent;",
+                e((string) $swatchImage)
+            );
+        }
+
+        if (filled($hex)) {
+            return 'background-color: '.e((string) $hex).';';
+        }
+
+        return '';
     }
 
     protected function buildSizePricing(Product $product, string $locale, string $currency): array
