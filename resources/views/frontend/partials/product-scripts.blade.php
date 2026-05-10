@@ -1,5 +1,8 @@
 <script>
     (function ($) {
+        // ---------------------------------------------------------------------
+        // Shared helpers
+        // ---------------------------------------------------------------------
         function escapeHtml(value) {
             return String(value || '').replace(/[&<>"']/g, function (char) {
                 return ({
@@ -78,6 +81,9 @@
             $card.find('a.collection-image, .card-product-info a.title.link').attr('href', url);
         }
 
+        // ---------------------------------------------------------------------
+        // Cart helpers
+        // ---------------------------------------------------------------------
         function syncCartState(response) {
             if (!response) {
                 return;
@@ -108,6 +114,9 @@
             }
         }
 
+        // ---------------------------------------------------------------------
+        // Product option helpers
+        // ---------------------------------------------------------------------
         function normalizeOptionList(items) {
             return (items || []).map(function (item) {
                 return typeof item === 'string' ? { name: item } : item;
@@ -300,6 +309,9 @@
             return fallback;
         }
 
+        // ---------------------------------------------------------------------
+        // Product card helpers
+        // ---------------------------------------------------------------------
         function cardSwatchDisplayStyle($swatch) {
             if (! $swatch || ! $swatch.length) {
                 return '';
@@ -488,6 +500,38 @@
             }, 1200);
         }
 
+
+        function prepareProductCard($card) {
+            if (! $card || ! $card.length) {
+                return;
+            }
+
+            var $activeSwatch = $card.find('.list-color-item.color-swatch.active').first();
+
+            if (! $activeSwatch.length) {
+                $activeSwatch = $card.find('.list-color-item.color-swatch').first();
+            }
+
+            if ($activeSwatch.length) {
+                syncCardSelectedColor($card, $activeSwatch);
+                updateCardDetailLinks($card);
+            }
+
+            settleProductCardSkeleton($card);
+        }
+
+        function prepareProductCards(scope) {
+            var $scope = scope && scope.jquery ? scope : $(scope || document);
+            var $cards = $scope.is && $scope.is('.card-product') ? $scope : $scope.find('.card-product');
+
+            $cards.each(function () {
+                prepareProductCard($(this));
+            });
+        }
+
+        // ---------------------------------------------------------------------
+        // Quick modal pricing helpers
+        // ---------------------------------------------------------------------
         function formatQuickPrice(value, currency) {
             var amount = Number(value);
 
@@ -519,6 +563,49 @@
             return fallback;
         }
 
+
+        function modalQuantity($modal) {
+            var qty = parseInt($modal.find('input[name="number"]').val(), 10) || 1;
+            return qty > 0 ? qty : 1;
+        }
+
+        function modalPriceState($modal, product, selectedSize) {
+            var qty = modalQuantity($modal);
+            var currency = product.base_currency || product.currency || $('.js-currency-select').val() || '';
+            var pricing = findSizePricing(product, selectedSize);
+            var unitCurrent = pricing && Number(pricing.price_current) > 0
+                ? Number(pricing.price_current)
+                : Number(product.price_current || product.base_price || 0);
+            var unitCompare = pricing && Number(pricing.compare_price) > 0
+                ? Number(pricing.compare_price)
+                : Number(product.compare_price || 0);
+            var totalCurrent = unitCurrent * qty;
+            var totalCompare = unitCompare > unitCurrent ? unitCompare * qty : 0;
+
+            return {
+                currency: currency,
+                current: totalCurrent,
+                compare: totalCompare,
+                currentLabel: formatQuickPrice(totalCurrent, currency) || product.price_label || '',
+                compareLabel: totalCompare > totalCurrent ? formatQuickPrice(totalCompare, currency) : ''
+            };
+        }
+
+        function writePrice($element, amount, currency, label) {
+            $element
+                .attr('data-base-price', amount)
+                .attr('data-base-currency', currency)
+                .text(label);
+        }
+
+        function toggleOldPrice($element, amount, currency, label) {
+            writePrice($element, amount, currency, label);
+            $element.toggleClass('d-none', ! label);
+        }
+
+        // ---------------------------------------------------------------------
+        // Quick modal render helpers
+        // ---------------------------------------------------------------------
         function renderGalleryMarkup(gallery) {
             var items = Array.isArray(gallery) && gallery.length ? gallery : [];
             var html = '';
@@ -599,36 +686,11 @@
         }
 
         function syncQuickViewPricing($modal, product, selectedSize) {
-            var qty = parseInt($modal.find('input[name="number"]').val(), 10) || 1;
-            qty = qty > 0 ? qty : 1;
-            var currency = product.base_currency || product.currency || $('.js-currency-select').val() || '';
-            var pricing = findSizePricing(product, selectedSize);
-            var unitCurrent = pricing && Number(pricing.price_current) > 0
-                ? Number(pricing.price_current)
-                : Number(product.price_current || product.base_price || 0);
-            var unitCompare = pricing && Number(pricing.compare_price) > 0
-                ? Number(pricing.compare_price)
-                : Number(product.compare_price || 0);
-            var totalCurrent = unitCurrent * qty;
-            var totalCompare = unitCompare > unitCurrent ? unitCompare * qty : 0;
-            var currentLabel = formatQuickPrice(totalCurrent, currency) || product.price_label || '';
-            var compareLabel = totalCompare > totalCurrent ? formatQuickPrice(totalCompare, currency) : '';
+            var price = modalPriceState($modal, product, selectedSize);
 
-            $modal.find('[data-qv-price-current]')
-                .attr('data-base-price', totalCurrent)
-                .attr('data-base-currency', currency)
-                .text(currentLabel);
-
-            $modal.find('[data-qv-submit-price]')
-                .attr('data-base-price', totalCurrent)
-                .attr('data-base-currency', currency)
-                .text(currentLabel);
-
-            $modal.find('[data-qv-price-old]')
-                .attr('data-base-price', totalCompare)
-                .attr('data-base-currency', currency)
-                .text(compareLabel)
-                .toggleClass('d-none', ! compareLabel);
+            writePrice($modal.find('[data-qv-price-current]'), price.current, price.currency, price.currentLabel);
+            writePrice($modal.find('[data-qv-submit-price]'), price.current, price.currency, price.currentLabel);
+            toggleOldPrice($modal.find('[data-qv-price-old]'), price.compare, price.currency, price.compareLabel);
 
             if (window.updateCurrencyConvertedPrices) {
                 window.updateCurrencyConvertedPrices();
@@ -636,40 +698,23 @@
         }
 
         function syncQuickAddPricing($modal, product, selectedSize) {
-            var qty = parseInt($modal.find('input[name="number"]').val(), 10) || 1;
-            qty = qty > 0 ? qty : 1;
-            var currency = product.base_currency || product.currency || $('.js-currency-select').val() || '';
-            var pricing = findSizePricing(product, selectedSize);
-            var unitCurrent = pricing && Number(pricing.price_current) > 0
-                ? Number(pricing.price_current)
-                : Number(product.price_current || product.base_price || 0);
-            var unitCompare = pricing && Number(pricing.compare_price) > 0
-                ? Number(pricing.compare_price)
-                : Number(product.compare_price || 0);
-            var totalCurrent = unitCurrent * qty;
-            var totalCompare = unitCompare > unitCurrent ? unitCompare * qty : 0;
-            var currentLabel = formatQuickPrice(totalCurrent, currency) || product.price_label || '';
-            var compareLabel = totalCompare > totalCurrent ? formatQuickPrice(totalCompare, currency) : '';
+            var price = modalPriceState($modal, product, selectedSize);
 
-            $modal.find('[data-qadd-price]')
-                .attr('data-base-price', totalCurrent)
-                .attr('data-base-currency', currency)
-                .text(currentLabel);
-
-            $modal.find('[data-qadd-submit-price]')
-                .attr('data-base-price', totalCurrent)
-                .attr('data-base-currency', currency)
-                .text(currentLabel);
-
-            $modal.find('[data-qadd-price-old]')
-                .attr('data-base-price', totalCompare)
-                .attr('data-base-currency', currency)
-                .text(compareLabel)
-                .toggleClass('d-none', ! compareLabel);
+            writePrice($modal.find('[data-qadd-price]'), price.current, price.currency, price.currentLabel);
+            writePrice($modal.find('[data-qadd-submit-price]'), price.current, price.currency, price.currentLabel);
+            toggleOldPrice($modal.find('[data-qadd-price-old]'), price.compare, price.currency, price.compareLabel);
 
             if (window.updateCurrencyConvertedPrices) {
                 window.updateCurrencyConvertedPrices();
             }
+        }
+
+        function updateModalCartSubmit($modal, product, available) {
+            $modal.find('[data-cart-submit]')
+                .attr('data-cart-url', product.cart_add_url || '')
+                .prop('disabled', ! available)
+                .toggleClass('disabled', ! available)
+                .attr('aria-disabled', ! available ? 'true' : 'false');
         }
 
         function syncQuickViewSelection($modal) {
@@ -704,11 +749,7 @@
             selectedSize = readSelected($modal, 'size');
             $modal.find('[data-qv-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
             $modal.find('[data-qv-find-size]').toggleClass('d-none', ! product.has_size_chart);
-            $modal.find('[data-cart-submit]')
-                .attr('data-cart-url', product.cart_add_url || '')
-                .prop('disabled', ! available)
-                .toggleClass('disabled', ! available)
-                .attr('aria-disabled', ! available ? 'true' : 'false');
+            updateModalCartSubmit($modal, product, available);
 
             syncQuickViewPricing($modal, product, selectedSize);
         }
@@ -741,15 +782,14 @@
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(sizes, selectedSize, 'size'));
 
             selectedSize = readSelected($modal, 'size');
-            $modal.find('[data-cart-submit]')
-                .attr('data-cart-url', product.cart_add_url || '')
-                .prop('disabled', ! available)
-                .toggleClass('disabled', ! available)
-                .attr('aria-disabled', ! available ? 'true' : 'false');
+            updateModalCartSubmit($modal, product, available);
 
             syncQuickAddPricing($modal, product, selectedSize);
         }
 
+        // ---------------------------------------------------------------------
+        // Quick modal state/rendering
+        // ---------------------------------------------------------------------
         function renderQuickModal($modal, product, prefix, options) {
             options = options || {};
             $modal.data('product', product);
@@ -811,6 +851,9 @@
             });
         }
 
+        // ---------------------------------------------------------------------
+        // Product card and quick modal events
+        // ---------------------------------------------------------------------
         $(document).on('click', '.card-product .quick-add, .card-product .quickview', function (event) {
             event.preventDefault();
 
@@ -869,21 +912,7 @@
         }
 
         $(function () {
-            $('.card-product').each(function () {
-                var $card = $(this);
-                var $activeSwatch = $card.find('.list-color-item.color-swatch.active').first();
-
-                if (! $activeSwatch.length) {
-                    $activeSwatch = $card.find('.list-color-item.color-swatch').first();
-                }
-
-                if ($activeSwatch.length) {
-                    syncCardSelectedColor($card, $activeSwatch);
-                    updateCardDetailLinks($card);
-                }
-
-                settleProductCardSkeleton($card);
-            });
+            prepareProductCards(document);
         });
 
         $(document).on('click', '#quick_view [data-cart-submit], #quick_add [data-cart-submit]', function (event) {
@@ -943,6 +972,9 @@
             $('#find_size').modal('show');
         });
 
+        // ---------------------------------------------------------------------
+        // Shop filter and load-more behavior
+        // ---------------------------------------------------------------------
         var filterRequest = null;
         var filterRequestToken = 0;
         var filterDebounceTimer = null;
@@ -1095,21 +1127,7 @@
                 if (response.products_html) {
                     var $results = $(response.products_html);
                     $('[data-shop-results]').replaceWith($results);
-                    $results.find('.card-product').each(function () {
-                        var $card = $(this);
-                        var $activeSwatch = $card.find('.list-color-item.color-swatch.active').first();
-
-                        if (! $activeSwatch.length) {
-                            $activeSwatch = $card.find('.list-color-item.color-swatch').first();
-                        }
-
-                        if ($activeSwatch.length) {
-                            syncCardSelectedColor($card, $activeSwatch);
-                            updateCardDetailLinks($card);
-                        }
-
-                        settleProductCardSkeleton($card);
-                    });
+                    prepareProductCards($results);
                 }
 
                 if (typeof response.loadmore_html !== 'undefined') {
@@ -1296,9 +1314,7 @@
                 if (response && response.html) {
                     var $newCards = $(response.html);
                     $grid.append($newCards);
-                    $newCards.each(function () {
-                        settleProductCardSkeleton($(this));
-                    });
+                    prepareProductCards($newCards);
                 }
 
                 if (response && response.next_page_url) {
