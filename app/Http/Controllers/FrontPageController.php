@@ -311,34 +311,126 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
     public function product(string $slug): View
     {
         $product = Product::query()
-            ->with(['category', 'variants.size', 'productColors.variants.size', 'measurementCharts', 'measurementChartGroup'])
+            ->with($this->productDetailRelations())
             ->where('slug', $slug)
-            ->first();
+            ->where('show_web', true)
+            ->where('is_active', true)
+            ->firstOrFail();
 
-        if ($product instanceof Product) {
-            $presentation = $this->homePageData->presentProduct($product);
-            $title = $presentation['title'] ?? $slug;
+        $locale = app()->getLocale();
+        $shell = $this->homePageData->build();
+        $presentation = $this->homePageData->presentProduct($product, $locale, [], null);
+        $title = $presentation['title'] ?? $slug;
+        $relatedProducts = $this->resolveDetailRelatedProducts($product, $locale);
 
-            return view('frontend.pages.placeholder', [
-                'title' => $title,
-                'eyebrow' => __('front.products.view_full_details'),
-                'message' => __('front.products.page_placeholder_message'),
-                'details' => [
-                    ['label' => __('front.products.product_code'), 'value' => $presentation['product_code'] ?? null],
-                    ['label' => __('front.products.color'), 'value' => $presentation['default_color'] ?? null],
-                    ['label' => __('front.products.size'), 'value' => $presentation['default_size'] ?? null],
-                ],
-                'back_url' => route('front.home') . '#featured-products',
-            ]);
+        $breadcrumbItems = [
+            ['label' => __('front.nav.home'), 'url' => route('front.home')],
+        ];
+
+        if ($product->category instanceof Category) {
+            foreach ($product->category->breadcrumbTrail() as $trailCategory) {
+                $breadcrumbItems[] = [
+                    'label' => $locale === 'ar'
+                        ? ($trailCategory->title_ar ?: $trailCategory->title_en ?: $trailCategory->slug)
+                        : ($trailCategory->title_en ?: $trailCategory->title_ar ?: $trailCategory->slug),
+                    'url' => route('front.category', $trailCategory->slug),
+                ];
+            }
         }
 
-        return view('frontend.pages.placeholder', [
-            'title' => Str::headline(str_replace('-', ' ', $slug)),
-            'eyebrow' => __('front.products.view_full_details'),
-            'message' => __('front.products.page_placeholder_message'),
-            'details' => [],
-            'back_url' => route('front.home') . '#featured-products',
-        ]);
+        $breadcrumbItems[] = [
+            'label' => $title,
+            'url' => filled($product->slug) ? route('front.products.show', $product->slug) : request()->url(),
+        ];
+
+        return view('frontend.pages.products.show', array_merge($shell, [
+            'page_title' => $title,
+            'page_subtitle' => $presentation['product_code'] ?? '',
+            'breadcrumb_items' => $breadcrumbItems,
+            'product' => $presentation,
+            'product_model' => $product,
+            'related_products' => $relatedProducts,
+            'locale' => $locale,
+        ]));
+    }
+
+    protected function productDetailRelations(): array
+    {
+        return [
+            'category',
+            'structureColor',
+            'variants' => fn ($query) => $query
+                ->whereHas('productColor', fn ($colorQuery) => $colorQuery->where('status', 'active'))
+                ->with('size'),
+            'productColors' => fn ($query) => $query
+                ->where('status', 'active')
+                ->orderBy('sort_order')
+                ->orderBy('id'),
+            'productColors.filterColor',
+            'productColors.variants.size',
+            'measurementCharts',
+            'measurementChartGroup',
+            'details' => fn ($query) => $query
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id'),
+            'complements' => fn ($query) => $query
+                ->orderBy('sort_order')
+                ->with([
+                    'relatedProduct' => fn ($relatedQuery) => $relatedQuery
+                        ->with($this->productCardRelations())
+                        ->where('show_web', true)
+                        ->where('is_active', true),
+                ]),
+        ];
+    }
+
+    protected function productCardRelations(): array
+    {
+        return [
+            'category',
+            'structureColor',
+            'variants' => fn ($query) => $query
+                ->whereHas('productColor', fn ($colorQuery) => $colorQuery->where('status', 'active'))
+                ->with('size'),
+            'productColors' => fn ($query) => $query
+                ->where('status', 'active')
+                ->orderBy('sort_order')
+                ->orderBy('id'),
+            'productColors.filterColor',
+            'productColors.variants.size',
+            'measurementCharts',
+            'measurementChartGroup',
+        ];
+    }
+
+    protected function resolveDetailRelatedProducts(Product $product, string $locale): array
+    {
+        $relatedModels = $product->relationLoaded('complements')
+            ? $product->complements
+                ->pluck('relatedProduct')
+                ->filter(fn ($item): bool => $item instanceof Product)
+                ->unique(fn (Product $related): int => (int) $related->getKey())
+                ->values()
+            : collect();
+
+        if ($relatedModels->isEmpty()) {
+            $relatedModels = Product::query()
+                ->with($this->productCardRelations())
+                ->whereKeyNot($product->getKey())
+                ->where('show_web', true)
+                ->where('is_active', true)
+                ->where('category_id', $product->category_id)
+                ->latest('id')
+                ->limit(8)
+                ->get();
+        }
+
+        return $relatedModels
+            ->take(8)
+            ->map(fn (Product $related): array => $this->homePageData->presentProduct($related, $locale))
+            ->values()
+            ->all();
     }
 
     public function cart(FrontCartService $cart): View

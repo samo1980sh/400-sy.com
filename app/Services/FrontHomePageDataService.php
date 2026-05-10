@@ -237,7 +237,7 @@ class FrontHomePageDataService
         return $products->map(fn (Product $product): array => $this->presentProduct($product, $locale))->values();
     }
 
-    public function presentProduct(Product $product, ?string $locale = null, array $preferredFilterColorIds = []): array
+    public function presentProduct(Product $product, ?string $locale = null, array $preferredFilterColorIds = [], ?int $colorLimit = 4): array
     {
         $locale ??= app()->getLocale();
 
@@ -255,7 +255,7 @@ class FrontHomePageDataService
         $sizePricing = $this->buildSizePricing($product, $locale, $currency);
         $sizeOptions = array_values($sizePricing);
         $sizes = $this->productSizes($sizeOptions, $product, $locale);
-        $colors = $this->productColors($product, $locale, $currency, $pricing, $preferredFilterColorIds);
+        $colors = $this->productColors($product, $locale, $currency, $pricing, $preferredFilterColorIds, $colorLimit);
         $defaultColor = $colors[0] ?? [];
         $defaultSize = ($defaultColor['default_size'] ?? null)
             ?: ($this->selectDefaultSize($sizeOptions) ?: (array_key_first($sizePricing) ?: ($sizes[0] ?? null)));
@@ -274,11 +274,19 @@ class FrontHomePageDataService
         $gallery = collect(array_merge([$imageUrl], array_map(fn (array $color): string => $color['image'] ?? '', $colors)))
             ->filter()
             ->unique()
-            ->take(4)
             ->values()
             ->all();
         $sizeChart = $this->buildSizeChart($product, $locale);
         $hasSizeChart = ! empty($sizeChart['rows']) && ! empty($sizeChart['columns']);
+        $specifications = $this->productSpecifications($product, $locale, $defaultColor);
+        $hasAvailableSizes = collect($defaultColor['size_options'] ?? $sizeOptions)
+            ->contains(fn (array $option): bool => ($option['available'] ?? true) === true && ! ($option['is_sold_out'] ?? false));
+        $categoryName = $product->relationLoaded('category')
+            ? $this->localizedValue($product->category?->title_ar ?? null, $product->category?->title_en ?? null, $locale)
+            : $this->localizedValue($product->category()?->value('title_ar'), $product->category()?->value('title_en'), $locale);
+        $filterColorName = $product->relationLoaded('structureColor')
+            ? $this->localizedValue($product->structureColor?->name_ar ?? null, $product->structureColor?->name_en ?? null, $locale)
+            : $this->localizedValue($product->structureColor()?->value('name_ar'), $product->structureColor()?->value('name_en'), $locale);
 
         return [
             'id' => $product->getKey(),
@@ -310,6 +318,16 @@ class FrontHomePageDataService
             'default_color' => $defaultColor['name'] ?? null,
             'default_color_class' => $defaultColor['class_name'] ?? null,
             'default_color_code' => $defaultColor['color_code'] ?? null,
+            'display_color_description' => trim((string) ($product->structure ?? '')) ?: null,
+            'filter_color_name' => $filterColorName ?: null,
+            'body_fit' => trim((string) ($product->body_fit ?? '')) ?: null,
+            'drop_type' => trim((string) ($product->drop_type ?? '')) ?: null,
+            'collection' => trim((string) ($product->collection ?? '')) ?: null,
+            'country' => trim((string) ($product->country ?? '')) ?: null,
+            'measurement_group' => trim((string) ($product->measurement_group ?? '')) ?: null,
+            'category_name' => $categoryName ?: null,
+            'specifications' => $specifications,
+            'has_available_sizes' => $hasAvailableSizes,
             'size_chart' => $sizeChart,
             'has_size_chart' => $hasSizeChart,
         ];
@@ -368,7 +386,7 @@ class FrontHomePageDataService
         ];
     }
 
-    protected function productColors(Product $product, string $locale, string $currency, array $pricing, array $preferredFilterColorIds = []): array
+    protected function productColors(Product $product, string $locale, string $currency, array $pricing, array $preferredFilterColorIds = [], ?int $limit = 4): array
     {
         $variantsByColor = $this->variantsByColor($product);
         $productColorsById = $product->relationLoaded('productColors')
@@ -424,7 +442,7 @@ class FrontHomePageDataService
 
                 return 0;
             })
-            ->take(4)
+            ->when($limit !== null, fn (Collection $colors): Collection => $colors->take($limit))
             ->values()
             ->map(function (array $color, int $index) use ($product, $locale, $currency, $pricing, $variantsByColor, $productColorsById): array {
                 $fallbackImage = asset('images/products/4brouwn1.jpg');
@@ -465,6 +483,76 @@ class FrontHomePageDataService
                     'compare_price_label' => $colorPricing['compare_label'],
                 ];
             })
+            ->all();
+    }
+
+    protected function productSpecifications(Product $product, string $locale, array $defaultColor = []): array
+    {
+        $items = collect([
+            [
+                'label' => $locale === 'ar' ? 'كود المنتج' : 'Product code',
+                'value' => $this->productCodeLabel($product),
+            ],
+            [
+                'label' => $locale === 'ar' ? 'التصنيف' : 'Category',
+                'value' => $product->relationLoaded('category')
+                    ? $this->localizedValue($product->category?->title_ar ?? null, $product->category?->title_en ?? null, $locale)
+                    : null,
+            ],
+            [
+                'label' => $locale === 'ar' ? 'لون المنتج المعروض' : 'Displayed color',
+                'value' => trim((string) ($product->structure ?? '')) ?: null,
+            ],
+            [
+                'label' => $locale === 'ar' ? 'لون الفلترة' : 'Filter color',
+                'value' => $product->relationLoaded('structureColor')
+                    ? $this->localizedValue($product->structureColor?->name_ar ?? null, $product->structureColor?->name_en ?? null, $locale)
+                    : null,
+            ],
+            [
+                'label' => $locale === 'ar' ? 'اللون الافتراضي' : 'Default color',
+                'value' => trim((string) ($defaultColor['name'] ?? '')) ?: null,
+            ],
+            [
+                'label' => $locale === 'ar' ? 'Body Fit' : 'Body Fit',
+                'value' => trim((string) ($product->body_fit ?? '')) ?: null,
+            ],
+            [
+                'label' => $locale === 'ar' ? 'Drop' : 'Drop',
+                'value' => trim((string) ($product->drop_type ?? '')) ?: null,
+            ],
+            [
+                'label' => $locale === 'ar' ? 'المنشأ' : 'Country',
+                'value' => trim((string) ($product->country ?? '')) ?: null,
+            ],
+            [
+                'label' => $locale === 'ar' ? 'المجموعة' : 'Collection',
+                'value' => trim((string) ($product->collection ?? '')) ?: null,
+            ],
+            [
+                'label' => $locale === 'ar' ? 'زمرة القياس' : 'Measurement group',
+                'value' => trim((string) ($product->measurement_group ?? '')) ?: null,
+            ],
+        ])->filter(fn (array $item): bool => filled($item['value'] ?? null));
+
+        $details = $product->relationLoaded('details')
+            ? $product->getRelation('details')
+            : $product->details()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
+
+        $extraDetails = $details
+            ->filter(fn ($detail): bool => (bool) ($detail->is_active ?? true))
+            ->map(function ($detail) use ($locale): array {
+                return [
+                    'label' => $this->localizedValue($detail->label_ar ?? null, $detail->label_en ?? null, $locale),
+                    'value' => $this->localizedValue($detail->value_ar ?? null, $detail->value_en ?? null, $locale),
+                ];
+            })
+            ->filter(fn (array $item): bool => filled($item['label'] ?? null) && filled($item['value'] ?? null));
+
+        return $items
+            ->merge($extraDetails)
+            ->unique(fn (array $item): string => mb_strtolower(trim((string) ($item['label'] ?? ''))))
+            ->values()
             ->all();
     }
 
