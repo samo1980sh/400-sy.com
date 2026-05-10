@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\ProductColor;
 use App\Models\ProductVariant;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -103,7 +104,7 @@ class FrontCartService
     protected function buildItem(Product $product, array $input): array
     {
         $locale = app()->getLocale();
-        $product->loadMissing(['variants.size', 'variants.productColor', 'productColors']);
+        $product->loadMissing(['variants.size', 'variants.productColor', 'productColors.filterColor']);
         $title = $locale === 'ar'
             ? ($product->title_ar ?: $product->title_en ?: $product->model_no ?: __('front.brand'))
             : ($product->title_en ?: $product->title_ar ?: $product->model_no ?: __('front.brand'));
@@ -118,6 +119,11 @@ class FrontCartService
 
         $colors = $this->imageCatalog->availableColors($product);
         $selectedColor = $this->resolveColor($colors, $input);
+        $selectedProductColor = $this->resolveProductColorModel($product, $selectedColor);
+        $colorSwatchImage = $this->swatchImageUrl($selectedProductColor?->swatch_image ?? null);
+        $colorHex = $this->normalizeHexColor($selectedProductColor?->color_hex ?? null)
+            ?? $this->normalizeHexColor($selectedProductColor?->filterColor?->hex ?? null);
+        $colorSwatchStyle = $this->swatchStyle($colorSwatchImage, $colorHex);
         $selectedVariant = $this->resolveVariant($product, $input, $selectedColor);
         $selectedSize = $this->variantSizeLabel($selectedVariant, $locale) ?: $this->resolveSize($product, (string) ($input['size'] ?? ''));
         $unitPrice = $this->resolveVariantNumber($selectedVariant?->price, $basePrice) ?? $basePrice;
@@ -164,6 +170,9 @@ class FrontCartService
             'size_code' => $selectedSizeCode ?: null,
             'color_name' => $selectedColorLabel,
             'color_class' => $selectedColor['class_name'] ?? '',
+            'color_hex' => $colorHex,
+            'color_swatch_image' => $colorSwatchImage,
+            'color_swatch_style' => $colorSwatchStyle,
             'meta_variant' => implode(' / ', array_filter([$selectedColorLabel, $selectedSize])),
             'qty' => 1,
             'unit_price' => $unitPrice,
@@ -319,6 +328,71 @@ class FrontCartService
         return $sizes[0] ?? 'S';
     }
 
+    protected function resolveProductColorModel(Product $product, array $selectedColor): ?ProductColor
+    {
+        $colorId = (int) ($selectedColor['id'] ?? 0);
+
+        if ($colorId <= 0) {
+            return null;
+        }
+
+        $colors = $product->relationLoaded('productColors')
+            ? $product->getRelation('productColors')
+            : $product->productColors()->with('filterColor')->get();
+
+        $match = $colors->first(fn ($color): bool => (int) ($color->id ?? 0) === $colorId);
+
+        return $match instanceof ProductColor ? $match : null;
+    }
+
+    protected function normalizeHexColor(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (! str_starts_with($value, '#')) {
+            $value = '#'.$value;
+        }
+
+        return preg_match('/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/', $value) === 1
+            ? strtoupper($value)
+            : null;
+    }
+
+    protected function swatchImageUrl(?string $path): ?string
+    {
+        $path = trim((string) $path);
+
+        if ($path === '') {
+            return null;
+        }
+
+        if (preg_match('~^(https?:)?//~i', $path) || str_starts_with($path, 'data:')) {
+            return $path;
+        }
+
+        return Storage::disk('public')->url($path);
+    }
+
+    protected function swatchStyle(?string $swatchImage, ?string $hex): string
+    {
+        if (filled($swatchImage)) {
+            return sprintf(
+                "background-image: url('%s'); background-size: cover; background-position: center; background-color: transparent;",
+                htmlspecialchars((string) $swatchImage, ENT_QUOTES, 'UTF-8')
+            );
+        }
+
+        if (filled($hex)) {
+            return 'background-color: '.htmlspecialchars((string) $hex, ENT_QUOTES, 'UTF-8').';';
+        }
+
+        return '';
+    }
+
     protected function cartKey(int $productId, ?int $variantId, string $size, string $color): string
     {
         return sha1($productId . '|' . ($variantId ?? 0) . '|' . $size . '|' . $color);
@@ -334,6 +408,9 @@ class FrontCartService
         $item['price_label'] = $item['price_label'] ?? $item['unit_price_label'];
         $item['compare_price'] = isset($item['compare_price']) ? (int) $item['compare_price'] : null;
         $item['compare_price_label'] = $item['compare_price_label'] ?? ($item['compare_price'] ? number_format((int) $item['compare_price'], 0) . ' ' . $item['base_currency'] : null);
+        $item['color_hex'] = $item['color_hex'] ?? null;
+        $item['color_swatch_image'] = $item['color_swatch_image'] ?? null;
+        $item['color_swatch_style'] = $item['color_swatch_style'] ?? '';
         $item['meta_variant'] = $item['meta_variant'] ?? implode(' / ', array_filter([$item['color_name'] ?? '', $item['size'] ?? '']));
         $item['update_url'] = $item['update_url'] ?? route('front.cart.update', $item['key']);
         $item['remove_url'] = $item['remove_url'] ?? route('front.cart.remove', $item['key']);

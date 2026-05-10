@@ -744,14 +744,31 @@ class FrontHomePageDataService
     {
         $rows = $this->measurementChartRows($product, $locale);
         $columns = $this->measurementChartColumns($rows, $locale);
+        $guideImage = $this->measurementChartGuideImage($product);
 
         return [
             'title' => $locale === 'ar' ? __('front.products.size_chart') : __('front.products.size_chart'),
             'subtitle' => $locale === 'ar' ? __('front.products.size_guide') : __('front.products.size_guide'),
             'empty' => $locale === 'ar' ? __('front.products.size_chart_empty') : __('front.products.size_chart_empty'),
+            'guide_image' => $guideImage,
             'columns' => $columns,
             'rows' => $rows,
         ];
+    }
+
+    protected function measurementChartGuideImage(Product $product): ?string
+    {
+        $group = $product->relationLoaded('measurementChartGroup')
+            ? $product->getRelation('measurementChartGroup')
+            : $product->measurementChartGroup()->first();
+
+        $path = trim((string) ($group?->guide_image ?? ''));
+
+        if ($path === '') {
+            return null;
+        }
+
+        return Storage::disk('public')->url($path);
     }
 
     protected function measurementChartRows(Product $product, string $locale): array

@@ -548,9 +548,23 @@
                 var $head = $modal.find('[data-size-chart-head]');
                 var $body = $modal.find('[data-size-chart-body]');
                 var $empty = $modal.find('[data-size-chart-empty]');
+                var $guideWrap = $modal.find('[data-size-chart-guide-wrap]');
+                var $guideImage = $modal.find('[data-size-chart-guide-image]');
+                var $tableWrap = $modal.find('[data-size-chart-table-wrap]');
+                var guideImage = String(chart.guide_image || '').trim();
 
                 $modal.find('[data-size-chart-title]').text(chart.title || '');
                 $modal.find('[data-size-chart-subtitle]').text(chart.subtitle || '');
+
+                if (guideImage) {
+                    $guideImage.attr('src', guideImage);
+                    $guideWrap.removeClass('d-none');
+                    $tableWrap.removeClass('col-lg-12').addClass('col-lg-8');
+                } else {
+                    $guideImage.attr('src', '');
+                    $guideWrap.addClass('d-none');
+                    $tableWrap.removeClass('col-lg-8').addClass('col-lg-12');
+                }
 
                 if (!columns.length || !rows.length) {
                     $table.addClass('d-none');

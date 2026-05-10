@@ -82,27 +82,6 @@ class RetailExcelImportService
         return '';
     }
 
-    private function productMeasurementGroup(array $rows): ?string
-    {
-        foreach ($rows as $row) {
-            $value = $this->normalizeText($this->value(
-                $row,
-                'زمر وحدة القياس',
-                'زمرة وحدة القياس',
-                'زمر القياس',
-                'مجموعة القياس',
-                'Measurement Group',
-                'measurement_group'
-            ));
-
-            if ($value !== '') {
-                return $value;
-            }
-        }
-
-        return null;
-    }
-
     private function productBodyFit(array $row): ?string
     {
         return $this->normalizeOptionalText($this->value(
@@ -1061,7 +1040,7 @@ class RetailExcelImportService
                         'collection' => $this->normalizeText($this->value($first, 'التشكيلة')),
                         'body_fit' => $this->productBodyFit($first),
                         'drop_type' => $this->productDropType($first),
-                        'measurement_group' => $this->productMeasurementGroup($rows),
+                        'measurement_group' => $this->normalizeText($this->value($first, 'زمرة وحدة القياس')) ?: null,
                         'visibility_targets' => $visibility['visibility_targets'],
                         'display_channels' => $visibility['display_channels'],
                         'show_web' => $visibility['show_web'],
@@ -1233,7 +1212,7 @@ class RetailExcelImportService
                         'collection' => $this->normalizeText($this->value($first, 'التشكيلة')),
                         'body_fit' => $this->productBodyFit($first),
                         'drop_type' => $this->productDropType($first),
-                'measurement_group' => $this->productMeasurementGroup($rows),
+                        'measurement_group' => $this->normalizeText($this->value($first, 'زمرة وحدة القياس')) ?: null,
                         'visibility_targets' => $visibility['visibility_targets'],
                         'display_channels' => $visibility['display_channels'],
                         'show_web' => $visibility['show_web'],

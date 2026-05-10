@@ -6,7 +6,6 @@ namespace App\Filament\Resources\Products\RelationManagers;
 
 use App\Services\ComplementaryProductsExportService;
 use App\Services\RetailExcelImportService;
-use Illuminate\Database\Eloquent\Model;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
@@ -14,9 +13,8 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Throwable;
 
 class ComplementaryProductsRelationManager extends RelationManager
@@ -83,28 +81,6 @@ class ComplementaryProductsRelationManager extends RelationManager
             ->emptyStateHeading('لا توجد منتجات مكملة')
             ->emptyStateDescription('لم يتم العثور على منتجات مكملة متوفرة أو قابلة للعرض لهذا المنتج.')
             ->headerActions([
-                Action::make('downloadComplementaryProductsTemplate')
-                    ->label('تنزيل القالب')
-                    ->icon(Heroicon::OutlinedArrowDownTray)
-                    ->color('primary')
-                    ->action(function () {
-                        $spreadsheet = new Spreadsheet();
-
-                        $sheet = $spreadsheet->getActiveSheet();
-                        $sheet->setTitle('المنتجات المكملة');
-                        $sheet->fromArray([
-                            ['الكود', 'Model Code Related 1', 'Model Code Related 2', 'Model Code Related 3', 'Model Code Related 4', 'Model Code Related 5'],
-                            ['140', '141', '152', '236', '', ''],
-                        ], null, 'A1');
-
-                        return response()->streamDownload(function () use ($spreadsheet): void {
-                            $writer = new Xlsx($spreadsheet);
-                            $writer->save('php://output');
-                        }, 'complementary-products-template.xlsx', [
-                            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                        ]);
-                    }),
-
                 Action::make('exportComplementaryProducts')
                     ->label('تصدير')
                     ->icon(Heroicon::OutlinedArrowDownTray)

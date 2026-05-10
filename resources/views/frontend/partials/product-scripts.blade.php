@@ -166,9 +166,13 @@
                     html += '</label>';
                 } else {
                     var gallery = Array.isArray(item.gallery) && item.gallery.length ? item.gallery : (item.image ? [item.image] : []);
-                    html += '<input type="radio" name="color" id="' + id + '" ' + checked + ' value="' + escapeHtml(value) + '" data-gallery="' + escapeHtml(JSON.stringify(gallery)) + '"' + (item.id ? ' data-color-id="' + escapeHtml(item.id) + '"' : '') + (item.color_code ? ' data-color-code="' + escapeHtml(item.color_code) + '"' : '') + (item.name ? ' data-color-name="' + escapeHtml(item.name) + '"' : '') + '" data-color-class="' + escapeHtml(item.class_name || '') + '" data-color-image="' + escapeHtml(item.image || '') + '">';
+                    var swatchStyle = item.swatch_style || '';
+                    var swatchImage = item.swatch_image || '';
+                    var colorHex = item.hex || item.color_hex || '';
+
+                    html += '<input type="radio" name="color" id="' + id + '" ' + checked + ' value="' + escapeHtml(value) + '" data-gallery="' + escapeHtml(JSON.stringify(gallery)) + '"' + (item.id ? ' data-color-id="' + escapeHtml(item.id) + '"' : '') + (item.color_code ? ' data-color-code="' + escapeHtml(item.color_code) + '"' : '') + (item.name ? ' data-color-name="' + escapeHtml(item.name) + '"' : '') + ' data-color-class="' + escapeHtml(item.class_name || '') + '" data-color-image="' + escapeHtml(item.image || '') + '" data-color-hex="' + escapeHtml(colorHex) + '" data-color-swatch-image="' + escapeHtml(swatchImage) + '" data-color-swatch-style="' + escapeHtml(swatchStyle) + '">';
                     html += '<label class="hover-tooltip radius-60" for="' + id + '" data-value="' + escapeHtml(value) + '">';
-                    html += '<span class="btn-checkbox ' + escapeHtml(item.class_name || 'four-Black') + '"></span>';
+                    html += '<span class="btn-checkbox ' + escapeHtml(item.class_name || 'four-Black') + '"' + (swatchStyle ? ' style="' + escapeHtml(swatchStyle) + '"' : '') + '></span>';
                     html += '<span class="tooltip">' + escapeHtml(value) + '</span>';
                     html += '</label>';
                 }
@@ -351,23 +355,43 @@
             var $head = $modal.find('[data-size-chart-head]');
             var $body = $modal.find('[data-size-chart-body]');
             var $empty = $modal.find('[data-size-chart-empty]');
+            var $guideWrap = $modal.find('[data-size-chart-guide-wrap]');
+            var $guideImage = $modal.find('[data-size-chart-guide-image]');
+            var $tableWrap = $modal.find('[data-size-chart-table-wrap]');
+            var guideImage = String(chart.guide_image || '').trim();
+
+            $modal.find('[data-size-chart-title]').text(chart.title || '');
+            $modal.find('[data-size-chart-subtitle]').text(chart.subtitle || '');
+
+            if (guideImage) {
+                $guideImage.attr('src', guideImage);
+                $guideWrap.removeClass('d-none');
+                $tableWrap.removeClass('col-lg-12').addClass('col-lg-8');
+            } else {
+                $guideImage.attr('src', '');
+                $guideWrap.addClass('d-none');
+                $tableWrap.removeClass('col-lg-8').addClass('col-lg-12');
+            }
 
             if (!rows.length || !columns.length) {
                 $table.addClass('d-none');
                 $empty.removeClass('d-none');
+                $head.empty();
+                $body.empty();
                 return;
             }
 
             var headHtml = '';
             $.each(columns, function (index, column) {
-                headHtml += '<th>' + escapeHtml(column) + '</th>';
+                headHtml += '<th>' + escapeHtml(column.label || '') + '</th>';
             });
 
             var bodyHtml = '';
             $.each(rows, function (rowIndex, row) {
                 bodyHtml += '<tr>';
                 $.each(columns, function (columnIndex, column) {
-                    bodyHtml += '<td>' + escapeHtml((row && row[column]) || '') + '</td>';
+                    var value = row[column.key] ?? '';
+                    bodyHtml += '<td>' + escapeHtml(value === null || value === undefined || value === '' ? '-' : String(value)) + '</td>';
                 });
                 bodyHtml += '</tr>';
             });

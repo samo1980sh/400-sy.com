@@ -4,6 +4,17 @@
     $subtotalLabel = $cartState['subtotal_label'] ?? ('0 ' . ($cartState['currency'] ?? (session('selectedCurrency') ?? 'SYP')));
 @endphp
 
+<style>
+    .cart-color-swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, .16);
+        display: inline-flex;
+        flex: 0 0 14px;
+    }
+</style>
+
 <div class="modal fullRight fade modal-shopping-cart" id="shoppingCart">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -25,7 +36,12 @@
                                         </div>
                                         <div class="tf-mini-cart-info">
                                             <a class="title link" href="{{ $product['url'] ?? '#' }}">{{ $product['title'] ?? '' }}</a>
-                                            <div class="meta-variant">{{ $product['meta_variant'] ?? '' }}</div>
+                                            <div class="meta-variant d-flex align-items-center gap-2">
+                                                @if (!empty($product['color_swatch_style']))
+                                                    <span class="cart-color-swatch" style="{!! $product['color_swatch_style'] !!}" aria-hidden="true"></span>
+                                                @endif
+                                                <span>{{ $product['meta_variant'] ?? '' }}</span>
+                                            </div>
                                             <div class="price fw-6 js-currency-price" data-base-price="{{ $product['unit_price'] ?? $product['base_price'] ?? 0 }}" data-base-currency="{{ $product['base_currency'] ?? 'SYP' }}">{{ $product['unit_price_label'] ?? $product['price_label'] ?? '' }}</div>
                                             <div class="tf-mini-cart-btns">
                                                 <div class="wg-quantity small">

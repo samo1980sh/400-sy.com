@@ -2,13 +2,11 @@
 
 namespace App\Filament\Resources\Products\Schemas;
 
-use App\Models\Color;
 use App\Models\Category;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -76,28 +74,6 @@ class ProductForm
                                             ->maxLength(100)
                                             ->default(null)
                                             ->helperText('هذا النص للعرض والمواصفات فقط، ويمكن أن يكون مركبًا مثل أسود ورمادي.'),
-                                        Select::make('structure_color_id')
-                                            ->label('لون الفلترة - التركيب')
-                                            ->options(fn (): array => Color::query()
-                                                ->where('status', 'active')
-                                                ->orderBy('sort_order')
-                                                ->orderBy('name_ar')
-                                                ->get(['id', 'name_ar', 'name_en', 'code'])
-                                                ->mapWithKeys(fn (Color $color): array => [
-                                                    $color->id => trim(implode(' - ', array_filter([
-                                                        $color->name_ar,
-                                                        $color->name_en,
-                                                        $color->code,
-                                                    ]))),
-                                                ])
-                                                ->all())
-                                            ->searchable()
-                                            ->preload()
-                                            ->helperText('هذا اللون يستخدم في فلتر الألوان فقط. إذا كان لون المنتج مركبًا مثل أسود ورمادي، اختر اللون الأساسي مثل أسود.')
-                                            ->required(fn (Get $get): bool => (bool) $get('show_web') || (bool) $get('show_app'))
-                                            ->validationMessages([
-                                                'required' => 'لون الفلترة مطلوب إذا كان المنتج ظاهرًا في الفرونت.',
-                                            ]),
                                         TextInput::make('collection')
                                             ->label('التشكيلة')
                                             ->maxLength(100)

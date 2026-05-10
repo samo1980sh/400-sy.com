@@ -311,7 +311,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
     public function product(string $slug): View
     {
         $product = Product::query()
-            ->with(['category', 'variants.size', 'productColors.variants.size', 'measurementCharts'])
+            ->with(['category', 'variants.size', 'productColors.variants.size', 'measurementCharts', 'measurementChartGroup'])
             ->where('slug', $slug)
             ->first();
 
@@ -612,6 +612,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
                     ->with('size'),
                 'productColors.variants.size',
                 'measurementCharts',
+                'measurementChartGroup',
                 'category',
             ])
             ->where('show_web', true)
