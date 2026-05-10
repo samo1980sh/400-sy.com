@@ -45,6 +45,29 @@
         $gallery = collect([asset('images/products/4brouwn1.jpg')]);
     }
 
+    $gallerySlides = $colors
+        ->flatMap(function (array $color) {
+            $colorName = trim((string) ($color['name'] ?? ''));
+            $images = collect($color['gallery'] ?? [])
+                ->prepend($color['image'] ?? null)
+                ->filter(fn ($image) => filled($image))
+                ->unique()
+                ->values();
+
+            return $images->map(fn ($image): array => [
+                'image' => $image,
+                'color' => $colorName,
+            ]);
+        })
+        ->values();
+
+    if ($gallerySlides->isEmpty()) {
+        $gallerySlides = $gallery->map(fn ($image): array => [
+            'image' => $image,
+            'color' => trim((string) ($defaultColor['name'] ?? '')),
+        ]);
+    }
+
     $normalizeSizeOption = static function ($size): ?array {
         if (is_object($size)) {
             $size = (array) $size;
@@ -184,6 +207,14 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/photoswipe.css') }}">
+    <style>
+        .detail-thumbs-slider { display: flex; gap: 10px; }
+        @media (max-width: 767.98px) {
+            .detail-thumbs-slider { flex-direction: column !important; }
+            .detail-thumbs-slider > div { width: 100%; }
+            .detail-thumbs-slider .tf-product-media-thumbs { order: 1; }
+        }
+    </style>
 @endpush
 
 @section('content')
@@ -227,13 +258,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="tf-product-media-wrap sticky-top">
-                                <div class="thumbs-slider" data-detail-media-shell>
+                                <div class="detail-thumbs-slider" data-detail-media-shell>
                                     <div dir="ltr" class="swiper tf-product-media-thumbs other-image-zoom" data-direction="vertical" data-detail-thumbs-swiper>
                                         <div class="swiper-wrapper stagger-wrap" data-detail-thumbs>
-                                            @foreach ($gallery as $image)
-                                                <div class="swiper-slide stagger-item" data-color="{{ $defaultColor['name'] ?? '' }}">
+                                            @foreach ($gallerySlides as $slide)
+                                                <div class="swiper-slide stagger-item" data-color="{{ $slide['color'] }}">
                                                     <div class="item">
-                                                        <img class="lazyload" data-src="{{ $image }}" src="{{ $image }}" alt="{{ $product['title'] ?? '' }}">
+                                                        <img class="lazyload" data-src="{{ $slide['image'] }}" src="{{ $slide['image'] }}" alt="{{ $product['title'] ?? '' }}">
                                                     </div>
                                                 </div>
                                             @endforeach
@@ -241,16 +272,16 @@
                                     </div>
                                     <div dir="ltr" class="swiper tf-product-media-main" id="gallery-swiper-started" data-detail-main-swiper data-detail-gallery-lightbox>
                                         <div class="swiper-wrapper" data-detail-gallery>
-                                            @foreach ($gallery as $image)
-                                                <div class="swiper-slide" data-color="{{ $defaultColor['name'] ?? '' }}">
-                                                    <a href="{{ $image }}" target="_blank" class="item" data-pswp-width="770" data-pswp-height="1075">
-                                                        <img class="tf-image-zoom lazyload" data-zoom="{{ $image }}" data-src="{{ $image }}" src="{{ $image }}" alt="{{ $product['title'] ?? '' }}">
+                                            @foreach ($gallerySlides as $slide)
+                                                <div class="swiper-slide" data-color="{{ $slide['color'] }}">
+                                                    <a href="{{ $slide['image'] }}" target="_blank" class="item" data-pswp-width="770" data-pswp-height="1075">
+                                                        <img class="tf-image-zoom lazyload" data-zoom="{{ $slide['image'] }}" data-src="{{ $slide['image'] }}" src="{{ $slide['image'] }}" alt="{{ $product['title'] ?? '' }}">
                                                     </a>
                                                 </div>
                                             @endforeach
                                         </div>
-                                        <div class="swiper-button-next button-style-arrow single-slide-prev"></div>
-                                        <div class="swiper-button-prev button-style-arrow single-slide-next"></div>
+                                        <div class="swiper-button-next button-style-arrow thumbs-next"></div>
+                                        <div class="swiper-button-prev button-style-arrow thumbs-prev"></div>
                                     </div>
                                 </div>
                             </div>
@@ -308,7 +339,7 @@
                                                     @foreach ($colors as $index => $color)
                                                         @php($swatchStyle = trim((string) ($color['swatch_style'] ?? '')))
                                                         <input id="detail-color-{{ $index }}" type="radio" name="detail_color" value="{{ $color['name'] }}" data-color-index="{{ $index }}" @checked($index === $defaultColorIndex)>
-                                                        <label class="hover-tooltip radius-60 color-btn" for="detail-color-{{ $index }}" data-value="{{ $color['name'] }}">
+                                                        <label class="hover-tooltip radius-60 color-btn {{ $index === $defaultColorIndex ? 'active' : '' }}" for="detail-color-{{ $index }}" data-value="{{ $color['name'] }}" data-color="{{ $color['name'] }}" data-color-code="{{ $color['color_code'] ?? '' }}">
                                                             <span class="btn-checkbox {{ $color['class_name'] ?? 'four-Black' }}" style="{{ $swatchStyle !== '' ? $swatchStyle : '' }}"></span>
                                                             <span class="tooltip">{{ $color['name'] }}</span>
                                                         </label>

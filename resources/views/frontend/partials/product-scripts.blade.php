@@ -188,16 +188,57 @@
                     var swatchStyle = item.swatch_style || '';
                     var swatchImage = item.swatch_image || '';
                     var colorHex = item.hex || item.color_hex || '';
+                    var colorStyle = swatchStyle || (colorHex ? ('background: ' + colorHex + '; background-color: ' + colorHex + ';') : '');
 
                     html += '<input type="radio" name="color" id="' + id + '" ' + checked + ' value="' + escapeHtml(value) + '" data-gallery="' + escapeHtml(JSON.stringify(gallery)) + '"' + (item.id ? ' data-color-id="' + escapeHtml(item.id) + '"' : '') + (item.color_code ? ' data-color-code="' + escapeHtml(item.color_code) + '"' : '') + (item.name ? ' data-color-name="' + escapeHtml(item.name) + '"' : '') + ' data-color-class="' + escapeHtml(item.class_name || '') + '" data-color-image="' + escapeHtml(item.image || '') + '" data-color-hex="' + escapeHtml(colorHex) + '" data-color-swatch-image="' + escapeHtml(swatchImage) + '" data-color-swatch-style="' + escapeHtml(swatchStyle) + '">';
-                    html += '<label class="hover-tooltip radius-60" for="' + id + '" data-value="' + escapeHtml(value) + '">';
-                    html += '<span class="btn-checkbox ' + escapeHtml(item.class_name || 'four-Black') + '"' + (swatchStyle ? ' style="' + escapeHtml(swatchStyle) + '"' : '') + '></span>';
+                    html += '<label class="hover-tooltip radius-60 color-btn" for="' + id + '" data-value="' + escapeHtml(value) + '" data-color="' + escapeHtml(item.name || value) + '" data-color-code="' + escapeHtml(item.color_code || '') + '">';
+                    html += '<span class="btn-checkbox swatch-value ' + escapeHtml(item.class_name || 'four-Black') + '"' + (colorStyle ? ' style="' + escapeHtml(colorStyle) + '"' : '') + '></span>';
                     html += '<span class="tooltip">' + escapeHtml(value) + '</span>';
                     html += '</label>';
                 }
             });
 
             return html;
+        }
+
+        function applyModalColorSwatches($scope) {
+            $scope.find('input[name="color"]').each(function () {
+                var $input = $(this);
+                var inputId = $input.attr('id');
+                var $swatch = $scope.find('label[for="' + inputId + '"] .btn-checkbox, label[for="' + inputId + '"] .swatch-value').first();
+
+                if (!$swatch.length) {
+                    return;
+                }
+
+                var swatchStyle = String($input.data('colorSwatchStyle') || '').trim();
+                var swatchImage = String($input.data('colorSwatchImage') || '').trim();
+                var colorHex = String($input.data('colorHex') || '').trim();
+
+                $swatch.removeAttr('style');
+
+                if (swatchStyle !== '') {
+                    $swatch.attr('style', swatchStyle);
+                    return;
+                }
+
+                if (swatchImage !== '') {
+                    $swatch.css({
+                        backgroundImage: "url('" + swatchImage + "')",
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundColor: 'transparent'
+                    });
+                    return;
+                }
+
+                if (colorHex !== '') {
+                    $swatch.css({
+                        background: colorHex,
+                        backgroundColor: colorHex
+                    });
+                }
+            });
         }
 
         function findProductColor(product, colorRef) {
@@ -523,6 +564,7 @@
             $modal.find('[data-qv-description]').html(product.description ? '<p>' + escapeHtml(product.description) + '</p>' : '');
             $modal.find('[data-qv-gallery]').html(renderGalleryMarkup(colorData.gallery || product.gallery || [product.image || '']));
             $modal.find('[data-qv-sizes]').html(buildOptionMarkup(sizes, selectedSize, 'size'));
+            applyModalColorSwatches($modal);
 
             selectedSize = readSelected($modal, 'size');
             $modal.find('[data-qv-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
@@ -562,6 +604,7 @@
             $modal.find('[data-qadd-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
             $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], selectedColorRef || product.default_color || '', 'color'));
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(sizes, selectedSize, 'size'));
+            applyModalColorSwatches($modal);
 
             selectedSize = readSelected($modal, 'size');
             $modal.find('[data-cart-submit]')
@@ -591,6 +634,7 @@
                 $modal.find('[data-qv-gallery]').html(renderGalleryMarkup(product.gallery || [product.image || '']));
                 $modal.find('[data-qv-colors]').html(buildOptionMarkup(product.colors || [], options.selectedColor ? (options.selectedColor.name || options.selectedColor.code || options.selectedColor.className || '') : (product.default_color || ''), 'color'));
                 $modal.find('[data-qv-sizes]').html(buildOptionMarkup(product.size_options || product.sizes || [], product.default_size || '', 'size'));
+                applyModalColorSwatches($modal);
                 syncQuickViewSelection($modal);
                 return;
             }
@@ -601,6 +645,7 @@
             $modal.find('[data-qadd-price-old]').text(product.compare_price_label || '').toggleClass('d-none', ! product.compare_price_label);
             $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], options.selectedColor ? (options.selectedColor.name || options.selectedColor.code || options.selectedColor.className || '') : (product.default_color || ''), 'color'));
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(product.size_options || product.sizes || [], product.default_size || '', 'size'));
+            applyModalColorSwatches($modal);
             syncQuickAddSelection($modal);
         }
 
