@@ -9,6 +9,16 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductImageCatalogService
 {
+    protected const FALLBACK_COLOR_CLASS = 'four-Black';
+
+    protected const IMAGE_EXTENSIONS = [
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'webp',
+    ];
+
     protected ?array $sourceFilesCache = null;
     protected ?array $sourcePathsIndexCache = null;
     protected array $mainImagePathCache = [];
@@ -36,7 +46,7 @@ class ProductImageCatalogService
             return $this->availableColorsCache[$productId];
         }
 
-        $result = [];
+        $colors = [];
 
         foreach ($this->colorsForProduct($product) as $color) {
             if (! $this->isActiveColor($color)) {
@@ -49,27 +59,10 @@ class ProductImageCatalogService
                 continue;
             }
 
-            $result[] = [
-                'id' => $color->id,
-                'name' => trim((string) ($color->color_name_ar ?: $color->color_name_en ?: '-')),
-                'name_ar' => trim((string) ($color->color_name_ar ?: '')),
-                'name_en' => trim((string) ($color->color_name_en ?: '')),
-                'class_name' => $this->normalizeColorClass((string) ($color->color_name_en ?: $color->color_name_ar ?: $color->color_code)),
-                'color_code' => $color->color_code,
-                'status' => $color->status ?? 'inactive',
-                'sort_order' => (int) ($color->sort_order ?? 0),
-                'count' => count($imageSet['source_paths']),
-                'source_paths' => $imageSet['source_paths'],
-                'thumb_urls' => $imageSet['thumb_urls'],
-                'card_urls' => $imageSet['card_urls'],
-                'detail_urls' => $imageSet['detail_urls'],
-                'zoom_urls' => $imageSet['zoom_urls'],
-                'primary_thumb_url' => $imageSet['primary_thumb_url'],
-                'primary_zoom_url' => $imageSet['primary_zoom_url'],
-            ];
+            $colors[] = $this->buildColorPayload($color, $imageSet);
         }
 
-        return $this->availableColorsCache[$productId] = $result;
+        return $this->availableColorsCache[$productId] = $colors;
     }
 
     public function mainImagePath(Product $product): ?string
@@ -80,9 +73,7 @@ class ProductImageCatalogService
             return $this->mainImagePathCache[$productId];
         }
 
-        $color = $this->colorsForProduct($product)
-            ->first(fn (ProductColor $productColor): bool => ($productColor->status ?? 'inactive') === 'active')
-            ?? $this->colorsForProduct($product)->first();
+        $color = $this->primaryColorForProduct($product);
 
         if (! $color instanceof ProductColor) {
             return $this->mainImagePathCache[$productId] = null;
@@ -98,21 +89,10 @@ class ProductImageCatalogService
         $sourcePaths = $this->sourcePathsForColor($product, $color);
 
         if ($sourcePaths === []) {
-            return [
-                'source_paths' => [],
-                'thumb_urls' => [],
-                'card_urls' => [],
-                'detail_urls' => [],
-                'zoom_urls' => [],
-                'primary_thumb_url' => null,
-                'primary_zoom_url' => null,
-            ];
+            return $this->emptyImageSet();
         }
 
-        $urls = array_map(
-            fn (string $sourcePath): string => Storage::disk('public')->url($sourcePath),
-            $sourcePaths,
-        );
+        $urls = $this->urlsForSourcePaths($sourcePaths);
 
         return [
             'source_paths' => $sourcePaths,
@@ -127,16 +107,76 @@ class ProductImageCatalogService
 
     protected function sourcePathsForColor(Product $product, ProductColor $color): array
     {
+        $baseName = $this->sourceBaseNameForColor($product, $color);
+
+        if ($baseName === null) {
+            return [];
+        }
+
+        return $this->sourcePathsIndex()[$baseName] ?? [];
+    }
+
+    protected function sourceBaseNameForColor(Product $product, ProductColor $color): ?string
+    {
         $productCode = trim((string) ($product->model_no ?? ''));
         $colorCode = trim((string) ($color->color_code ?? ''));
 
         if ($productCode === '' || $colorCode === '') {
-            return [];
+            return null;
         }
 
-        $baseName = $productCode . '-' . $colorCode;
+        return $productCode . '-' . $colorCode;
+    }
 
-        return $this->sourcePathsIndex()[$baseName] ?? [];
+    protected function buildColorPayload(ProductColor $color, array $imageSet): array
+    {
+        return [
+            'id' => $color->id,
+            'name' => trim((string) ($color->color_name_ar ?: $color->color_name_en ?: '-')),
+            'name_ar' => trim((string) ($color->color_name_ar ?: '')),
+            'name_en' => trim((string) ($color->color_name_en ?: '')),
+            'class_name' => $this->normalizeColorClass((string) ($color->color_name_en ?: $color->color_name_ar ?: $color->color_code)),
+            'color_code' => $color->color_code,
+            'status' => $color->status ?? 'inactive',
+            'sort_order' => (int) ($color->sort_order ?? 0),
+            'count' => count($imageSet['source_paths']),
+            'source_paths' => $imageSet['source_paths'],
+            'thumb_urls' => $imageSet['thumb_urls'],
+            'card_urls' => $imageSet['card_urls'],
+            'detail_urls' => $imageSet['detail_urls'],
+            'zoom_urls' => $imageSet['zoom_urls'],
+            'primary_thumb_url' => $imageSet['primary_thumb_url'],
+            'primary_zoom_url' => $imageSet['primary_zoom_url'],
+        ];
+    }
+
+    protected function emptyImageSet(): array
+    {
+        return [
+            'source_paths' => [],
+            'thumb_urls' => [],
+            'card_urls' => [],
+            'detail_urls' => [],
+            'zoom_urls' => [],
+            'primary_thumb_url' => null,
+            'primary_zoom_url' => null,
+        ];
+    }
+
+    protected function urlsForSourcePaths(array $sourcePaths): array
+    {
+        return array_map(
+            fn (string $sourcePath): string => Storage::disk('public')->url($sourcePath),
+            $sourcePaths,
+        );
+    }
+
+    protected function primaryColorForProduct(Product $product): ?ProductColor
+    {
+        $colors = $this->colorsForProduct($product);
+
+        return $colors->first(fn (ProductColor $productColor): bool => $this->isActiveColor($productColor))
+            ?? $colors->first();
     }
 
     /**
@@ -188,28 +228,39 @@ class ProductImageCatalogService
         }
 
         foreach ($index as $baseName => $paths) {
-            usort($paths, function (string $left, string $right) use ($baseName): int {
-                $leftName = pathinfo($left, PATHINFO_FILENAME);
-                $rightName = pathinfo($right, PATHINFO_FILENAME);
-
-                if ($leftName === $baseName && $rightName !== $baseName) {
-                    return -1;
-                }
-
-                if ($rightName === $baseName && $leftName !== $baseName) {
-                    return 1;
-                }
-
-                $leftSuffix = (int) preg_replace('/^' . preg_quote($baseName, '/') . '-/', '', $leftName);
-                $rightSuffix = (int) preg_replace('/^' . preg_quote($baseName, '/') . '-/', '', $rightName);
-
-                return $leftSuffix <=> $rightSuffix ?: $leftName <=> $rightName;
-            });
+            usort(
+                $paths,
+                fn (string $left, string $right): int => $this->compareSourcePaths($baseName, $left, $right),
+            );
 
             $index[$baseName] = array_values($paths);
         }
 
         return $this->sourcePathsIndexCache = $index;
+    }
+
+    protected function compareSourcePaths(string $baseName, string $left, string $right): int
+    {
+        $leftName = pathinfo($left, PATHINFO_FILENAME);
+        $rightName = pathinfo($right, PATHINFO_FILENAME);
+
+        if ($leftName === $baseName && $rightName !== $baseName) {
+            return -1;
+        }
+
+        if ($rightName === $baseName && $leftName !== $baseName) {
+            return 1;
+        }
+
+        $leftSuffix = $this->imageSuffixNumber($baseName, $leftName);
+        $rightSuffix = $this->imageSuffixNumber($baseName, $rightName);
+
+        return $leftSuffix <=> $rightSuffix ?: $leftName <=> $rightName;
+    }
+
+    protected function imageSuffixNumber(string $baseName, string $fileName): int
+    {
+        return (int) preg_replace('/^' . preg_quote($baseName, '/') . '-/', '', $fileName);
     }
 
     protected function isProductImageSource(string $path): bool
@@ -220,13 +271,11 @@ class ProductImageCatalogService
             return false;
         }
 
-        return in_array(strtolower((string) pathinfo($normalizedPath, PATHINFO_EXTENSION)), [
-            'jpg',
-            'jpeg',
-            'png',
-            'gif',
-            'webp',
-        ], true);
+        return in_array(
+            strtolower((string) pathinfo($normalizedPath, PATHINFO_EXTENSION)),
+            self::IMAGE_EXTENSIONS,
+            true,
+        );
     }
 
     protected function normalizeImageBaseName(string $fileName): string
@@ -237,13 +286,14 @@ class ProductImageCatalogService
     protected function normalizeColorClass(string $value): string
     {
         $value = trim($value);
+
         if ($value === '') {
-            return 'four-Black';
+            return self::FALLBACK_COLOR_CLASS;
         }
 
         $value = preg_replace('/[^A-Za-z0-9]+/', '-', $value) ?: $value;
         $value = trim($value, '-');
 
-        return $value !== '' ? 'four-' . $value : 'four-Black';
+        return $value !== '' ? 'four-' . $value : self::FALLBACK_COLOR_CLASS;
     }
 }
