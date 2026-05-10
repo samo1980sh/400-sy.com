@@ -46,7 +46,7 @@
         }
 
         function appendQueryParam(url, key, value) {
-            if (!url) {
+            if (!url || value === null || value === undefined || value === '') {
                 return url;
             }
 
@@ -57,6 +57,25 @@
             } catch (error) {
                 return url + (url.indexOf('?') === -1 ? '?' : '&') + encodeURIComponent(key) + '=' + encodeURIComponent(value);
             }
+        }
+
+        function detailUrlWithColor(product, colorRef) {
+            var url = product && (product.detail_url || product.url) ? (product.detail_url || product.url) : '#';
+            colorRef = colorRef || {};
+
+            url = appendQueryParam(url, 'color_id', colorRef.id || '');
+            url = appendQueryParam(url, 'color_code', colorRef.code || colorRef.color_code || '');
+            url = appendQueryParam(url, 'color', colorRef.name || '');
+
+            return url;
+        }
+
+        function updateCardDetailLinks($card) {
+            var product = parseProduct($card.data('product')) || {};
+            var selectedColor = getCardSelectedColor($card);
+            var url = detailUrlWithColor(product, selectedColor);
+
+            $card.find('a.collection-image, .card-product-info a.title.link').attr('href', url);
         }
 
         function syncCartState(response) {
@@ -489,7 +508,11 @@
                         : (Array.isArray(product.sizes) ? product.sizes : [])));
             var selectedSize = readSelected($modal, 'size');
             var available = hasAvailableSize(sizes);
-            var detailUrl = product.detail_url || product.url || '#';
+            var detailUrl = detailUrlWithColor(product, {
+                id: colorData.id || '',
+                code: colorData.color_code || '',
+                name: colorData.name || selectedColorRef || ''
+            });
 
             $modal.find('[data-qv-title]').attr('href', detailUrl).text(product.title || '');
             $modal.find('[data-qv-detail]').attr('href', detailUrl);
@@ -526,7 +549,11 @@
                         : (Array.isArray(product.sizes) ? product.sizes : [])));
             var selectedSize = readSelected($modal, 'size');
             var available = hasAvailableSize(sizes);
-            var detailUrl = product.detail_url || product.url || '#';
+            var detailUrl = detailUrlWithColor(product, {
+                id: colorData.id || '',
+                code: colorData.color_code || '',
+                name: colorData.name || selectedColorRef || ''
+            });
 
             $modal.find('[data-qadd-title-link]').attr('href', detailUrl).text(product.title || '');
             $modal.find('[data-qadd-image]').attr('src', colorData.image || (Array.isArray(colorData.gallery) && colorData.gallery[0]) || product.image || '');
@@ -551,9 +578,11 @@
             $modal.data('product', product);
             $modal.find('input[name="number"]').val(1);
 
+            var selectedDetailUrl = detailUrlWithColor(product, options.selectedColor || {});
+
             if (prefix === 'qv') {
-                $modal.find('[data-qv-title]').attr('href', product.detail_url || product.url || '#').text(product.title || '');
-                $modal.find('[data-qv-detail]').attr('href', product.detail_url || product.url || '#');
+                $modal.find('[data-qv-title]').attr('href', selectedDetailUrl).text(product.title || '');
+                $modal.find('[data-qv-detail]').attr('href', selectedDetailUrl);
                 $modal.find('[data-qv-description]').html(product.description ? '<p>' + escapeHtml(product.description) + '</p>' : '');
                 $modal.find('[data-qv-badge]').toggleClass('d-none', ! product.badge).text(product.badge || '').attr('data-badge-class', product.badge_class || '');
                 $modal.find('[data-qv-product-code]').text(product.product_code || '—');
@@ -566,7 +595,7 @@
                 return;
             }
 
-            $modal.find('[data-qadd-title-link]').attr('href', product.detail_url || product.url || '#').text(product.title || '');
+            $modal.find('[data-qadd-title-link]').attr('href', selectedDetailUrl).text(product.title || '');
             $modal.find('[data-qadd-image]').attr('src', product.image || '');
             $modal.find('[data-qadd-price]').text(product.price_label || product.price_current_label || '');
             $modal.find('[data-qadd-price-old]').text(product.compare_price_label || '').toggleClass('d-none', ! product.compare_price_label);
@@ -658,11 +687,25 @@
             if (imageSrc) {
                 $card.find('.img-product').attr('src', imageSrc).attr('data-src', imageSrc);
             }
+
+            updateCardDetailLinks($card);
         }
 
         $(function () {
             $('.card-product').each(function () {
-                settleProductCardSkeleton($(this));
+                var $card = $(this);
+                var $activeSwatch = $card.find('.list-color-item.color-swatch.active').first();
+
+                if (! $activeSwatch.length) {
+                    $activeSwatch = $card.find('.list-color-item.color-swatch').first();
+                }
+
+                if ($activeSwatch.length) {
+                    syncCardSelectedColor($card, $activeSwatch);
+                    updateCardDetailLinks($card);
+                }
+
+                settleProductCardSkeleton($card);
             });
         });
 
@@ -876,7 +919,19 @@
                     var $results = $(response.products_html);
                     $('[data-shop-results]').replaceWith($results);
                     $results.find('.card-product').each(function () {
-                        settleProductCardSkeleton($(this));
+                        var $card = $(this);
+                        var $activeSwatch = $card.find('.list-color-item.color-swatch.active').first();
+
+                        if (! $activeSwatch.length) {
+                            $activeSwatch = $card.find('.list-color-item.color-swatch').first();
+                        }
+
+                        if ($activeSwatch.length) {
+                            syncCardSelectedColor($card, $activeSwatch);
+                            updateCardDetailLinks($card);
+                        }
+
+                        settleProductCardSkeleton($card);
                     });
                 }
 

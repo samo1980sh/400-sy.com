@@ -414,18 +414,6 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
                 ->values()
             : collect();
 
-        if ($relatedModels->isEmpty()) {
-            $relatedModels = Product::query()
-                ->with($this->productCardRelations())
-                ->whereKeyNot($product->getKey())
-                ->where('show_web', true)
-                ->where('is_active', true)
-                ->where('category_id', $product->category_id)
-                ->latest('id')
-                ->limit(8)
-                ->get();
-        }
-
         return $relatedModels
             ->take(8)
             ->map(fn (Product $related): array => $this->homePageData->presentProduct($related, $locale))

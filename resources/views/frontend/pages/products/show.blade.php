@@ -3,29 +3,188 @@
 @php
     $locale = $locale ?? app()->getLocale();
     $isArabic = $locale === 'ar';
-    $product = $product ?? [];
+    $product = is_array($product ?? null) ? $product : [];
     $productModel = $product_model ?? null;
-    $colors = collect($product['colors'] ?? [])->filter(fn ($color) => filled($color['name'] ?? null))->values();
-    $defaultColor = $colors->first() ?? [];
-    $gallery = collect($defaultColor['gallery'] ?? ($product['gallery'] ?? []))->filter()->values();
-    $sizeOptions = collect($defaultColor['size_options'] ?? ($product['size_options'] ?? []))
-        ->filter(fn ($size) => filled($size['size'] ?? ($size['name'] ?? ($size['label'] ?? null))))
+
+    $colors = collect($product['colors'] ?? [])
+        ->filter(fn ($color) => is_array($color) && filled($color['name'] ?? null))
         ->values();
-    $defaultSize = $defaultColor['default_size'] ?? ($product['default_size'] ?? null);
+
+    $requestedColorId = trim((string) request()->query('color_id', request()->query('product_color_id', '')));
+    $requestedColorCode = trim((string) request()->query('color_code', ''));
+    $requestedColorName = trim((string) request()->query('color', ''));
+
+    $defaultColorIndex = $colors->search(function (array $color) use ($requestedColorId, $requestedColorCode, $requestedColorName): bool {
+        if ($requestedColorId !== '' && (string) ($color['id'] ?? '') === $requestedColorId) {
+            return true;
+        }
+
+        if ($requestedColorCode !== '' && mb_strtolower((string) ($color['color_code'] ?? '')) === mb_strtolower($requestedColorCode)) {
+            return true;
+        }
+
+        if ($requestedColorName !== '' && mb_strtolower((string) ($color['name'] ?? '')) === mb_strtolower($requestedColorName)) {
+            return true;
+        }
+
+        return false;
+    });
+
+    $defaultColorIndex = $defaultColorIndex === false ? 0 : (int) $defaultColorIndex;
+    $defaultColor = $colors->get($defaultColorIndex) ?? [];
+
+    $gallery = collect($defaultColor['gallery'] ?? [])
+        ->merge($defaultColor['image'] ?? [])
+        ->merge($product['gallery'] ?? [])
+        ->merge($product['image'] ?? [])
+        ->filter(fn ($image) => filled($image))
+        ->unique()
+        ->values();
+
+    if ($gallery->isEmpty()) {
+        $gallery = collect([asset('images/products/4brouwn1.jpg')]);
+    }
+
+    $normalizeSizeOption = static function ($size): ?array {
+        if (is_object($size)) {
+            $size = (array) $size;
+        }
+
+        if (is_string($size) || is_numeric($size)) {
+            $size = ['size' => (string) $size];
+        }
+
+        if (! is_array($size)) {
+            return null;
+        }
+
+        $value = trim((string) ($size['size'] ?? ($size['name'] ?? ($size['label'] ?? ($size['value'] ?? '')))));
+
+        if ($value === '') {
+            return null;
+        }
+
+        $soldOut = ! empty($size['is_sold_out'])
+            || (($size['available'] ?? true) === false)
+            || (array_key_exists('quantity', $size) && (int) $size['quantity'] <= 0);
+
+        return array_replace($size, [
+            'value' => $value,
+            'is_sold_out_normalized' => $soldOut,
+        ]);
+    };
+
+    $sizeOptions = collect($defaultColor['size_options'] ?? [])
+        ->whenEmpty(fn () => collect($product['size_options'] ?? []))
+        ->map($normalizeSizeOption)
+        ->filter()
+        ->values();
+
+    $defaultSize = trim((string) ($defaultColor['default_size'] ?? ($product['default_size'] ?? '')));
+
+    if ($defaultSize === '' && $sizeOptions->isNotEmpty()) {
+        $defaultSize = (string) (($sizeOptions->firstWhere('is_sold_out_normalized', false)['value'] ?? null)
+            ?: ($sizeOptions->first()['value'] ?? ''));
+    }
     $description = trim((string) ($product['description'] ?? ''));
     $descriptionHtml = $description !== '' ? nl2br(e($description)) : '';
-    $sizeChart = $product['size_chart'] ?? [];
-    $hasSizeChart = !empty($product['has_size_chart']) && !empty($sizeChart['columns'] ?? []) && !empty($sizeChart['rows'] ?? []);
-    $specifications = collect($product['specifications'] ?? [])->filter(fn ($item) => filled($item['label'] ?? null) && filled($item['value'] ?? null))->values();
+    $sizeChart = is_array($product['size_chart'] ?? null) ? $product['size_chart'] : [];
+    $hasSizeChart = ! empty($product['has_size_chart']) && ! empty($sizeChart['columns'] ?? []) && ! empty($sizeChart['rows'] ?? []);
+    $translateDisplayValue = static function (?string $value, string $type) use ($isArabic): string {
+        $value = trim((string) $value);
+
+        if ($value === '' || ! $isArabic) {
+            return $value;
+        }
+
+        $maps = [
+            'body_fit' => [
+                'slim' => 'ضيق',
+                'regular' => 'عادي',
+                'wide' => 'واسع',
+                'extra slim' => 'ضيق جداً',
+                'extraslim' => 'ضيق جداً',
+                'extra-slim' => 'ضيق جداً',
+            ],
+            'drop' => [
+                'long' => 'طويل',
+                'short' => 'قصير',
+                'regular' => 'عادي',
+            ],
+        ];
+
+        $key = mb_strtolower(str_replace(['_', '-'], ' ', $value));
+        $key = trim(preg_replace('/\s+/', ' ', $key) ?? $key);
+
+        return $maps[$type][$key] ?? $value;
+    };
+
+    $productInfoItems = collect([
+        [
+            'label' => $isArabic ? 'قصة الجسم' : 'Body Fit',
+            'value' => $translateDisplayValue($product['body_fit'] ?? null, 'body_fit'),
+        ],
+        [
+            'label' => $isArabic ? 'الدروب' : 'Drop',
+            'value' => $translateDisplayValue($product['drop_type'] ?? null, 'drop'),
+        ],
+    ])->filter(fn (array $item): bool => filled($item['value'] ?? null))->values();
+
+    $specifications = collect($product['specifications'] ?? [])
+        ->map(function ($specification): ?array {
+            if (is_object($specification)) {
+                $specification = (array) $specification;
+            }
+
+            if (! is_array($specification)) {
+                return null;
+            }
+
+            return [
+                'label' => trim((string) ($specification['label'] ?? '')),
+                'value' => trim((string) ($specification['value'] ?? '')),
+            ];
+        })
+        ->filter(fn (?array $item): bool => is_array($item) && filled($item['label'] ?? null) && filled($item['value'] ?? null))
+        ->values();
+
+    if ($specifications->isEmpty() && $productModel && method_exists($productModel, 'relationLoaded') && $productModel->relationLoaded('details')) {
+        $specifications = collect($productModel->getRelation('details'))
+            ->filter(fn ($detail): bool => (bool) ($detail->is_active ?? true))
+            ->map(function ($detail) use ($locale): array {
+                $label = $locale === 'ar'
+                    ? trim((string) ($detail->label_ar ?? ($detail->label_en ?? '')))
+                    : trim((string) ($detail->label_en ?? ($detail->label_ar ?? '')));
+                $value = $locale === 'ar'
+                    ? trim((string) ($detail->value_ar ?? ($detail->value_en ?? '')))
+                    : trim((string) ($detail->value_en ?? ($detail->value_ar ?? '')));
+
+                return [
+                    'label' => $label,
+                    'value' => $value,
+                ];
+            })
+            ->filter(fn (array $item): bool => filled($item['label'] ?? null) && filled($item['value'] ?? null))
+            ->values();
+    }
+
     $relatedProducts = collect($related_products ?? [])->values();
-    $categoryUrl = $productModel?->category?->slug ? route('front.category', $productModel->category->slug) : route('front.home');
-    $relatedTitle = ($productModel?->relationLoaded('complements') && $productModel->complements->isNotEmpty())
-        ? ($isArabic ? 'منتجات مكملة' : 'Complementary products')
-        : ($isArabic ? 'قد يعجبك أيضاً' : 'You may also like');
+
+    $categoryUrl = $productModel?->category?->slug
+        ? route('front.category', $productModel->category->slug)
+        : route('front.home');
+
+    $cartAddUrl = $product['cart_add_url'] ?? ($productModel?->slug ? route('front.cart.add', $productModel->slug) : '');
+
+    $relatedTitle = $isArabic ? 'أكمل إطلالتك' : 'Complete Your Look';
 @endphp
 
 @section('title', $product['title'] ?? ($page_title ?? __('front.brand')))
 @section('meta_description', $description !== '' ? $description : ($product['title'] ?? __('front.brand')))
+
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/photoswipe.css') }}">
+@endpush
 
 @section('content')
     @include('frontend.partials.announcement-bar', ['tickerItems' => $ticker_items ?? [], 'socialLinks' => $social_links ?? []])
@@ -45,6 +204,7 @@
                             @if (! $loop->first)
                                 <i class="icon icon-arrow-right"></i>
                             @endif
+
                             @if ($loop->last)
                                 <span class="text">{{ $crumb['label'] ?? '' }}</span>
                             @else
@@ -53,33 +213,37 @@
                         @endforeach
                     </div>
                     <div class="tf-breadcrumb-prev-next">
-                        <a href="{{ $categoryUrl }}" class="tf-breadcrumb-back hover-tooltip center"><i class="icon icon-shop"></i></a>
+                        <a href="{{ $categoryUrl }}" class="tf-breadcrumb-back hover-tooltip center">
+                            <i class="icon icon-shop"></i>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
 
         <section class="flat-spacing-4 pt_0">
-            <div class="tf-main-product section-image-zoom" data-detail-product='@json($product)'>
+            <div class="tf-main-product section-image-zoom" data-detail-product='@json($product)' data-detail-default-color-index="{{ $defaultColorIndex }}">
                 <div class="container">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="tf-product-media-wrap sticky-top">
-                                <div class="thumbs-slider">
+                                <div class="thumbs-slider" data-detail-media-shell>
                                     <div dir="ltr" class="swiper tf-product-media-thumbs other-image-zoom" data-direction="vertical" data-detail-thumbs-swiper>
                                         <div class="swiper-wrapper stagger-wrap" data-detail-thumbs>
                                             @foreach ($gallery as $image)
                                                 <div class="swiper-slide stagger-item" data-color="{{ $defaultColor['name'] ?? '' }}">
-                                                    <div class="item"><img class="lazyload" data-src="{{ $image }}" src="{{ $image }}" alt="{{ $product['title'] ?? '' }}"></div>
+                                                    <div class="item">
+                                                        <img class="lazyload" data-src="{{ $image }}" src="{{ $image }}" alt="{{ $product['title'] ?? '' }}">
+                                                    </div>
                                                 </div>
                                             @endforeach
                                         </div>
                                     </div>
-                                    <div dir="ltr" class="swiper tf-product-media-main" data-detail-main-swiper>
+                                    <div dir="ltr" class="swiper tf-product-media-main" id="gallery-swiper-started" data-detail-main-swiper data-detail-gallery-lightbox>
                                         <div class="swiper-wrapper" data-detail-gallery>
                                             @foreach ($gallery as $image)
                                                 <div class="swiper-slide" data-color="{{ $defaultColor['name'] ?? '' }}">
-                                                    <a href="{{ $image }}" target="_blank" class="item" data-pswp-width="770px" data-pswp-height="1075px">
+                                                    <a href="{{ $image }}" target="_blank" class="item" data-pswp-width="770" data-pswp-height="1075">
                                                         <img class="tf-image-zoom lazyload" data-zoom="{{ $image }}" data-src="{{ $image }}" src="{{ $image }}" alt="{{ $product['title'] ?? '' }}">
                                                     </a>
                                                 </div>
@@ -96,10 +260,14 @@
                             <div class="tf-product-info-wrap position-relative">
                                 <div class="tf-zoom-main"></div>
                                 <div class="tf-product-info-list other-image-zoom">
-                                    <div class="tf-product-info-title"><h5>{{ $product['title'] ?? '' }}</h5></div>
+                                    <div class="tf-product-info-title">
+                                        <h5>{{ $product['title'] ?? '' }}</h5>
+                                    </div>
 
-                                    @if (!empty($product['badge']))
-                                        <div class="tf-product-info-badges"><div class="badges {{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</div></div>
+                                    @if (! empty($product['badge']))
+                                        <div class="tf-product-info-badges">
+                                            <div class="badges {{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</div>
+                                        </div>
                                     @endif
 
                                     <div class="tf-product-info-price">
@@ -111,29 +279,35 @@
                                         </div>
                                     </div>
 
-                                    @if (!empty($product['product_code']))
-                                        <div class="tf-product-info-liveview"><p>{{ __('front.products.product_code') }}: <span class="fw-6">{{ $product['product_code'] }}</span></p></div>
-                                    @endif
-                                    @if (!empty($product['category_name']))
-                                        <div class="tf-product-info-liveview"><p>{{ $isArabic ? 'القسم' : 'Category' }}: <a href="{{ $categoryUrl }}" class="fw-6 link">{{ $product['category_name'] }}</a></p></div>
-                                    @endif
-                                    @if (!empty($product['display_color_description']))
-                                        <div class="tf-product-info-liveview"><p>{{ $isArabic ? 'لون المنتج المعروض' : 'Displayed color' }}: <span class="fw-6">{{ $product['display_color_description'] }}</span></p></div>
+                                    @if (! empty($product['product_code']))
+                                        <div class="tf-product-info-liveview">
+                                            <p>{{ __('front.products.product_code') }}: <span class="fw-6">{{ $product['product_code'] }}</span></p>
+                                        </div>
                                     @endif
 
-                                    @if ($descriptionHtml !== '')
-                                        <div class="tf-product-description"><p>{!! $descriptionHtml !!}</p></div>
+                                    @if ($productInfoItems->isNotEmpty())
+                                        @foreach ($productInfoItems as $infoItem)
+                                            <div class="tf-product-info-liveview">
+                                                <p>{{ $infoItem['label'] }}: <span class="fw-6">{{ $infoItem['value'] }}</span></p>
+                                            </div>
+                                        @endforeach
                                     @endif
 
                                     <div class="tf-product-info-variant-picker">
                                         @if ($colors->isNotEmpty())
                                             <div class="variant-picker-item">
-                                                <div class="variant-picker-label">{{ __('front.products.color') }}: <span class="fw-6 variant-picker-label-value" data-detail-color-label>{{ $defaultColor['name'] ?? '' }}</span></div>
-                                                <div class="tf-product-info-code color-code"><span class="label">{{ __('front.products.color_code') }}:</span> <span class="value" data-detail-color-code>{{ $defaultColor['color_code'] ?? '' }}</span></div>
+                                                <div class="variant-picker-label">
+                                                    {{ __('front.products.color') }}:
+                                                    <span class="fw-6 variant-picker-label-value" data-detail-color-label>{{ $defaultColor['name'] ?? '' }}</span>
+                                                </div>
+                                                <div class="tf-product-info-code color-code">
+                                                    <span class="label">{{ __('front.products.color_code') }}:</span>
+                                                    <span class="value" data-detail-color-code>{{ $defaultColor['color_code'] ?? '' }}</span>
+                                                </div>
                                                 <div class="variant-picker-values" data-detail-colors>
                                                     @foreach ($colors as $index => $color)
                                                         @php($swatchStyle = trim((string) ($color['swatch_style'] ?? '')))
-                                                        <input id="detail-color-{{ $index }}" type="radio" name="detail_color" value="{{ $color['name'] }}" data-color-index="{{ $index }}" @checked($index === 0)>
+                                                        <input id="detail-color-{{ $index }}" type="radio" name="detail_color" value="{{ $color['name'] }}" data-color-index="{{ $index }}" @checked($index === $defaultColorIndex)>
                                                         <label class="hover-tooltip radius-60 color-btn" for="detail-color-{{ $index }}" data-value="{{ $color['name'] }}">
                                                             <span class="btn-checkbox {{ $color['class_name'] ?? 'four-Black' }}" style="{{ $swatchStyle !== '' ? $swatchStyle : '' }}"></span>
                                                             <span class="tooltip">{{ $color['name'] }}</span>
@@ -143,26 +317,40 @@
                                             </div>
                                         @endif
 
-                                        <div class="variant-picker-item">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div class="variant-picker-label">{{ __('front.products.size') }}: <span class="fw-6 variant-picker-label-value" data-detail-size-label>{{ $defaultSize ?? '' }}</span></div>
-                                                @if ($hasSizeChart)
-                                                    <a href="#find_size" data-bs-toggle="modal" class="find-size fw-6" data-detail-find-size>{{ __('front.products.find_your_size') }}</a>
-                                                @endif
-                                            </div>
-                                            <div class="variant-picker-values" data-detail-sizes>
-                                                @foreach ($sizeOptions as $index => $size)
-                                                    @php
-                                                        $sizeValue = $size['size'] ?? ($size['name'] ?? ($size['label'] ?? ''));
-                                                        $soldOut = !empty($size['is_sold_out']) || (($size['available'] ?? true) === false);
-                                                    @endphp
-                                                    @if ($sizeValue !== '')
-                                                        <input type="radio" name="detail_size" id="detail-size-{{ $index }}" value="{{ $sizeValue }}" data-size-index="{{ $index }}" data-size-id="{{ $size['size_id'] ?? '' }}" data-size-code="{{ $size['size_code'] ?? '' }}" data-variant-id="{{ $size['variant_id'] ?? '' }}" data-product-color-id="{{ $size['product_color_id'] ?? '' }}" @checked($sizeValue === $defaultSize && ! $soldOut) @disabled($soldOut)>
-                                                        <label class="style-text size-btn" for="detail-size-{{ $index }}" data-value="{{ $sizeValue }}" aria-disabled="{{ $soldOut ? 'true' : 'false' }}"><p>{{ $sizeValue }}</p></label>
+                                        @if ($sizeOptions->isNotEmpty())
+                                            <div class="variant-picker-item">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="variant-picker-label">
+                                                        {{ __('front.products.size') }}:
+                                                        <span class="fw-6 variant-picker-label-value" data-detail-size-label>{{ $defaultSize ?? '' }}</span>
+                                                    </div>
+                                                    @if ($hasSizeChart)
+                                                        <button type="button" class="size-chart-pill btn-choose-size" data-detail-find-size>
+                                                            <span class="size-chart-pill__icon" aria-hidden="true">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                                    <path d="M4 7h16" />
+                                                                    <path d="M4 17h16" />
+                                                                    <path d="M7 4v16" />
+                                                                    <path d="M17 4v16" />
+                                                                </svg>
+                                                            </span>
+                                                            <span class="size-chart-pill__text">
+                                                                <span class="size-chart-pill__title">{{ __('front.products.size_chart') }}</span>
+                                                                <span class="size-chart-pill__subtitle">{{ __('front.products.find_your_size') }}</span>
+                                                            </span>
+                                                        </button>
                                                     @endif
-                                                @endforeach
+                                                </div>
+                                                <div class="variant-picker-values" data-detail-sizes>
+                                                    @foreach ($sizeOptions as $index => $size)
+                                                        <input type="radio" name="detail_size" id="detail-size-{{ $index }}" value="{{ $size['value'] }}" data-size-index="{{ $index }}" data-size-id="{{ $size['size_id'] ?? '' }}" data-size-code="{{ $size['size_code'] ?? '' }}" data-variant-id="{{ $size['variant_id'] ?? '' }}" data-product-color-id="{{ $size['product_color_id'] ?? '' }}" @checked(($size['value'] ?? '') === $defaultSize && empty($size['is_sold_out_normalized'])) @disabled(! empty($size['is_sold_out_normalized']))>
+                                                        <label class="style-text" for="detail-size-{{ $index }}" data-value="{{ $size['value'] }}" @if (! empty($size['is_sold_out_normalized'])) aria-disabled="true" @endif>
+                                                            <span class="size-label">{{ $size['value'] }}</span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
                                             </div>
-                                        </div>
+                                        @endif
                                     </div>
 
                                     <div class="tf-product-info-quantity">
@@ -178,10 +366,13 @@
                                         <form data-detail-cart-form data-cart-url="{{ $cartAddUrl }}">
                                             @csrf
                                             <button type="submit" class="tf-btn btn-fill justify-content-center fw-6 fs-16 flex-grow-1 animate-hover-btn btn-add-to-cart" data-detail-cart-submit @disabled(empty($cartAddUrl))>
-                                                <span>{{ __('front.products.add_to_cart') }} -&nbsp;</span><span class="tf-qty-price total-price" data-detail-submit-price>{{ $product['price_current_label'] ?? $product['price_label'] ?? '' }}</span>
+                                                <span>{{ __('front.products.add_to_cart') }} -&nbsp;</span>
+                                                <span class="tf-qty-price total-price js-currency-price" data-detail-submit-price data-base-price="{{ $product['price_current'] ?? $product['base_price'] ?? 0 }}" data-base-currency="{{ $product['base_currency'] ?? 'SYP' }}">{{ $product['price_current_label'] ?? $product['price_label'] ?? '' }}</span>
                                             </button>
                                             <a href="javascript:void(0);" class="tf-product-btn-wishlist hover-tooltip box-icon bg_white wishlist btn-icon-action">
-                                                <span class="icon icon-heart"></span><span class="tooltip">{{ __('front.products.add_to_wishlist') }}</span><span class="icon icon-delete"></span>
+                                                <span class="icon icon-heart"></span>
+                                                <span class="tooltip">{{ __('front.products.add_to_wishlist') }}</span>
+                                                <span class="icon icon-delete"></span>
                                             </a>
                                         </form>
                                     </div>
@@ -193,7 +384,7 @@
             </div>
         </section>
 
-        @if ($descriptionHtml !== '' || $specifications->isNotEmpty() || $hasSizeChart)
+        @if ($descriptionHtml !== '' || $specifications->isNotEmpty())
             <section class="flat-spacing-17 pt_0">
                 <div class="container">
                     <div class="row">
@@ -206,13 +397,12 @@
                                     @if ($specifications->isNotEmpty())
                                         <li class="item-title {{ $descriptionHtml === '' ? 'active' : '' }}"><span class="inner">{{ $isArabic ? 'المواصفات' : 'Additional Information' }}</span></li>
                                     @endif
-                                    @if ($hasSizeChart)
-                                        <li class="item-title {{ $descriptionHtml === '' && $specifications->isEmpty() ? 'active' : '' }}"><span class="inner">{{ __('front.products.size_chart') }}</span></li>
-                                    @endif
                                 </ul>
                                 <div class="widget-content-tab">
                                     @if ($descriptionHtml !== '')
-                                        <div class="widget-content-inner active"><div class="tab-description"><p>{!! $descriptionHtml !!}</p></div></div>
+                                        <div class="widget-content-inner active">
+                                            <div class="tab-description"><p>{!! $descriptionHtml !!}</p></div>
+                                        </div>
                                     @endif
                                     @if ($specifications->isNotEmpty())
                                         <div class="widget-content-inner {{ $descriptionHtml === '' ? 'active' : '' }}">
@@ -220,15 +410,10 @@
                                                 @foreach ($specifications as $spec)
                                                     <div class="d-flex justify-content-between flex-wrap gap-3 py-3 border-bottom">
                                                         <div class="fw-6">{{ $spec['label'] }}</div>
-                                                        <div>{{ $spec['value'] }}</div>
+                                                        <div>{!! nl2br(e($spec['value'])) !!}</div>
                                                     </div>
                                                 @endforeach
                                             </div>
-                                        </div>
-                                    @endif
-                                    @if ($hasSizeChart)
-                                        <div class="widget-content-inner {{ $descriptionHtml === '' && $specifications->isEmpty() ? 'active' : '' }}">
-                                            <div class="tab-description"><a href="#find_size" data-bs-toggle="modal" class="tf-btn btn-line" data-detail-find-size>{{ __('front.products.size_chart') }}<i class="icon icon-arrow1-top-left"></i></a></div>
                                         </div>
                                     @endif
                                 </div>
@@ -266,7 +451,5 @@
 
 @push('scripts')
     @include('frontend.partials.product-scripts')
-    <script>
-        (function($){var $r=$('[data-detail-product]').first(),p=$r.data('detail-product')||{},c=Array.isArray(p.colors)?p.colors:[],ci=0,si=0,t=null,m=null;if(!$r.length)return;function e(v){return String(v||'').replace(/[&<>"']/g,function(ch){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];});}function col(){return c[ci]||c[0]||{};}function sizes(){var x=col();return Array.isArray(x.size_options)&&x.size_options.length?x.size_options:(Array.isArray(p.size_options)?p.size_options:[]);}function sold(s){return s&&(s.is_sold_out===true||s.available===false||Number(s.quantity||0)<=0);}function init(){if(typeof Swiper==='undefined')return;if(t&&t.destroy)t.destroy(true,true);if(m&&m.destroy)m.destroy(true,true);var te=document.querySelector('[data-detail-thumbs-swiper]'),me=document.querySelector('[data-detail-main-swiper]');if(!te||!me)return;t=new Swiper(te,{direction:'vertical',slidesPerView:5,spaceBetween:12,watchSlidesProgress:true});m=new Swiper(me,{slidesPerView:1,spaceBetween:0,thumbs:{swiper:t},navigation:{nextEl:me.querySelector('.swiper-button-next'),prevEl:me.querySelector('.swiper-button-prev')}});}function gallery(x){var g=Array.isArray(x.gallery)&&x.gallery.length?x.gallery:(x.image?[x.image]:(Array.isArray(p.gallery)?p.gallery:[]));g=g.filter(Boolean);$('[data-detail-thumbs]').html(g.map(function(i){return '<div class="swiper-slide stagger-item" data-color="'+e(x.name||'')+'"><div class="item"><img class="lazyload" data-src="'+e(i)+'" src="'+e(i)+'" alt="'+e(p.title||'')+'"></div></div>';}).join(''));$('[data-detail-gallery]').html(g.map(function(i){return '<div class="swiper-slide" data-color="'+e(x.name||'')+'"><a href="'+e(i)+'" target="_blank" class="item" data-pswp-width="770px" data-pswp-height="1075px"><img class="tf-image-zoom lazyload" data-zoom="'+e(i)+'" data-src="'+e(i)+'" src="'+e(i)+'" alt="'+e(p.title||'')+'"></a></div>';}).join(''));init();}function renderSizes(){var a=sizes(),f=a.findIndex(function(s){return !sold(s);});if(f<0)f=0;si=f;$('[data-detail-sizes]').html(a.map(function(s,i){var v=s.size||s.name||s.label||'',d=sold(s)?' disabled':'',ck=i===f&&!sold(s)?' checked':'';if(!v)return '';return '<input type="radio" name="detail_size" id="detail-size-js-'+i+'" value="'+e(v)+'" data-size-index="'+i+'" data-size-id="'+e(s.size_id||'')+'" data-size-code="'+e(s.size_code||'')+'" data-variant-id="'+e(s.variant_id||'')+'" data-product-color-id="'+e(s.product_color_id||'')+'"'+ck+d+'><label class="style-text size-btn" for="detail-size-js-'+i+'" data-value="'+e(v)+'"'+(sold(s)?' aria-disabled="true"':'')+'><p>'+e(v)+'</p></label>';}).join(''));}function price(){var x=col(),a=sizes(),s=a[si]||null,q=Math.max(1,Math.min(99,parseInt($('[data-detail-quantity]').val(),10)||1)),cu=p.base_currency||'SYP',cl=(s&&s.price_current_label)||x.price_current_label||p.price_current_label||p.price_label||'',xl=(s&&s.compare_price_label)||x.compare_price_label||p.compare_price_label||'',cb=(s&&s.price_current)||x.price_current||p.price_current||p.base_price||0,xb=(s&&s.compare_price)||x.compare_price||p.compare_price||0,tl=(Math.round(Number(cb||0)*q)).toLocaleString()+' '+cu;$('[data-detail-current-price]').text(cl).attr({'data-base-price':cb||0,'data-base-currency':cu});$('[data-detail-submit-price]').text(tl);$('[data-detail-compare-price]').text(xl||'').attr({'data-base-price':xb||0,'data-base-currency':cu}).toggleClass('d-none',!xl);$('[data-detail-color-label]').text(x.name||'');$('[data-detail-color-code]').text(x.color_code||'');$('[data-detail-size-label]').text(s?(s.size||s.name||s.label||''):'');if(window.updateCurrencyConvertedPrices)window.updateCurrencyConvertedPrices();}function chart(){var $m=$('#find_size'),ch=p.size_chart||{},r=Array.isArray(ch.rows)?ch.rows:[],cs=Array.isArray(ch.columns)?ch.columns:[],$t=$m.find('[data-size-chart-table]'),$h=$m.find('[data-size-chart-head]'),$b=$m.find('[data-size-chart-body]'),$e=$m.find('[data-size-chart-empty]'),$gw=$m.find('[data-size-chart-guide-wrap]'),$gi=$m.find('[data-size-chart-guide-image]'),$tw=$m.find('[data-size-chart-table-wrap]'),img=String(ch.guide_image||'').trim();$m.find('[data-size-chart-title]').text(ch.title||'');$m.find('[data-size-chart-subtitle]').text(ch.subtitle||'');if(img){$gi.attr('src',img);$gw.removeClass('d-none');$tw.removeClass('col-lg-12').addClass('col-lg-8');}else{$gi.attr('src','');$gw.addClass('d-none');$tw.removeClass('col-lg-8').addClass('col-lg-12');}if(!r.length||!cs.length){$t.addClass('d-none');$e.removeClass('d-none');$h.empty();$b.empty();return;}$h.html(cs.map(function(c){return '<th>'+e(c.label||'')+'</th>';}).join(''));$b.html(r.map(function(row){return '<tr>'+cs.map(function(c){var v=row[c.key]??'';return '<td>'+e(v===null||v===undefined||v===''?'-':String(v))+'</td>';}).join('')+'</tr>';}).join(''));$e.addClass('d-none');$t.removeClass('d-none');}function cartState(res){var $f=$('<div>').html(res.cart_html||''),$n=$f.find('#shoppingCart'),count=(res.cart_state&&res.cart_state.count)||0;$('[data-cart-count]').text(count);if($n.length&&$('#shoppingCart').length){var $m=$('#shoppingCart'),$ns=$n.find('[data-cart-subtotal]'),$s=$m.find('[data-cart-subtotal]');$m.find('[data-cart-items]').html($n.find('[data-cart-items]').html());if($s.length&&$ns.length){$s.text($ns.text()).attr({'data-base-price':$ns.attr('data-base-price')||0,'data-base-currency':$ns.attr('data-base-currency')||($('.js-currency-select').val()||'')});}if(window.updateCurrencyConvertedPrices)window.updateCurrencyConvertedPrices();}}$(document).on('change','[data-detail-colors] input[name=\"detail_color\"]',function(){ci=Number($(this).data('color-index')||0);gallery(col());renderSizes();price();});$(document).on('change','[data-detail-sizes] input[name=\"detail_size\"]',function(){si=Number($(this).data('size-index')||0);price();});$(document).on('click','[data-detail-qty]',function(){var $q=$('[data-detail-quantity]'),n=parseInt($q.val(),10)||1;$q.val($(this).data('detail-qty')==='decrease'?Math.max(1,n-1):Math.min(99,n+1));price();});$(document).on('click','[data-detail-find-size]',function(ev){ev.preventDefault();chart();$('#find_size').modal('show');});$('[data-detail-cart-form]').on('submit',function(ev){ev.preventDefault();var url=String($(this).data('cart-url')||''),x=col(),$s=$('[data-detail-sizes] input[name=\"detail_size\"]:checked').first(),q=Math.max(1,Math.min(99,parseInt($('[data-detail-quantity]').val(),10)||1)),d={quantity:q,color:x.name||'',color_name:x.name||'',color_id:x.id||'',color_code:x.color_code||''};if(!url)return;if($s.length){d.size=$s.val()||'';d.size_id=$s.data('size-id')||'';d.size_code=$s.data('size-code')||'';d.variant_id=$s.data('variant-id')||'';}$('[data-detail-cart-submit]').prop('disabled',true);$.ajax({url:url,type:'POST',data:d,dataType:'json',headers:{'X-CSRF-TOKEN':$('meta[name=\"csrf-token\"]').attr('content')||'',Accept:'application/json'}}).done(function(res){cartState(res||{});$('#shoppingCart').modal('show');}).fail(function(xhr){console.error('Detail add-to-cart failed',xhr);}).always(function(){$('[data-detail-cart-submit]').prop('disabled',false);});});chart();gallery(col());renderSizes();price();})(jQuery);
-    </script>
+    @include('frontend.partials.product-detail-scripts')
 @endpush

@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="{{ asset('fonts/fonts.css') }}">
     <link rel="stylesheet" href="{{ asset('fonts/font-icons.css') }}">
     <link rel="stylesheet" href="{{ asset('css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/photoswipe.css') }}">
     <link rel="stylesheet" href="{{ asset('css/swiper-bundle.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/animate.css') }}">
     <link rel="stylesheet" href="{{ asset('css/bootstrap-select.min.css') }}">
@@ -53,6 +54,10 @@
         }
     </script>
     <script src="{{ asset('js/main.js') }}?v={{ filemtime(public_path('js/main.js')) }}"></script>
+    <script src="{{ asset('js/photoswipe-lightbox.umd.min.js') }}"></script>
+    <script src="{{ asset('js/model-viewer.min.js') }}"></script>
+    <script src="{{ asset('js/zoom.js') }}"></script>
+
     @stack('scripts')
 </body>
 </html>
