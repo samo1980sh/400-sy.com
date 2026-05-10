@@ -169,13 +169,58 @@
             return available;
         }
 
+        function buildSwatchStyle(item) {
+            item = item || {};
+
+            var swatchStyle = item.swatch_style || item.card_swatch_style || item.computed_swatch_style || '';
+            var swatchImage = item.swatch_image || item.card_swatch_image || '';
+            var colorHex = item.hex || item.color_hex || '';
+
+            if (!swatchStyle && swatchImage) {
+                swatchStyle = "background-image: url('" + String(swatchImage).replace(/'/g, "\\'") + "'); background-size: cover; background-position: center; background-color: transparent;";
+            }
+
+            if (!swatchStyle && colorHex) {
+                swatchStyle = 'background-color: ' + colorHex + ';';
+            }
+
+            return swatchStyle;
+        }
+
+        function isSelectedOption(item, selectedValue) {
+            if (!selectedValue) {
+                return false;
+            }
+
+            var selected = String(selectedValue).toLowerCase();
+            var candidates = [
+                item.name,
+                item.label,
+                item.size,
+                item.value,
+                item.id,
+                item.color_code,
+                item.class_name
+            ];
+
+            for (var index = 0; index < candidates.length; index++) {
+                if (candidates[index] !== null && candidates[index] !== undefined && String(candidates[index]).toLowerCase() === selected) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         function buildOptionMarkup(items, selectedValue, type) {
             var html = '';
 
             $.each(normalizeOptionList(items), function (index, item) {
+                item = item || {};
+
                 var value = item.name || item.label || item.size || item.value || '';
                 var soldOut = type === 'size' ? isOptionSoldOut(item) : false;
-                var checked = ! soldOut && selectedValue && String(selectedValue) === String(value) ? 'checked' : (!selectedValue && index === 0 && !soldOut ? 'checked' : '');
+                var checked = ! soldOut && isSelectedOption(item, selectedValue) ? 'checked' : (!selectedValue && index === 0 && !soldOut ? 'checked' : '');
                 var id = type + '-' + index + '-' + Math.random().toString(36).slice(2, 8);
 
                 if (type === 'size') {
@@ -185,60 +230,20 @@
                     html += '</label>';
                 } else {
                     var gallery = Array.isArray(item.gallery) && item.gallery.length ? item.gallery : (item.image ? [item.image] : []);
-                    var swatchStyle = item.swatch_style || '';
-                    var swatchImage = item.swatch_image || '';
+                    var swatchStyle = buildSwatchStyle(item);
+                    var swatchImage = item.swatch_image || item.card_swatch_image || '';
                     var colorHex = item.hex || item.color_hex || '';
-                    var colorStyle = swatchStyle || (colorHex ? ('background: ' + colorHex + '; background-color: ' + colorHex + ';') : '');
+                    var className = item.class_name || 'four-Black';
 
-                    html += '<input type="radio" name="color" id="' + id + '" ' + checked + ' value="' + escapeHtml(value) + '" data-gallery="' + escapeHtml(JSON.stringify(gallery)) + '"' + (item.id ? ' data-color-id="' + escapeHtml(item.id) + '"' : '') + (item.color_code ? ' data-color-code="' + escapeHtml(item.color_code) + '"' : '') + (item.name ? ' data-color-name="' + escapeHtml(item.name) + '"' : '') + ' data-color-class="' + escapeHtml(item.class_name || '') + '" data-color-image="' + escapeHtml(item.image || '') + '" data-color-hex="' + escapeHtml(colorHex) + '" data-color-swatch-image="' + escapeHtml(swatchImage) + '" data-color-swatch-style="' + escapeHtml(swatchStyle) + '">';
-                    html += '<label class="hover-tooltip radius-60 color-btn" for="' + id + '" data-value="' + escapeHtml(value) + '" data-color="' + escapeHtml(item.name || value) + '" data-color-code="' + escapeHtml(item.color_code || '') + '">';
-                    html += '<span class="btn-checkbox swatch-value ' + escapeHtml(item.class_name || 'four-Black') + '"' + (colorStyle ? ' style="' + escapeHtml(colorStyle) + '"' : '') + '></span>';
+                    html += '<input type="radio" name="color" id="' + id + '" ' + checked + ' value="' + escapeHtml(value) + '" data-gallery="' + escapeHtml(JSON.stringify(gallery)) + '"' + (item.id ? ' data-color-id="' + escapeHtml(item.id) + '"' : '') + (item.color_code ? ' data-color-code="' + escapeHtml(item.color_code) + '"' : '') + (item.name ? ' data-color-name="' + escapeHtml(item.name) + '"' : '') + ' data-color-class="' + escapeHtml(className) + '" data-color-image="' + escapeHtml(item.image || '') + '" data-color-hex="' + escapeHtml(colorHex) + '" data-color-swatch-image="' + escapeHtml(swatchImage) + '" data-color-swatch-style="' + escapeHtml(swatchStyle) + '">';
+                    html += '<label class="hover-tooltip radius-60" for="' + id + '" data-value="' + escapeHtml(value) + '">';
+                    html += '<span class="btn-checkbox swatch-value ' + escapeHtml(className) + '"' + (swatchStyle ? ' style="' + escapeHtml(swatchStyle) + '"' : '') + '></span>';
                     html += '<span class="tooltip">' + escapeHtml(value) + '</span>';
                     html += '</label>';
                 }
             });
 
             return html;
-        }
-
-        function applyModalColorSwatches($scope) {
-            $scope.find('input[name="color"]').each(function () {
-                var $input = $(this);
-                var inputId = $input.attr('id');
-                var $swatch = $scope.find('label[for="' + inputId + '"] .btn-checkbox, label[for="' + inputId + '"] .swatch-value').first();
-
-                if (!$swatch.length) {
-                    return;
-                }
-
-                var swatchStyle = String($input.data('colorSwatchStyle') || '').trim();
-                var swatchImage = String($input.data('colorSwatchImage') || '').trim();
-                var colorHex = String($input.data('colorHex') || '').trim();
-
-                $swatch.removeAttr('style');
-
-                if (swatchStyle !== '') {
-                    $swatch.attr('style', swatchStyle);
-                    return;
-                }
-
-                if (swatchImage !== '') {
-                    $swatch.css({
-                        backgroundImage: "url('" + swatchImage + "')",
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundColor: 'transparent'
-                    });
-                    return;
-                }
-
-                if (colorHex !== '') {
-                    $swatch.css({
-                        background: colorHex,
-                        backgroundColor: colorHex
-                    });
-                }
-            });
         }
 
         function findProductColor(product, colorRef) {
@@ -295,6 +300,134 @@
             return fallback;
         }
 
+        function cardSwatchDisplayStyle($swatch) {
+            if (! $swatch || ! $swatch.length) {
+                return '';
+            }
+
+            var $value = $swatch.find('.swatch-value').first();
+
+            if (! $value.length) {
+                $value = $swatch.find('.btn-checkbox').first();
+            }
+
+            if (! $value.length) {
+                return '';
+            }
+
+            var inlineStyle = ($value.attr('style') || '').trim();
+
+            if (inlineStyle) {
+                return inlineStyle;
+            }
+
+            var styleParts = [];
+            var bgImage = $value.css('background-image');
+            var bgColor = $value.css('background-color');
+            var bgSize = $value.css('background-size');
+            var bgPosition = $value.css('background-position');
+
+            if (bgImage && bgImage !== 'none') {
+                styleParts.push('background-image: ' + bgImage);
+                styleParts.push('background-size: ' + (bgSize && bgSize !== 'auto' ? bgSize : 'cover'));
+                styleParts.push('background-position: ' + (bgPosition || 'center'));
+                styleParts.push('background-color: transparent');
+            } else if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                styleParts.push('background-color: ' + bgColor);
+            }
+
+            return styleParts.length ? styleParts.join('; ') + ';' : '';
+        }
+
+        function cardSwatchClass($swatch) {
+            var $value = $swatch.find('.swatch-value').first();
+
+            if (! $value.length) {
+                $value = $swatch.find('.btn-checkbox').first();
+            }
+
+            var classes = String($value.attr('class') || '').split(/\s+/).filter(function (className) {
+                return className && className !== 'swatch-value' && className !== 'btn-checkbox' && className !== 'lazyload';
+            });
+
+            return classes.length ? classes.join(' ') : ($swatch.data('colorClass') || '');
+        }
+
+        function findProductColorIndex(colors, colorRef, fallbackIndex) {
+            colors = Array.isArray(colors) ? colors : [];
+            colorRef = colorRef || {};
+
+            var matchValue = function (left, right) {
+                return left !== null && left !== undefined && right !== null && right !== undefined && String(left).toLowerCase() === String(right).toLowerCase();
+            };
+
+            for (var index = 0; index < colors.length; index++) {
+                var color = colors[index] || {};
+
+                if (colorRef.id && matchValue(color.id, colorRef.id)) {
+                    return index;
+                }
+
+                if (colorRef.code && matchValue(color.color_code, colorRef.code)) {
+                    return index;
+                }
+
+                if (colorRef.name && matchValue(color.name, colorRef.name)) {
+                    return index;
+                }
+
+                if (colorRef.className && matchValue(color.class_name, colorRef.className)) {
+                    return index;
+                }
+
+                if (colorRef.image && matchValue(color.image, colorRef.image)) {
+                    return index;
+                }
+            }
+
+            fallbackIndex = Number(fallbackIndex);
+
+            return Number.isFinite(fallbackIndex) && fallbackIndex >= 0 && fallbackIndex < colors.length ? fallbackIndex : -1;
+        }
+
+        function hydrateProductColorsFromCard(product, $card) {
+            product = $.extend(true, {}, product || {});
+            product.colors = Array.isArray(product.colors) ? product.colors : [];
+
+            if (! $card || ! $card.length || ! product.colors.length) {
+                return product;
+            }
+
+            $card.find('.list-color-item.color-swatch').each(function (index) {
+                var $swatch = $(this);
+                var colorRef = {
+                    id: $swatch.data('colorId') || '',
+                    name: $swatch.data('colorName') || '',
+                    code: $swatch.data('colorCode') || '',
+                    className: $swatch.data('colorClass') || '',
+                    image: $swatch.data('colorImage') || ''
+                };
+                var colorIndex = findProductColorIndex(product.colors, colorRef, index);
+
+                if (colorIndex < 0) {
+                    return;
+                }
+
+                var swatchStyle = cardSwatchDisplayStyle($swatch);
+                var className = cardSwatchClass($swatch);
+                var swatchImage = $swatch.data('colorSwatch') || $swatch.data('colorSwatchImage') || '';
+                var hex = $swatch.data('colorHex') || '';
+
+                product.colors[colorIndex].class_name = className || product.colors[colorIndex].class_name;
+                product.colors[colorIndex].swatch_style = swatchStyle || product.colors[colorIndex].swatch_style || '';
+                product.colors[colorIndex].card_swatch_style = swatchStyle || product.colors[colorIndex].card_swatch_style || '';
+                product.colors[colorIndex].swatch_image = swatchImage || product.colors[colorIndex].swatch_image || '';
+                product.colors[colorIndex].hex = hex || product.colors[colorIndex].hex || '';
+            });
+
+            return product;
+        }
+
         function getCardSelectedColor($card) {
             var $active = $card.find('.list-color-item.color-swatch.active').first();
 
@@ -306,8 +439,11 @@
                 id: $active.data('colorId') || '',
                 name: $active.data('colorName') || '',
                 code: $active.data('colorCode') || '',
-                className: $active.data('colorClass') || '',
-                image: $active.data('colorImage') || ''
+                className: cardSwatchClass($active) || $active.data('colorClass') || '',
+                image: $active.data('colorImage') || '',
+                swatchStyle: cardSwatchDisplayStyle($active),
+                swatchImage: $active.data('colorSwatch') || $active.data('colorSwatchImage') || '',
+                hex: $active.data('colorHex') || ''
             };
         }
 
@@ -564,7 +700,6 @@
             $modal.find('[data-qv-description]').html(product.description ? '<p>' + escapeHtml(product.description) + '</p>' : '');
             $modal.find('[data-qv-gallery]').html(renderGalleryMarkup(colorData.gallery || product.gallery || [product.image || '']));
             $modal.find('[data-qv-sizes]').html(buildOptionMarkup(sizes, selectedSize, 'size'));
-            applyModalColorSwatches($modal);
 
             selectedSize = readSelected($modal, 'size');
             $modal.find('[data-qv-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
@@ -604,7 +739,6 @@
             $modal.find('[data-qadd-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
             $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], selectedColorRef || product.default_color || '', 'color'));
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(sizes, selectedSize, 'size'));
-            applyModalColorSwatches($modal);
 
             selectedSize = readSelected($modal, 'size');
             $modal.find('[data-cart-submit]')
@@ -632,9 +766,8 @@
                 $modal.find('[data-qv-price-current]').text(product.price_label || product.price_current_label || '');
                 $modal.find('[data-qv-submit-price]').text(product.price_label || product.price_current_label || '');
                 $modal.find('[data-qv-gallery]').html(renderGalleryMarkup(product.gallery || [product.image || '']));
-                $modal.find('[data-qv-colors]').html(buildOptionMarkup(product.colors || [], options.selectedColor ? (options.selectedColor.name || options.selectedColor.code || options.selectedColor.className || '') : (product.default_color || ''), 'color'));
+                $modal.find('[data-qv-colors]').html(buildOptionMarkup(product.colors || [], options.selectedColor ? (options.selectedColor.id || options.selectedColor.code || options.selectedColor.name || options.selectedColor.className || '') : (product.default_color || ''), 'color'));
                 $modal.find('[data-qv-sizes]').html(buildOptionMarkup(product.size_options || product.sizes || [], product.default_size || '', 'size'));
-                applyModalColorSwatches($modal);
                 syncQuickViewSelection($modal);
                 return;
             }
@@ -643,9 +776,8 @@
             $modal.find('[data-qadd-image]').attr('src', product.image || '');
             $modal.find('[data-qadd-price]').text(product.price_label || product.price_current_label || '');
             $modal.find('[data-qadd-price-old]').text(product.compare_price_label || '').toggleClass('d-none', ! product.compare_price_label);
-            $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], options.selectedColor ? (options.selectedColor.name || options.selectedColor.code || options.selectedColor.className || '') : (product.default_color || ''), 'color'));
+            $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], options.selectedColor ? (options.selectedColor.id || options.selectedColor.code || options.selectedColor.name || options.selectedColor.className || '') : (product.default_color || ''), 'color'));
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(product.size_options || product.sizes || [], product.default_size || '', 'size'));
-            applyModalColorSwatches($modal);
             syncQuickAddSelection($modal);
         }
 
@@ -683,14 +815,14 @@
             event.preventDefault();
 
             var $card = $(this).closest('.card-product');
-            var product = parseProduct($card.data('product'));
+            var product = hydrateProductColorsFromCard(parseProduct($card.data('product')), $card);
             if (!product) {
                 return;
             }
 
             var selectedColor = getCardSelectedColor($card);
             if (selectedColor.name || selectedColor.code || selectedColor.className || selectedColor.id) {
-                product.default_color = selectedColor.name || selectedColor.code || selectedColor.className || selectedColor.id;
+                product.default_color = selectedColor.id || selectedColor.code || selectedColor.name || selectedColor.className;
             }
 
             if ($(this).hasClass('quickview')) {
