@@ -87,12 +87,17 @@ class FrontPageController extends Controller
             ? $baseCategory
             : ($selectedCategoryModels->count() === 1 ? $selectedCategoryModels->first() : null);
         $categoryTrail = $primaryCategory instanceof Category ? $primaryCategory->breadcrumbTrail() : collect();
-        $baseCategoryLeafIds = $filterScopeCategory instanceof Category
-            ? $this->collectLeafCategoryIds($filterScopeCategory)
-            : [];
-        $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
-            ? $this->collectCategoriesLeafIds($selectedCategoryModels)
-            : $baseCategoryLeafIds;
+        $baseProductCategoryLeafIds = $baseCategory instanceof Category
+    ? $this->collectLeafCategoryIds($baseCategory)
+    : [];
+
+$filterScopeLeafIds = $filterScopeCategory instanceof Category
+    ? $this->collectLeafCategoryIds($filterScopeCategory)
+    : [];
+
+$effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
+    ? $this->collectCategoriesLeafIds($selectedCategoryModels)
+    : $baseProductCategoryLeafIds;
 
         $filters = [
             'category_ids' => $effectiveCategoryIds,
@@ -147,7 +152,7 @@ class FrontPageController extends Controller
         $categories = $this->filterCategoriesTree($filterScopeCategory);
 
         $filterCategories = $this->buildFilterCategories($categories, [
-            'category_ids' => $baseCategoryLeafIds,
+            'category_ids' => $filterScopeLeafIds,
             'min_price' => $minPrice,
             'max_price' => $maxPrice,
             'colors' => $selectedColors,
