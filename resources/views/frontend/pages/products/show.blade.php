@@ -4,210 +4,38 @@
     $locale = $locale ?? app()->getLocale();
     $isArabic = $locale === 'ar';
     $product = $product ?? [];
+    $productModel = $product_model ?? null;
     $relatedProducts = collect($related_products ?? [])->values();
-    $colors = collect($product['colors'] ?? [])->values();
+    $colors = collect($product['colors'] ?? [])->filter(fn ($color) => filled($color['name'] ?? null))->values();
     $defaultColor = $colors->first() ?? [];
-    $gallery = collect($defaultColor['gallery'] ?? ($product['gallery'] ?? []))
+    $defaultGallery = collect($defaultColor['gallery'] ?? [])
         ->filter()
-        ->unique()
         ->values();
+    $fallbackGallery = collect($product['gallery'] ?? [])
+        ->filter()
+        ->values();
+    $gallery = $defaultGallery->isNotEmpty() ? $defaultGallery : $fallbackGallery;
     $mainImage = $defaultColor['image'] ?? ($product['image'] ?? ($gallery->first() ?? ''));
-    $sizeOptions = collect($defaultColor['size_options'] ?? ($product['size_options'] ?? []))->values();
+    $sizeOptions = collect($defaultColor['size_options'] ?? ($product['size_options'] ?? []))
+        ->filter(fn ($size) => filled($size['size'] ?? ($size['name'] ?? ($size['label'] ?? null))))
+        ->values();
     $defaultSize = $defaultColor['default_size'] ?? ($product['default_size'] ?? null);
     $cartAddUrl = $product['cart_add_url'] ?? null;
-    $sizeChart = $product['size_chart'] ?? [];
-    $hasSizeChart = !empty($product['has_size_chart']) && !empty($sizeChart['columns'] ?? []) && !empty($sizeChart['rows'] ?? []);
-    $specifications = collect($product['specifications'] ?? [])->filter(fn ($item) => filled($item['label'] ?? null) && filled($item['value'] ?? null))->values();
     $description = trim((string) ($product['description'] ?? ''));
     $descriptionHtml = $description !== '' ? nl2br(e($description)) : '';
-    $baseCategoryUrl = $product_model?->category?->slug ? route('front.category', $product_model->category->slug) : route('front.home');
-    $backLabel = $product_model?->category
-        ? ($isArabic
-            ? ($product_model->category->title_ar ?: $product_model->category->title_en ?: __('front.products.products'))
-            : ($product_model->category->title_en ?: $product_model->category->title_ar ?: __('front.products.products')))
-        : __('front.products.products');
-    $detailHighlights = collect([
-        [
-            'label' => $isArabic ? 'لون الفلترة' : 'Filter color',
-            'value' => $product['filter_color_name'] ?? null,
-        ],
-        [
-            'label' => 'Body Fit',
-            'value' => $product['body_fit'] ?? null,
-        ],
-        [
-            'label' => 'Drop',
-            'value' => $product['drop_type'] ?? null,
-        ],
-        [
-            'label' => $isArabic ? 'زمرة القياس' : 'Measurement group',
-            'value' => $product['measurement_group'] ?? null,
-        ],
-        [
-            'label' => $isArabic ? 'المنشأ' : 'Country',
-            'value' => $product['country'] ?? null,
-        ],
-        [
-            'label' => $isArabic ? 'المجموعة' : 'Collection',
-            'value' => $product['collection'] ?? null,
-        ],
-    ])->filter(fn ($item) => filled($item['value'] ?? null))->take(4)->values();
-    $relatedSectionTitle = ($product_model?->relationLoaded('complements') && $product_model->complements->isNotEmpty())
+    $sizeChart = $product['size_chart'] ?? [];
+    $hasSizeChart = !empty($product['has_size_chart']) && !empty($sizeChart['columns'] ?? []) && !empty($sizeChart['rows'] ?? []);
+    $specifications = collect($product['specifications'] ?? [])
+        ->filter(fn ($item) => filled($item['label'] ?? null) && filled($item['value'] ?? null))
+        ->values();
+    $categoryUrl = $productModel?->category?->slug ? route('front.category', $productModel->category->slug) : route('front.home');
+    $relatedTitle = ($productModel?->relationLoaded('complements') && $productModel->complements->isNotEmpty())
         ? ($isArabic ? 'منتجات مكملة' : 'Complementary products')
         : ($isArabic ? 'قد يعجبك أيضاً' : 'You may also like');
 @endphp
 
 @section('title', $product['title'] ?? ($page_title ?? __('front.brand')))
 @section('meta_description', $description !== '' ? $description : ($product['title'] ?? __('front.brand')))
-
-@push('styles')
-    <style>
-        .tf-main-product .row {
-            --bs-gutter-x: 32px;
-            align-items: flex-start;
-        }
-
-        .product-detail-gallery-thumb {
-            border: 1px solid rgba(0, 0, 0, .08);
-            border-radius: 12px;
-            overflow: hidden;
-            cursor: pointer;
-            background: #f7f7f7;
-            padding: 0;
-        }
-
-        .product-detail-gallery-thumb.is-active {
-            border-color: #111;
-        }
-
-        .product-detail-gallery-thumb img {
-            width: 100%;
-            aspect-ratio: 1 / 1.18;
-            object-fit: cover;
-            display: block;
-        }
-
-        .product-detail-main-image {
-            width: 100%;
-            border-radius: 18px;
-            background: #f7f7f7;
-            overflow: hidden;
-            min-height: 640px;
-        }
-
-        .product-detail-main-image img {
-            width: 100%;
-            height: 100%;
-            display: block;
-            object-fit: cover;
-        }
-
-        .product-detail-swatch.is-active .btn-checkbox,
-        .product-detail-swatch input:checked + label .btn-checkbox {
-            outline: 2px solid #111;
-            outline-offset: 3px;
-        }
-
-        .product-detail-size-disabled {
-            opacity: .45;
-            pointer-events: none;
-        }
-
-        .product-detail-size-disabled span,
-        .product-detail-size-disabled p {
-            text-decoration: line-through;
-        }
-
-        .product-detail-meta {
-            display: grid;
-            gap: 8px;
-        }
-
-        .product-detail-meta__row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            font-size: 14px;
-        }
-
-        .product-detail-meta__label {
-            color: #6c6c6c;
-        }
-
-        .product-detail-meta__row a {
-            text-decoration: none;
-        }
-
-        .product-detail-find-size {
-            white-space: nowrap;
-        }
-
-        .product-detail-highlights {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .product-detail-highlights__item {
-            border: 1px solid rgba(0, 0, 0, .08);
-            border-radius: 14px;
-            padding: 14px 16px;
-            min-height: 88px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            background: #fff;
-        }
-
-        .product-detail-highlights__label {
-            color: #6c6c6c;
-            font-size: 13px;
-            margin-bottom: 6px;
-        }
-
-        .product-detail-highlights__value {
-            font-weight: 600;
-            line-height: 1.45;
-        }
-
-        .product-detail-specs {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px 24px;
-        }
-
-        .product-detail-specs__item {
-            border-bottom: 1px solid rgba(0, 0, 0, .08);
-            padding-bottom: 12px;
-        }
-
-        .product-detail-specs__label {
-            display: block;
-            color: #6c6c6c;
-            margin-bottom: 4px;
-        }
-
-        @media (max-width: 991.98px) {
-            .product-detail-main-image {
-                min-height: 0;
-            }
-        }
-
-        @media (max-width: 767.98px) {
-            .tf-main-product .row {
-                --bs-gutter-x: 18px;
-            }
-
-            .product-detail-highlights {
-                grid-template-columns: 1fr;
-            }
-
-            .product-detail-specs {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-@endpush
 
 @section('content')
     @include('frontend.partials.announcement-bar', [
@@ -240,7 +68,7 @@
                         @endforeach
                     </div>
                     <div class="tf-breadcrumb-prev-next">
-                        <a href="{{ $baseCategoryUrl }}" class="tf-breadcrumb-back hover-tooltip center">
+                        <a href="{{ $categoryUrl }}" class="tf-breadcrumb-back hover-tooltip center">
                             <i class="icon icon-shop"></i>
                         </a>
                     </div>
@@ -249,39 +77,42 @@
         </div>
 
         <section class="flat-spacing-4 pt_0">
-            <div class="tf-main-product section-image-zoom">
+            <div class="tf-main-product section-image-zoom" data-detail-product='@json($product)'>
                 <div class="container">
                     <div class="row">
-                        <div class="col-lg-6">
+                        <div class="col-md-6">
                             <div class="tf-product-media-wrap sticky-top">
                                 <div class="thumbs-slider">
-                                    <div class="row g-3">
-                                        <div class="col-3">
-                                            <div class="d-grid gap-3" data-detail-thumbs>
-                                                @forelse ($gallery as $index => $image)
-                                                    <button type="button" class="product-detail-gallery-thumb {{ $index === 0 ? 'is-active' : '' }}" data-detail-thumb="{{ $image }}">
+                                    <div dir="ltr" class="swiper tf-product-media-thumbs other-image-zoom" data-direction="vertical" data-detail-thumbs-swiper>
+                                        <div class="swiper-wrapper stagger-wrap" data-detail-thumbs>
+                                            @foreach ($gallery as $index => $image)
+                                                <div class="swiper-slide stagger-item" data-color="{{ $defaultColor['name'] ?? '' }}">
+                                                    <div class="item">
                                                         <img class="lazyload" data-src="{{ $image }}" src="{{ $image }}" alt="{{ $product['title'] ?? '' }}">
-                                                    </button>
-                                                @empty
-                                                    @if ($mainImage)
-                                                        <button type="button" class="product-detail-gallery-thumb is-active" data-detail-thumb="{{ $mainImage }}">
-                                                            <img class="lazyload" data-src="{{ $mainImage }}" src="{{ $mainImage }}" alt="{{ $product['title'] ?? '' }}">
-                                                        </button>
-                                                    @endif
-                                                @endforelse
-                                            </div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
                                         </div>
-                                        <div class="col-9">
-                                            <div class="product-detail-main-image">
-                                                <img data-detail-main-image class="lazyload" data-src="{{ $mainImage }}" src="{{ $mainImage }}" alt="{{ $product['title'] ?? '' }}">
-                                            </div>
+                                    </div>
+
+                                    <div dir="ltr" class="swiper tf-product-media-main" data-detail-main-swiper>
+                                        <div class="swiper-wrapper" data-detail-gallery>
+                                            @foreach ($gallery as $image)
+                                                <div class="swiper-slide" data-color="{{ $defaultColor['name'] ?? '' }}">
+                                                    <a href="{{ $image }}" target="_blank" class="item" data-pswp-width="770px" data-pswp-height="1075px">
+                                                        <img class="tf-image-zoom lazyload" data-zoom="{{ $image }}" data-src="{{ $image }}" src="{{ $image }}" alt="{{ $product['title'] ?? '' }}">
+                                                    </a>
+                                                </div>
+                                            @endforeach
                                         </div>
+                                        <div class="swiper-button-next button-style-arrow single-slide-prev"></div>
+                                        <div class="swiper-button-prev button-style-arrow single-slide-next"></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="col-lg-6">
+                        <div class="col-md-6">
                             <div class="tf-product-info-wrap position-relative">
                                 <div class="tf-zoom-main"></div>
                                 <div class="tf-product-info-list other-image-zoom">
@@ -291,7 +122,7 @@
 
                                     @if (!empty($product['badge']))
                                         <div class="tf-product-info-badges">
-                                            <span class="badge {{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</span>
+                                            <div class="badges {{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</div>
                                         </div>
                                     @endif
 
@@ -304,30 +135,26 @@
                                         </div>
                                     </div>
 
-                                    <div class="product-detail-meta mb_24">
-                                        @if (!empty($product['product_code']))
-                                            <div class="product-detail-meta__row tf-product-info-liveview">
-                                                <span class="product-detail-meta__label">{{ __('front.products.product_code') }}:</span>
-                                                <span class="fw-6">{{ $product['product_code'] }}</span>
-                                            </div>
-                                        @endif
-
-                                        <div class="product-detail-meta__row tf-product-info-liveview">
-                                            <span class="product-detail-meta__label">{{ $isArabic ? 'القسم' : 'Category' }}:</span>
-                                            <a href="{{ $baseCategoryUrl }}" class="fw-6 link">{{ $backLabel }}</a>
+                                    @if (!empty($product['product_code']))
+                                        <div class="tf-product-info-liveview">
+                                            <p>{{ __('front.products.product_code') }}: <span class="fw-6">{{ $product['product_code'] }}</span></p>
                                         </div>
+                                    @endif
 
-                                        @if (!empty($product['display_color_description']))
-                                            <div class="product-detail-meta__row tf-product-info-liveview">
-                                                <span class="product-detail-meta__label">{{ $isArabic ? 'لون المنتج المعروض' : 'Displayed color' }}:</span>
-                                                <span class="fw-6">{{ $product['display_color_description'] }}</span>
-                                            </div>
-                                        @endif
+                                    @if (!empty($product['category_name']))
+                                        <div class="tf-product-info-liveview">
+                                            <p>{{ $isArabic ? 'القسم' : 'Category' }}: <a href="{{ $categoryUrl }}" class="fw-6 link">{{ $product['category_name'] }}</a></p>
+                                        </div>
+                                    @endif
 
-                                    </div>
+                                    @if (!empty($product['display_color_description']))
+                                        <div class="tf-product-info-liveview">
+                                            <p>{{ $isArabic ? 'لون المنتج المعروض' : 'Displayed color' }}: <span class="fw-6">{{ $product['display_color_description'] }}</span></p>
+                                        </div>
+                                    @endif
 
                                     @if ($descriptionHtml !== '')
-                                        <div class="tf-product-description mb_24">
+                                        <div class="tf-product-description">
                                             <p>{!! $descriptionHtml !!}</p>
                                         </div>
                                     @endif
@@ -336,8 +163,7 @@
                                         @if ($colors->isNotEmpty())
                                             <div class="variant-picker-item">
                                                 <div class="variant-picker-label">
-                                                    {{ __('front.products.color') }}:
-                                                    <span class="fw-6 variant-picker-label-value" data-detail-color-label>{{ $defaultColor['name'] ?? '' }}</span>
+                                                    {{ __('front.products.color') }}: <span class="fw-6 variant-picker-label-value" data-detail-color-label>{{ $defaultColor['name'] ?? '' }}</span>
                                                 </div>
                                                 <div class="tf-product-info-code color-code">
                                                     <span class="label">{{ __('front.products.color_code') }}:</span>
@@ -346,16 +172,14 @@
                                                 <div class="variant-picker-values" data-detail-colors>
                                                     @foreach ($colors as $index => $color)
                                                         @php
-                                                            $colorValue = $color['name'] ?? ('color-' . $index);
+                                                            $colorName = $color['name'] ?? ('color-' . $index);
                                                             $swatchStyle = trim((string) ($color['swatch_style'] ?? ''));
                                                         @endphp
-                                                        <div class="product-detail-swatch {{ $index === 0 ? 'is-active' : '' }}">
-                                                            <input type="radio" name="detail_color" id="detail-color-{{ $index }}" value="{{ $colorValue }}" data-color-index="{{ $index }}" @checked($index === 0)>
-                                                            <label class="hover-tooltip radius-60" for="detail-color-{{ $index }}" data-value="{{ $colorValue }}">
-                                                                <span class="btn-checkbox {{ $color['class_name'] ?? 'four-Black' }}" @if ($swatchStyle !== '') style="{{ $swatchStyle }}" @endif></span>
-                                                                <span class="tooltip">{{ $colorValue }}</span>
-                                                            </label>
-                                                        </div>
+                                                        <input id="detail-color-{{ $index }}" type="radio" name="detail_color" value="{{ $colorName }}" data-color-index="{{ $index }}" @checked($index === 0)>
+                                                        <label class="hover-tooltip radius-60 color-btn" for="detail-color-{{ $index }}" data-value="{{ $colorName }}">
+                                                            <span class="btn-checkbox {{ $color['class_name'] ?? 'four-Black' }}" @if ($swatchStyle !== '') style="{{ $swatchStyle }}" @endif></span>
+                                                            <span class="tooltip">{{ $colorName }}</span>
+                                                        </label>
                                                     @endforeach
                                                 </div>
                                             </div>
@@ -364,11 +188,10 @@
                                         <div class="variant-picker-item">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div class="variant-picker-label">
-                                                    {{ __('front.products.size') }}:
-                                                    <span class="fw-6 variant-picker-label-value" data-detail-size-label>{{ $defaultSize ?? '' }}</span>
+                                                    {{ __('front.products.size') }}: <span class="fw-6 variant-picker-label-value" data-detail-size-label>{{ $defaultSize ?? '' }}</span>
                                                 </div>
                                                 @if ($hasSizeChart)
-                                                    <a href="#find_size" data-bs-toggle="modal" class="find-size fw-6 product-detail-find-size">{{ __('front.products.find_your_size') }}</a>
+                                                    <a href="#find_size" data-bs-toggle="modal" class="find-size fw-6" data-detail-find-size>{{ __('front.products.find_your_size') }}</a>
                                                 @endif
                                             </div>
                                             <div class="variant-picker-values" data-detail-sizes>
@@ -379,7 +202,7 @@
                                                     @endphp
                                                     @if ($sizeValue !== '')
                                                         <input type="radio" name="detail_size" id="detail-size-{{ $index }}" value="{{ $sizeValue }}" data-size-index="{{ $index }}" data-size-id="{{ $size['size_id'] ?? '' }}" data-size-code="{{ $size['size_code'] ?? '' }}" data-variant-id="{{ $size['variant_id'] ?? '' }}" data-product-color-id="{{ $size['product_color_id'] ?? '' }}" @checked($sizeValue === $defaultSize && ! $soldOut) @disabled($soldOut)>
-                                                        <label class="style-text size-btn {{ $soldOut ? 'product-detail-size-disabled' : '' }}" for="detail-size-{{ $index }}" data-value="{{ $sizeValue }}">
+                                                        <label class="style-text size-btn" for="detail-size-{{ $index }}" data-value="{{ $sizeValue }}" @if ($soldOut) aria-disabled="true" @endif>
                                                             <p>{{ $sizeValue }}</p>
                                                         </label>
                                                     @endif
@@ -412,14 +235,20 @@
                                         </form>
                                     </div>
 
-                                    @if ($detailHighlights->isNotEmpty())
-                                        <div class="product-detail-highlights">
-                                            @foreach ($detailHighlights as $spec)
-                                                <div class="product-detail-highlights__item">
-                                                    <span class="product-detail-highlights__label">{{ $spec['label'] }}</span>
-                                                    <div class="product-detail-highlights__value">{{ $spec['value'] }}</div>
-                                                </div>
-                                            @endforeach
+                                    @if ($specifications->take(4)->isNotEmpty())
+                                        <div class="tf-product-info-delivery-return">
+                                            <div class="row">
+                                                @foreach ($specifications->take(4) as $spec)
+                                                    <div class="col-xl-6 col-12">
+                                                        <div class="tf-product-delivery {{ $loop->last && $loop->even ? 'mb-0' : '' }}">
+                                                            <div class="inner">
+                                                                <p>{{ $spec['label'] }}</p>
+                                                                <span>{{ $spec['value'] }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
                                         </div>
                                     @endif
                                 </div>
@@ -431,75 +260,62 @@
         </section>
 
         @if ($descriptionHtml !== '' || $specifications->isNotEmpty() || $hasSizeChart)
-            <section class="flat-spacing-1 pt_0">
+            <section class="flat-spacing-17 pt_0">
                 <div class="container">
-                    <div class="widget-tabs style-has-border">
-                        <ul class="widget-menu-tab">
-                            @if ($descriptionHtml !== '')
-                                <li class="item-title active">
-                                    <span class="inner">{{ $isArabic ? 'وصف المنتج' : 'Product description' }}</span>
-                                </li>
-                            @endif
-
-                            @if ($specifications->isNotEmpty())
-                                <li class="item-title {{ $descriptionHtml === '' ? 'active' : '' }}">
-                                    <span class="inner">{{ $isArabic ? 'المواصفات' : 'Specifications' }}</span>
-                                </li>
-                            @endif
-
-                            @if ($hasSizeChart)
-                                <li class="item-title {{ $descriptionHtml === '' && $specifications->isEmpty() ? 'active' : '' }}">
-                                    <span class="inner">{{ __('front.products.size_chart') }}</span>
-                                </li>
-                            @endif
-                        </ul>
-
-                        <div class="widget-content-tab">
-                            @if ($descriptionHtml !== '')
-                                <div class="widget-content-inner active">
-                                    <div class="tab-description">
-                                        <p>{!! $descriptionHtml !!}</p>
-                                    </div>
-                                </div>
-                            @endif
-
-                            @if ($specifications->isNotEmpty())
-                                <div class="widget-content-inner {{ $descriptionHtml === '' ? 'active' : '' }}">
-                                    <div class="product-detail-specs">
-                                        @foreach ($specifications as $spec)
-                                            <div class="product-detail-specs__item">
-                                                <span class="product-detail-specs__label">{{ $spec['label'] }}</span>
-                                                <strong>{{ $spec['value'] }}</strong>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="widget-tabs style-has-border">
+                                <ul class="widget-menu-tab">
+                                    @if ($descriptionHtml !== '')
+                                        <li class="item-title active">
+                                            <span class="inner">{{ $isArabic ? 'وصف المنتج' : 'Description' }}</span>
+                                        </li>
+                                    @endif
+                                    @if ($specifications->isNotEmpty())
+                                        <li class="item-title {{ $descriptionHtml === '' ? 'active' : '' }}">
+                                            <span class="inner">{{ $isArabic ? 'المواصفات' : 'Additional information' }}</span>
+                                        </li>
+                                    @endif
+                                    @if ($hasSizeChart)
+                                        <li class="item-title {{ $descriptionHtml === '' && $specifications->isEmpty() ? 'active' : '' }}">
+                                            <span class="inner">{{ __('front.products.size_chart') }}</span>
+                                        </li>
+                                    @endif
+                                </ul>
+                                <div class="widget-content-tab">
+                                    @if ($descriptionHtml !== '')
+                                        <div class="widget-content-inner active">
+                                            <div class="tab-description">
+                                                <p>{!! $descriptionHtml !!}</p>
                                             </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
+                                        </div>
+                                    @endif
 
-                            @if ($hasSizeChart)
-                                <div class="widget-content-inner {{ $descriptionHtml === '' && $specifications->isEmpty() ? 'active' : '' }}">
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered align-middle mb-0">
-                                            <thead>
-                                                <tr>
-                                                    @foreach (($sizeChart['columns'] ?? []) as $column)
-                                                        <th>{{ $column['label'] ?? '' }}</th>
-                                                    @endforeach
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (($sizeChart['rows'] ?? []) as $row)
-                                                    <tr>
-                                                        @foreach (($sizeChart['columns'] ?? []) as $column)
-                                                            <td>{{ data_get($row, $column['key'] ?? '', '') }}</td>
-                                                        @endforeach
-                                                    </tr>
+                                    @if ($specifications->isNotEmpty())
+                                        <div class="widget-content-inner {{ $descriptionHtml === '' ? 'active' : '' }}">
+                                            <div class="tf-page-privacy-policy">
+                                                @foreach ($specifications as $spec)
+                                                    <div class="d-flex justify-content-between flex-wrap gap-3 py-3 border-bottom">
+                                                        <div class="fw-6">{{ $spec['label'] }}</div>
+                                                        <div>{{ $spec['value'] }}</div>
+                                                    </div>
                                                 @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    @if ($hasSizeChart)
+                                        <div class="widget-content-inner {{ $descriptionHtml === '' && $specifications->isEmpty() ? 'active' : '' }}">
+                                            <div class="tab-description">
+                                                <a href="#find_size" data-bs-toggle="modal" class="tf-btn btn-line">
+                                                    {{ __('front.products.size_chart') }}
+                                                    <i class="icon icon-arrow1-top-left"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
-                            @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -510,7 +326,7 @@
             <section class="flat-spacing-1 pt_0">
                 <div class="container">
                     <div class="flat-title">
-                        <span class="title">{{ $relatedSectionTitle }}</span>
+                        <span class="title">{{ $relatedTitle }}</span>
                     </div>
                     <div class="grid-layout wrapper-shop" data-grid="grid-4">
                         @foreach ($relatedProducts as $relatedProduct)
@@ -555,33 +371,70 @@
     @include('frontend.partials.product-scripts')
 
     <script>
-        (function () {
-            const product = @json($product);
-            const form = document.querySelector('[data-detail-cart-form]');
+        (function ($) {
+            var $root = $('[data-detail-product]').first();
 
-            if (!form || !product) {
+            if (!$root.length) {
                 return;
             }
 
-            const colors = Array.isArray(product.colors) ? product.colors : [];
-            let currentColorIndex = 0;
-            let currentSizeIndex = 0;
-
-            const mainImage = document.querySelector('[data-detail-main-image]');
-            const thumbsWrap = document.querySelector('[data-detail-thumbs]');
-            const sizesWrap = document.querySelector('[data-detail-sizes]');
-            const colorLabel = document.querySelector('[data-detail-color-label]');
-            const colorCode = document.querySelector('[data-detail-color-code]');
-            const sizeLabel = document.querySelector('[data-detail-size-label]');
-            const currentPrice = document.querySelector('[data-detail-current-price]');
-            const comparePrice = document.querySelector('[data-detail-compare-price]');
-            const submitPrice = document.querySelector('[data-detail-submit-price]');
-            const quantityInput = document.querySelector('[data-detail-quantity]');
-            const submitButton = document.querySelector('[data-detail-cart-submit]');
+            var product = $root.data('detail-product') || {};
+            var colors = Array.isArray(product.colors) ? product.colors : [];
+            var currentColorIndex = 0;
+            var currentSizeIndex = 0;
+            var $form = $('[data-detail-cart-form]');
+            var $qtyInput = $('[data-detail-quantity]');
+            var $submit = $('[data-detail-cart-submit]');
+            var $currentPrice = $('[data-detail-current-price]');
+            var $comparePrice = $('[data-detail-compare-price]');
+            var $submitPrice = $('[data-detail-submit-price]');
+            var $colorLabel = $('[data-detail-color-label]');
+            var $colorCode = $('[data-detail-color-code]');
+            var $sizeLabel = $('[data-detail-size-label]');
+            var thumbsSwiper = null;
+            var mainSwiper = null;
 
             function escapeHtml(value) {
                 return String(value || '').replace(/[&<>"']/g, function (char) {
                     return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
+                });
+            }
+
+            function initSwipers() {
+                if (typeof Swiper === 'undefined') {
+                    return;
+                }
+
+                if (thumbsSwiper && typeof thumbsSwiper.destroy === 'function') {
+                    thumbsSwiper.destroy(true, true);
+                }
+
+                if (mainSwiper && typeof mainSwiper.destroy === 'function') {
+                    mainSwiper.destroy(true, true);
+                }
+
+                var thumbsEl = document.querySelector('[data-detail-thumbs-swiper]');
+                var mainEl = document.querySelector('[data-detail-main-swiper]');
+
+                if (!thumbsEl || !mainEl) {
+                    return;
+                }
+
+                thumbsSwiper = new Swiper(thumbsEl, {
+                    direction: 'vertical',
+                    slidesPerView: 5,
+                    spaceBetween: 12,
+                    watchSlidesProgress: true,
+                });
+
+                mainSwiper = new Swiper(mainEl, {
+                    slidesPerView: 1,
+                    spaceBetween: 0,
+                    thumbs: { swiper: thumbsSwiper },
+                    navigation: {
+                        nextEl: mainEl.querySelector('.swiper-button-next'),
+                        prevEl: mainEl.querySelector('.swiper-button-prev'),
+                    },
                 });
             }
 
@@ -590,7 +443,7 @@
             }
 
             function activeSizeOptions() {
-                const color = activeColor();
+                var color = activeColor();
                 return Array.isArray(color.size_options) && color.size_options.length
                     ? color.size_options
                     : (Array.isArray(product.size_options) ? product.size_options : []);
@@ -600,26 +453,9 @@
                 return size && (size.is_sold_out === true || size.available === false || Number(size.quantity || 0) <= 0);
             }
 
-            function formatGallery(color) {
-                const gallery = Array.isArray(color.gallery) && color.gallery.length
-                    ? color.gallery
-                    : (color.image ? [color.image] : (Array.isArray(product.gallery) ? product.gallery : []));
-
-                return gallery.filter(Boolean);
-            }
-
-            function setMainImage(src) {
-                if (!mainImage || !src) {
-                    return;
-                }
-
-                mainImage.src = src;
-                mainImage.setAttribute('data-src', src);
-            }
-
-            function firstAvailableSizeIndex(sizes) {
-                for (let i = 0; i < sizes.length; i++) {
-                    if (!isSoldOut(sizes[i])) {
+            function firstAvailableSizeIndex(items) {
+                for (var i = 0; i < items.length; i++) {
+                    if (!isSoldOut(items[i])) {
                         return i;
                     }
                 }
@@ -627,180 +463,111 @@
                 return -1;
             }
 
+            function galleryForColor(color) {
+                var gallery = Array.isArray(color.gallery) && color.gallery.length
+                    ? color.gallery
+                    : (color.image ? [color.image] : (Array.isArray(product.gallery) ? product.gallery : []));
+
+                return gallery.filter(Boolean);
+            }
+
             function renderGallery(color) {
-                const gallery = formatGallery(color);
+                var gallery = galleryForColor(color);
+                var colorKey = color.name || '';
+                var thumbsHtml = '';
+                var mainHtml = '';
 
-                if (gallery.length) {
-                    setMainImage(gallery[0]);
-                }
+                gallery.forEach(function (image) {
+                    thumbsHtml += '<div class="swiper-slide stagger-item" data-color="' + escapeHtml(colorKey) + '"><div class="item"><img class="lazyload" data-src="' + escapeHtml(image) + '" src="' + escapeHtml(image) + '" alt="' + escapeHtml(product.title || '') + '"></div></div>';
+                    mainHtml += '<div class="swiper-slide" data-color="' + escapeHtml(colorKey) + '"><a href="' + escapeHtml(image) + '" target="_blank" class="item" data-pswp-width="770px" data-pswp-height="1075px"><img class="tf-image-zoom lazyload" data-zoom="' + escapeHtml(image) + '" data-src="' + escapeHtml(image) + '" src="' + escapeHtml(image) + '" alt="' + escapeHtml(product.title || '') + '"></a></div>';
+                });
 
-                if (!thumbsWrap) {
-                    return;
-                }
-
-                thumbsWrap.innerHTML = gallery.map(function (image, index) {
-                    return '<button type="button" class="product-detail-gallery-thumb ' + (index === 0 ? 'is-active' : '') + '" data-detail-thumb="' + escapeHtml(image) + '">' +
-                        '<img class="lazyload" data-src="' + escapeHtml(image) + '" src="' + escapeHtml(image) + '" alt="' + escapeHtml(product.title || '') + '">' +
-                        '</button>';
-                }).join('');
+                $('[data-detail-thumbs]').html(thumbsHtml);
+                $('[data-detail-gallery]').html(mainHtml);
+                initSwipers();
             }
 
             function renderSizes(color) {
-                const sizes = activeSizeOptions();
-                currentSizeIndex = 0;
+                var sizes = activeSizeOptions();
+                var firstAvailable = firstAvailableSizeIndex(sizes);
+                var html = '';
 
-                if (!sizesWrap) {
-                    return;
-                }
+                sizes.forEach(function (size, index) {
+                    var value = size.size || size.name || size.label || '';
+                    var soldOut = isSoldOut(size);
+                    var checked = index === firstAvailable && !soldOut ? ' checked' : '';
+                    var disabled = soldOut ? ' disabled' : '';
 
-                sizesWrap.innerHTML = sizes.map(function (size, index) {
-                    const value = size.size || size.name || size.label || size.value || '';
-                    const soldOut = isSoldOut(size);
-                    const checked = !soldOut && index === firstAvailableSizeIndex(sizes) ? ' checked' : '';
-                    const disabled = soldOut ? ' disabled' : '';
-                    const cls = soldOut ? ' product-detail-size-disabled' : '';
+                    if (!value) {
+                        return;
+                    }
 
-                    return '<input type="radio" name="detail_size" id="detail-size-js-' + index + '" value="' + escapeHtml(value) + '" data-size-index="' + index + '" data-size-id="' + escapeHtml(size.size_id || '') + '" data-size-code="' + escapeHtml(size.size_code || '') + '" data-variant-id="' + escapeHtml(size.variant_id || '') + '" data-product-color-id="' + escapeHtml(size.product_color_id || color.id || '') + '"' + checked + disabled + '>' +
-                        '<label class="style-text size-btn' + cls + '" for="detail-size-js-' + index + '" data-value="' + escapeHtml(value) + '"><p>' + escapeHtml(value) + '</p></label>';
-                }).join('');
+                    html += '<input type="radio" name="detail_size" id="detail-size-js-' + index + '" value="' + escapeHtml(value) + '" data-size-index="' + index + '" data-size-id="' + escapeHtml(size.size_id || '') + '" data-size-code="' + escapeHtml(size.size_code || '') + '" data-variant-id="' + escapeHtml(size.variant_id || '') + '" data-product-color-id="' + escapeHtml(size.product_color_id || '') + '"' + checked + disabled + '>';
+                    html += '<label class="style-text size-btn" for="detail-size-js-' + index + '" data-value="' + escapeHtml(value) + '"' + (soldOut ? ' aria-disabled="true"' : '') + '><p>' + escapeHtml(value) + '</p></label>';
+                });
 
-                const selectedInput = sizesWrap.querySelector('input[name="detail_size"]:checked');
-                currentSizeIndex = selectedInput ? Number(selectedInput.dataset.sizeIndex || 0) : 0;
-            }
-
-            function updatePricing() {
-                const color = activeColor();
-                const sizes = activeSizeOptions();
-                const size = sizes[currentSizeIndex] || null;
-                const priceLabel = (size && size.price_current_label) || color.price_current_label || product.price_current_label || product.price_label || '';
-                const compareLabel = (size && size.compare_price_label) || color.compare_price_label || product.compare_price_label || '';
-                const basePrice = (size && size.price_current) || color.price_current || product.price_current || product.base_price || 0;
-                const compareBase = (size && size.compare_price) || color.compare_price || product.compare_price || 0;
-                const currency = product.base_currency || 'SYP';
-
-                if (currentPrice) {
-                    currentPrice.textContent = priceLabel;
-                    currentPrice.setAttribute('data-base-price', basePrice || 0);
-                    currentPrice.setAttribute('data-base-currency', currency);
-                }
-
-                if (submitPrice) {
-                    submitPrice.textContent = priceLabel;
-                }
-
-                if (comparePrice) {
-                    comparePrice.textContent = compareLabel || '';
-                    comparePrice.setAttribute('data-base-price', compareBase || 0);
-                    comparePrice.setAttribute('data-base-currency', currency);
-                    comparePrice.classList.toggle('d-none', !compareLabel);
-                }
-
-                if (window.updateCurrencyConvertedPrices) {
-                    window.updateCurrencyConvertedPrices();
-                }
+                $('[data-detail-sizes]').html(html);
+                currentSizeIndex = firstAvailable >= 0 ? firstAvailable : 0;
             }
 
             function updateLabels() {
-                const color = activeColor();
-                const sizes = activeSizeOptions();
-                const size = sizes[currentSizeIndex] || null;
+                var color = activeColor();
+                var sizes = activeSizeOptions();
+                var size = sizes[currentSizeIndex] || null;
 
-                if (colorLabel) {
-                    colorLabel.textContent = color.name || '';
-                }
+                $colorLabel.text(color.name || '');
+                $colorCode.text(color.color_code || '');
+                $sizeLabel.text(size ? (size.size || size.name || size.label || '') : '');
+            }
 
-                if (colorCode) {
-                    colorCode.textContent = color.color_code || '';
-                }
+            function updatePricing() {
+                var color = activeColor();
+                var sizes = activeSizeOptions();
+                var size = sizes[currentSizeIndex] || null;
+                var currency = product.base_currency || 'SYP';
+                var quantity = Math.max(1, Math.min(99, parseInt($qtyInput.val(), 10) || 1));
+                var currentLabel = (size && size.price_current_label) || color.price_current_label || product.price_current_label || product.price_label || '';
+                var compareLabel = (size && size.compare_price_label) || color.compare_price_label || product.compare_price_label || '';
+                var currentBase = (size && size.price_current) || color.price_current || product.price_current || product.base_price || 0;
+                var compareBase = (size && size.compare_price) || color.compare_price || product.compare_price || 0;
+                var totalBase = Number(currentBase || 0) * quantity;
+                var totalLabel = totalBase > 0 && currency ? (Math.round(totalBase)).toLocaleString() + ' ' + currency : currentLabel;
 
-                if (sizeLabel) {
-                    sizeLabel.textContent = size ? (size.size || size.name || size.label || '') : '';
+                $currentPrice
+                    .text(currentLabel)
+                    .attr('data-base-price', currentBase || 0)
+                    .attr('data-base-currency', currency);
+
+                $submitPrice.text(totalLabel);
+
+                $comparePrice
+                    .text(compareLabel || '')
+                    .attr('data-base-price', compareBase || 0)
+                    .attr('data-base-currency', currency)
+                    .toggleClass('d-none', !compareLabel);
+
+                if (window.updateCurrencyConvertedPrices) {
+                    window.updateCurrencyConvertedPrices();
                 }
             }
 
             function selectedSizeInput() {
-                return document.querySelector('[data-detail-sizes] input[name="detail_size"]:checked');
-            }
-
-            function selectColor(index) {
-                currentColorIndex = Number(index || 0);
-                const color = activeColor();
-
-                document.querySelectorAll('[data-detail-colors] .product-detail-swatch').forEach(function (item) {
-                    item.classList.remove('is-active');
-                });
-
-                const input = document.querySelector('[data-detail-colors] input[data-color-index="' + currentColorIndex + '"]');
-                if (input) {
-                    input.checked = true;
-                    input.closest('.product-detail-swatch')?.classList.add('is-active');
-                }
-
-                renderGallery(color);
-                renderSizes(color);
-                updateLabels();
-                updatePricing();
-            }
-
-            function updateCartState(response) {
-                if (!response) {
-                    return;
-                }
-
-                const count = response.cart_state && typeof response.cart_state.count !== 'undefined'
-                    ? response.cart_state.count
-                    : 0;
-
-                document.querySelectorAll('[data-cart-count]').forEach(function (item) {
-                    item.textContent = count;
-                });
-
-                if (response.cart_html) {
-                    const wrapper = document.createElement('div');
-                    wrapper.innerHTML = response.cart_html;
-                    const newCart = wrapper.querySelector('#shoppingCart');
-                    const currentCart = document.querySelector('#shoppingCart');
-
-                    if (newCart && currentCart) {
-                        const newItems = newCart.querySelector('[data-cart-items]');
-                        const items = currentCart.querySelector('[data-cart-items]');
-                        const newSubtotal = newCart.querySelector('[data-cart-subtotal]');
-                        const subtotal = currentCart.querySelector('[data-cart-subtotal]');
-
-                        if (newItems && items) {
-                            items.innerHTML = newItems.innerHTML;
-                        }
-
-                        if (newSubtotal && subtotal) {
-                            subtotal.textContent = newSubtotal.textContent;
-                            subtotal.setAttribute('data-base-price', newSubtotal.getAttribute('data-base-price') || 0);
-                            subtotal.setAttribute('data-base-currency', newSubtotal.getAttribute('data-base-currency') || product.base_currency || 'SYP');
-                        }
-                    }
-                }
-
-                if (window.updateCurrencyConvertedPrices) {
-                    window.updateCurrencyConvertedPrices();
-                }
+                return $('[data-detail-sizes] input[name="detail_size"]:checked').first();
             }
 
             function renderSizeChartModal() {
-                if (!window.jQuery) {
-                    return;
-                }
-
-                const $modal = window.jQuery('#find_size');
-                const chart = product && product.size_chart ? product.size_chart : {};
-                const rows = Array.isArray(chart.rows) ? chart.rows : [];
-                const columns = Array.isArray(chart.columns) ? chart.columns : [];
-                const $table = $modal.find('[data-size-chart-table]');
-                const $head = $modal.find('[data-size-chart-head]');
-                const $body = $modal.find('[data-size-chart-body]');
-                const $empty = $modal.find('[data-size-chart-empty]');
-                const $guideWrap = $modal.find('[data-size-chart-guide-wrap]');
-                const $guideImage = $modal.find('[data-size-chart-guide-image]');
-                const $tableWrap = $modal.find('[data-size-chart-table-wrap]');
-                const guideImage = String(chart.guide_image || '').trim();
+                var $modal = $('#find_size');
+                var chart = product && product.size_chart ? product.size_chart : {};
+                var rows = Array.isArray(chart.rows) ? chart.rows : [];
+                var columns = Array.isArray(chart.columns) ? chart.columns : [];
+                var $table = $modal.find('[data-size-chart-table]');
+                var $head = $modal.find('[data-size-chart-head]');
+                var $body = $modal.find('[data-size-chart-body]');
+                var $empty = $modal.find('[data-size-chart-empty]');
+                var $guideWrap = $modal.find('[data-size-chart-guide-wrap]');
+                var $guideImage = $modal.find('[data-size-chart-guide-image]');
+                var $tableWrap = $modal.find('[data-size-chart-table-wrap]');
+                var guideImage = String(chart.guide_image || '').trim();
 
                 $modal.find('[data-size-chart-title]').text(chart.title || '');
                 $modal.find('[data-size-chart-subtitle]').text(chart.subtitle || '');
@@ -823,16 +590,17 @@
                     return;
                 }
 
-                let headHtml = '';
+                var headHtml = '';
+                var bodyHtml = '';
+
                 columns.forEach(function (column) {
                     headHtml += '<th>' + escapeHtml(column.label || '') + '</th>';
                 });
 
-                let bodyHtml = '';
                 rows.forEach(function (row) {
                     bodyHtml += '<tr>';
                     columns.forEach(function (column) {
-                        const value = row[column.key] ?? '';
+                        var value = row[column.key] ?? '';
                         bodyHtml += '<td>' + escapeHtml(value === null || value === undefined || value === '' ? '-' : String(value)) + '</td>';
                     });
                     bodyHtml += '</tr>';
@@ -844,108 +612,111 @@
                 $table.removeClass('d-none');
             }
 
-            document.addEventListener('change', function (event) {
-                const colorInput = event.target.closest('[data-detail-colors] input[name="detail_color"]');
-                if (colorInput) {
-                    selectColor(colorInput.dataset.colorIndex || 0);
-                    return;
-                }
+            function syncCartState(response) {
+                var $fragment = $('<div>').html(response.cart_html || '');
+                var $newModal = $fragment.find('#shoppingCart');
+                var count = (response.cart_state && response.cart_state.count) || 0;
 
-                const sizeInput = event.target.closest('[data-detail-sizes] input[name="detail_size"]');
-                if (sizeInput) {
-                    currentSizeIndex = Number(sizeInput.dataset.sizeIndex || 0);
-                    updateLabels();
-                    updatePricing();
+                $('[data-cart-count]').text(count);
+
+                if ($newModal.length && $('#shoppingCart').length) {
+                    var $modal = $('#shoppingCart');
+                    var $newSubtotal = $newModal.find('[data-cart-subtotal]');
+                    var $subtotal = $modal.find('[data-cart-subtotal]');
+
+                    $modal.find('[data-cart-items]').html($newModal.find('[data-cart-items]').html());
+
+                    if ($subtotal.length && $newSubtotal.length) {
+                        $subtotal.text($newSubtotal.text());
+                        $subtotal.attr('data-base-price', $newSubtotal.attr('data-base-price') || 0);
+                        $subtotal.attr('data-base-currency', $newSubtotal.attr('data-base-currency') || $('.js-currency-select').val() || '');
+                    }
+
+                    if (window.updateCurrencyConvertedPrices) {
+                        window.updateCurrencyConvertedPrices();
+                    }
                 }
+            }
+
+            function selectColor(index) {
+                currentColorIndex = Number(index || 0);
+                renderGallery(activeColor());
+                renderSizes(activeColor());
+                updateLabels();
+                updatePricing();
+            }
+
+            $(document).on('change', '[data-detail-colors] input[name="detail_color"]', function () {
+                selectColor($(this).data('color-index') || 0);
             });
 
-            document.addEventListener('click', function (event) {
-                const thumb = event.target.closest('[data-detail-thumb]');
-                if (thumb) {
-                    event.preventDefault();
-                    thumbsWrap?.querySelectorAll('.product-detail-gallery-thumb').forEach(function (item) {
-                        item.classList.remove('is-active');
-                    });
-                    thumb.classList.add('is-active');
-                    setMainImage(thumb.dataset.detailThumb || '');
-                    return;
-                }
-
-                const qtyButton = event.target.closest('[data-detail-qty]');
-                if (qtyButton && quantityInput) {
-                    const current = parseInt(quantityInput.value, 10) || 1;
-                    quantityInput.value = qtyButton.dataset.detailQty === 'decrease'
-                        ? Math.max(1, current - 1)
-                        : Math.min(99, current + 1);
-                    return;
-                }
-
-                const sizeChartTrigger = event.target.closest('a.find-size');
-                if (sizeChartTrigger) {
-                    renderSizeChartModal();
-                }
+            $(document).on('change', '[data-detail-sizes] input[name="detail_size"]', function () {
+                currentSizeIndex = Number($(this).data('size-index') || 0);
+                updateLabels();
+                updatePricing();
             });
 
-            form.addEventListener('submit', function (event) {
+            $(document).on('click', '[data-detail-qty]', function () {
+                var current = parseInt($qtyInput.val(), 10) || 1;
+                $qtyInput.val($(this).data('detail-qty') === 'decrease' ? Math.max(1, current - 1) : Math.min(99, current + 1));
+                updatePricing();
+            });
+
+            $(document).on('click', '[data-detail-find-size]', function (event) {
+                event.preventDefault();
+                renderSizeChartModal();
+                $('#find_size').modal('show');
+            });
+
+            $form.on('submit', function (event) {
                 event.preventDefault();
 
-                const url = form.getAttribute('data-cart-url') || '';
-                if (!url || !submitButton) {
+                var url = String($form.data('cart-url') || '');
+                if (!url || !$submit.length) {
                     return;
                 }
 
-                const color = activeColor();
-                const sizeInput = selectedSizeInput();
-                const quantity = parseInt(quantityInput?.value || '1', 10) || 1;
-                const formData = new FormData();
+                var color = activeColor();
+                var $size = selectedSizeInput();
+                var quantity = Math.max(1, Math.min(99, parseInt($qtyInput.val(), 10) || 1));
+                var payload = {
+                    quantity: quantity,
+                    color: color.name || '',
+                    color_name: color.name || '',
+                    color_id: color.id || '',
+                    color_code: color.color_code || ''
+                };
 
-                formData.append('quantity', String(Math.max(1, Math.min(99, quantity))));
-                formData.append('color', color.name || '');
-                formData.append('color_name', color.name || '');
-                formData.append('color_id', color.id || '');
-                formData.append('color_code', color.color_code || '');
-
-                if (sizeInput) {
-                    formData.append('size', sizeInput.value || '');
-                    formData.append('size_id', sizeInput.dataset.sizeId || '');
-                    formData.append('size_code', sizeInput.dataset.sizeCode || '');
-                    formData.append('variant_id', sizeInput.dataset.variantId || '');
+                if ($size.length) {
+                    payload.size = $size.val() || '';
+                    payload.size_id = $size.data('size-id') || '';
+                    payload.size_code = $size.data('size-code') || '';
+                    payload.variant_id = $size.data('variant-id') || '';
                 }
 
-                submitButton.disabled = true;
+                $submit.prop('disabled', true);
 
-                fetch(url, {
-                    method: 'POST',
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: payload,
+                    dataType: 'json',
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                        'Accept': 'application/json'
-                    },
-                    body: formData
-                })
-                    .then(function (response) {
-                        if (!response.ok) {
-                            throw new Error('Cart request failed');
-                        }
-
-                        return response.json();
-                    })
-                    .then(function (response) {
-                        updateCartState(response);
-                        const cart = document.getElementById('shoppingCart');
-                        if (cart && window.bootstrap && window.bootstrap.Modal) {
-                            window.bootstrap.Modal.getOrCreateInstance(cart).show();
-                        }
-                    })
-                    .catch(function () {
-                        alert(@json($isArabic ? 'تعذر إضافة المنتج إلى السلة. حاول مرة أخرى.' : 'Could not add the product to cart. Please try again.'));
-                    })
-                    .finally(function () {
-                        submitButton.disabled = false;
-                    });
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') || '',
+                        Accept: 'application/json'
+                    }
+                }).done(function (response) {
+                    syncCartState(response || {});
+                    $('#shoppingCart').modal('show');
+                }).fail(function (xhr) {
+                    console.error('Detail add-to-cart failed', xhr);
+                }).always(function () {
+                    $submit.prop('disabled', false);
+                });
             });
 
-            selectColor(0);
             renderSizeChartModal();
-        })();
+            selectColor(0);
+        })(jQuery);
     </script>
 @endpush
