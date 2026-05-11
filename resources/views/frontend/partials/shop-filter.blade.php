@@ -155,8 +155,8 @@
                                 <div class="progress-price" style="left: {{ ($priceMinValue / max(1, $priceUpperLimit)) * 100 }}%; right: {{ 100 - (($priceMaxValue / max(1, $priceUpperLimit)) * 100) }}%;"></div>
                             </div>
                             <div class="range-input">
-                                <input class="range-min" type="range" name="min_price" min="0" max="{{ $priceUpperLimit }}" value="{{ $priceMinValue }}" />
-                                <input class="range-max" type="range" name="max_price" min="0" max="{{ $priceUpperLimit }}" value="{{ $priceMaxValue }}" />
+                                <input class="range-min" type="range" name="min_price" min="0" max="{{ $priceUpperLimit }}" value="{{ $priceMinValue }}" data-default-value="{{ max(0, (int) ($priceStats['min_limit'] ?? 0)) }}" />
+                                <input class="range-max" type="range" name="max_price" min="0" max="{{ $priceUpperLimit }}" value="{{ $priceMaxValue }}" data-default-value="{{ $priceUpperLimit }}" />
                             </div>
                             <div class="box-title-price">
                                 <span class="title-price">{{ $isArabic ? 'السعر :' : 'Price :' }}</span>

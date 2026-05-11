@@ -206,7 +206,7 @@
     @include('frontend.partials.header', [
         'navCategories' => $nav_categories ?? [],
         'currencyOptions' => $currency_options ?? [],
-        'siteName' => $site_name ?? config('app.name', '400 Four HUNDRED'),
+        'siteName' => $site_name ?? __('front.brand'),
         'cartCount' => $cart_count ?? 0,
     ])
 

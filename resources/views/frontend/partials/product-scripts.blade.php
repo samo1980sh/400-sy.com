@@ -152,7 +152,7 @@
         }
 
         function isOptionSoldOut(item) {
-            if (! item) {
+            if (!item) {
                 return false;
             }
 
@@ -257,7 +257,7 @@
 
                 var value = item.name || item.label || item.size || item.value || '';
                 var soldOut = type === 'size' ? isOptionSoldOut(item) : false;
-                var checked = ! soldOut && isSelectedOption(item, selectedValue) ? 'checked' : (!selectedValue && index === 0 && !soldOut ? 'checked' : '');
+                var checked = !soldOut && isSelectedOption(item, selectedValue) ? 'checked' : (!selectedValue && index === 0 && !soldOut ? 'checked' : '');
                 var id = type + '-' + index + '-' + Math.random().toString(36).slice(2, 8);
 
                 if (type === 'size') {
@@ -341,17 +341,17 @@
         // Product card helpers
         // ---------------------------------------------------------------------
         function cardSwatchDisplayStyle($swatch) {
-            if (! $swatch || ! $swatch.length) {
+            if (!$swatch || !$swatch.length) {
                 return '';
             }
 
             var $value = $swatch.find('.swatch-value').first();
 
-            if (! $value.length) {
+            if (!$value.length) {
                 $value = $swatch.find('.btn-checkbox').first();
             }
 
-            if (! $value.length) {
+            if (!$value.length) {
                 return '';
             }
 
@@ -382,7 +382,7 @@
         function cardSwatchClass($swatch) {
             var $value = $swatch.find('.swatch-value').first();
 
-            if (! $value.length) {
+            if (!$value.length) {
                 $value = $swatch.find('.btn-checkbox').first();
             }
 
@@ -434,7 +434,7 @@
             product = $.extend(true, {}, product || {});
             product.colors = Array.isArray(product.colors) ? product.colors : [];
 
-            if (! $card || ! $card.length || ! product.colors.length) {
+            if (!$card || !$card.length || !product.colors.length) {
                 return product;
             }
 
@@ -530,13 +530,13 @@
 
 
         function prepareProductCard($card) {
-            if (! $card || ! $card.length) {
+            if (!$card || !$card.length) {
                 return;
             }
 
             var $activeSwatch = $card.find('.list-color-item.color-swatch.active').first();
 
-            if (! $activeSwatch.length) {
+            if (!$activeSwatch.length) {
                 $activeSwatch = $card.find('.list-color-item.color-swatch').first();
             }
 
@@ -628,7 +628,7 @@
 
         function toggleOldPrice($element, amount, currency, label) {
             writePrice($element, amount, currency, label);
-            $element.toggleClass('d-none', ! label);
+            $element.toggleClass('d-none', !label);
         }
 
         // ---------------------------------------------------------------------
@@ -740,9 +740,9 @@
         function updateModalCartSubmit($modal, product, available) {
             $modal.find('[data-cart-submit]')
                 .attr('data-cart-url', product.cart_add_url || '')
-                .prop('disabled', ! available)
-                .toggleClass('disabled', ! available)
-                .attr('aria-disabled', ! available ? 'true' : 'false');
+                .prop('disabled', !available)
+                .toggleClass('disabled', !available)
+                .attr('aria-disabled', !available ? 'true' : 'false');
         }
 
         function syncQuickViewSelection($modal) {
@@ -766,12 +766,12 @@
 
             $modal.find('[data-qv-title]').attr('href', detailUrl).text(product.title || '');
             $modal.find('[data-qv-detail]').attr('href', detailUrl);
-            $modal.find('[data-qv-badge]').toggleClass('d-none', ! product.badge).text(product.badge || '').attr('data-badge-class', product.badge_class || '');
+            $modal.find('[data-qv-badge]').toggleClass('d-none', !product.badge).text(product.badge || '').attr('data-badge-class', product.badge_class || '');
             $modal.find('[data-qv-product-code]').text(product.product_code || '—');
             $modal.find('[data-qv-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
             $modal.find('[data-qv-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
-            $modal.find('[data-qv-body-fit-wrap]').toggleClass('d-none', ! String(product.body_fit || '').trim());
-            $modal.find('[data-qv-drop-wrap]').toggleClass('d-none', ! String(product.drop_type || '').trim());
+            $modal.find('[data-qv-body-fit-wrap]').toggleClass('d-none', !String(product.body_fit || '').trim());
+            $modal.find('[data-qv-drop-wrap]').toggleClass('d-none', !String(product.drop_type || '').trim());
             $modal.find('[data-qv-color-label]').text(colorData.name || selectedColorRef || '');
             $modal.find('[data-qv-color-code]').text(colorData.color_code || '—');
             $modal.find('[data-qv-description]').html(product.description ? '<p>' + escapeHtml(product.description) + '</p>' : '');
@@ -780,7 +780,7 @@
 
             selectedSize = readSelected($modal, 'size');
             $modal.find('[data-qv-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
-            $modal.find('[data-qv-find-size]').toggleClass('d-none', ! product.has_size_chart);
+            $modal.find('[data-qv-find-size]').toggleClass('d-none', !product.has_size_chart);
             updateModalCartSubmit($modal, product, available);
 
             syncQuickViewPricing($modal, product, selectedSize);
@@ -808,18 +808,18 @@
             $modal.find('[data-qadd-title-link]').attr('href', detailUrl).text(product.title || '');
             $modal.find('[data-qadd-image]').attr('src', colorData.image || (Array.isArray(colorData.gallery) && colorData.gallery[0]) || product.image || '');
             $modal.find('[data-qadd-price]').text(product.price_label || product.price_current_label || '');
-            $modal.find('[data-qadd-badge]').toggleClass('d-none', ! product.badge).text(product.badge || '');
+            $modal.find('[data-qadd-badge]').toggleClass('d-none', !product.badge).text(product.badge || '');
             $modal.find('[data-qadd-product-code]').text(product.product_code || '—');
             $modal.find('[data-qadd-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
             $modal.find('[data-qadd-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
-            $modal.find('[data-qadd-body-fit-wrap]').toggleClass('d-none', ! String(product.body_fit || '').trim());
-            $modal.find('[data-qadd-drop-wrap]').toggleClass('d-none', ! String(product.drop_type || '').trim());
+            $modal.find('[data-qadd-body-fit-wrap]').toggleClass('d-none', !String(product.body_fit || '').trim());
+            $modal.find('[data-qadd-drop-wrap]').toggleClass('d-none', !String(product.drop_type || '').trim());
             $modal.find('[data-qadd-color-label]').text(colorData.name || selectedColorRef || '');
             $modal.find('[data-qadd-color-code]').text(colorData.color_code || '—');
             $modal.find('[data-qadd-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
             $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], selectedColorRef || product.default_color || '', 'color'));
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(sizes, selectedSize, 'size'));
-            $modal.find('[data-qadd-find-size]').toggleClass('d-none', ! product.has_size_chart);
+            $modal.find('[data-qadd-find-size]').toggleClass('d-none', !product.has_size_chart);
 
             selectedSize = readSelected($modal, 'size');
             updateModalCartSubmit($modal, product, available);
@@ -840,7 +840,7 @@
             if (prefix === 'qv') {
                 $modal.find('[data-qv-title]').attr('href', selectedDetailUrl).text(product.title || '');
                 $modal.find('[data-qv-detail]').attr('href', selectedDetailUrl);
-                $modal.find('[data-qv-badge]').toggleClass('d-none', ! product.badge).text(product.badge || '').attr('data-badge-class', product.badge_class || '');
+                $modal.find('[data-qv-badge]').toggleClass('d-none', !product.badge).text(product.badge || '').attr('data-badge-class', product.badge_class || '');
                 $modal.find('[data-qv-product-code]').text(product.product_code || '—');
                 $modal.find('[data-qv-price-current]').text(product.price_label || product.price_current_label || '');
                 $modal.find('[data-qv-submit-price]').text(product.price_label || product.price_current_label || '');
@@ -849,8 +849,8 @@
                 $modal.find('[data-qv-sizes]').html(buildOptionMarkup(product.size_options || product.sizes || [], product.default_size || '', 'size'));
                 $modal.find('[data-qv-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
                 $modal.find('[data-qv-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
-                $modal.find('[data-qv-body-fit-wrap]').toggleClass('d-none', ! String(product.body_fit || '').trim());
-                $modal.find('[data-qv-drop-wrap]').toggleClass('d-none', ! String(product.drop_type || '').trim());
+                $modal.find('[data-qv-body-fit-wrap]').toggleClass('d-none', !String(product.body_fit || '').trim());
+                $modal.find('[data-qv-drop-wrap]').toggleClass('d-none', !String(product.drop_type || '').trim());
                 syncQuickViewSelection($modal);
                 return;
             }
@@ -858,16 +858,16 @@
             $modal.find('[data-qadd-title-link]').attr('href', selectedDetailUrl).text(product.title || '');
             $modal.find('[data-qadd-image]').attr('src', product.image || '');
             $modal.find('[data-qadd-price]').text(product.price_label || product.price_current_label || '');
-            $modal.find('[data-qadd-price-old]').text(product.compare_price_label || '').toggleClass('d-none', ! product.compare_price_label);
-            $modal.find('[data-qadd-badge]').toggleClass('d-none', ! product.badge).text(product.badge || '');
+            $modal.find('[data-qadd-price-old]').text(product.compare_price_label || '').toggleClass('d-none', !product.compare_price_label);
+            $modal.find('[data-qadd-badge]').toggleClass('d-none', !product.badge).text(product.badge || '');
             $modal.find('[data-qadd-product-code]').text(product.product_code || '—');
             $modal.find('[data-qadd-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
             $modal.find('[data-qadd-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
-            $modal.find('[data-qadd-body-fit-wrap]').toggleClass('d-none', ! String(product.body_fit || '').trim());
-            $modal.find('[data-qadd-drop-wrap]').toggleClass('d-none', ! String(product.drop_type || '').trim());
+            $modal.find('[data-qadd-body-fit-wrap]').toggleClass('d-none', !String(product.body_fit || '').trim());
+            $modal.find('[data-qadd-drop-wrap]').toggleClass('d-none', !String(product.drop_type || '').trim());
             $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], options.selectedColor ? (options.selectedColor.id || options.selectedColor.code || options.selectedColor.name || options.selectedColor.className || '') : (product.default_color || ''), 'color'));
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(product.size_options || product.sizes || [], product.default_size || '', 'size'));
-            $modal.find('[data-qadd-find-size]').toggleClass('d-none', ! product.has_size_chart);
+            $modal.find('[data-qadd-find-size]').toggleClass('d-none', !product.has_size_chart);
             syncQuickAddSelection($modal);
         }
 
