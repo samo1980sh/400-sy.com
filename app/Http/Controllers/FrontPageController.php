@@ -676,17 +676,22 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
     protected function requestPriceRange(Request $request): array
     {
         $compact = trim((string) $request->query('price', ''));
+        $min = null;
+        $max = null;
+
         if ($compact !== '' && preg_match('/^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$/', $compact, $matches)) {
-            return [
-                $this->normalizePriceInput($matches[1]),
-                $this->normalizePriceInput($matches[2]),
-            ];
+            $min = $this->normalizePriceInput($matches[1]);
+            $max = $this->normalizePriceInput($matches[2]);
+        } else {
+            $min = $this->normalizePriceInput($request->query('min_price'));
+            $max = $this->normalizePriceInput($request->query('max_price'));
         }
 
-        return [
-            $this->normalizePriceInput($request->query('min_price')),
-            $this->normalizePriceInput($request->query('max_price')),
-        ];
+        if ($min !== null && $max !== null && $min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+
+        return [$min, $max];
     }
 
     protected function newProductsListingQuery(): Builder
@@ -713,12 +718,16 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
     protected function applyProductsFilters(Builder $query, array $filters): Builder
     {
         $categoryIds = array_values(array_filter(array_map('intval', $filters['category_ids'] ?? [])));
-        $minPrice = $this->displayPriceToBase($filters['min_price'] ?? null);
-        $maxPrice = $this->displayPriceToBase($filters['max_price'] ?? null);
+        $minPrice = $this->normalizePriceInput($filters['min_price'] ?? null);
+        $maxPrice = $this->normalizePriceInput($filters['max_price'] ?? null);
         $colorIds = $this->resolveStructureColorIds($this->normalizeStringArray($filters['colors'] ?? []));
         $sizes = $this->resolveSizeFilterTerms($this->normalizeStringArray($filters['sizes'] ?? []));
         $bodyFits = $this->normalizeStringArray($filters['body_fit'] ?? []);
         $dropTypes = $this->normalizeStringArray($filters['drop_type'] ?? []);
+
+        if ($minPrice !== null && $maxPrice !== null && $minPrice > $maxPrice) {
+            [$minPrice, $maxPrice] = [$maxPrice, $minPrice];
+        }
 
         if ($categoryIds !== []) {
             $query->whereIn('category_id', $categoryIds);
@@ -971,16 +980,33 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
         $minBase = (float) ((clone $query)->min('price') ?? 0);
         $maxBase = (float) ((clone $query)->max('price') ?? 0);
-        $min = $this->basePriceToDisplay($minBase);
-        $max = $this->basePriceToDisplay($maxBase);
-        $upper = max(1, (int) ceil($max));
+        $selectedMinBase = $selectedMin !== null ? $this->normalizePriceInput($selectedMin) : $minBase;
+        $selectedMaxBase = $selectedMax !== null ? $this->normalizePriceInput($selectedMax) : $maxBase;
+
+        if ($selectedMinBase !== null && $selectedMaxBase !== null && $selectedMinBase > $selectedMaxBase) {
+            [$selectedMinBase, $selectedMaxBase] = [$selectedMaxBase, $selectedMinBase];
+        }
+
+        $displayMin = $this->basePriceToDisplay($minBase);
+        $displayMax = $this->basePriceToDisplay($maxBase);
+        $displayUpper = max(1, (int) ceil($displayMax));
+        $selectedMinDisplay = $this->basePriceToDisplay($selectedMinBase);
+        $selectedMaxDisplay = $this->basePriceToDisplay($selectedMaxBase);
         $currencyContext = $this->currentCurrencyContext();
 
         return [
-            'min_limit' => max(0, (int) floor($min)),
-            'max_limit' => $upper,
-            'selected_min' => $selectedMin !== null ? (int) floor($selectedMin) : max(0, (int) floor($min)),
-            'selected_max' => $selectedMax !== null ? (int) ceil($selectedMax) : $upper,
+            'base_min_limit' => max(0, (int) floor($minBase)),
+            'base_max_limit' => max(1, (int) ceil($maxBase)),
+            'selected_min_base' => max(0, (int) floor($selectedMinBase ?? $minBase)),
+            'selected_max_base' => max(1, (int) ceil($selectedMaxBase ?? $maxBase)),
+            'display_min_limit' => max(0, (int) floor($displayMin)),
+            'display_max_limit' => $displayUpper,
+            'selected_min_display' => max(0, (int) floor($selectedMinDisplay)),
+            'selected_max_display' => max(1, (int) ceil($selectedMaxDisplay)),
+            'min_limit' => max(0, (int) floor($displayMin)),
+            'max_limit' => $displayUpper,
+            'selected_min' => max(0, (int) floor($selectedMinDisplay)),
+            'selected_max' => max(1, (int) ceil($selectedMaxDisplay)),
             'currency' => $currencyContext['currency'],
             'symbol' => $currencyContext['symbol'],
             'rate' => $currencyContext['rate'],
@@ -1046,10 +1072,15 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             ];
         }
 
-        if ($selectedMin !== null || $selectedMax !== null) {
+        $defaultMinBase = (float) ($priceStats['base_min_limit'] ?? 0);
+        $defaultMaxBase = (float) ($priceStats['base_max_limit'] ?? 0);
+        $resolvedMinBase = $selectedMin ?? $defaultMinBase;
+        $resolvedMaxBase = $selectedMax ?? $defaultMaxBase;
+
+        if ($resolvedMinBase !== $defaultMinBase || $resolvedMaxBase !== $defaultMaxBase) {
             $currency = (string) ($priceStats['currency'] ?? 'SYP');
-            $rangeMin = (int) ($selectedMin ?? $priceStats['selected_min'] ?? 0);
-            $rangeMax = (int) ($selectedMax ?? $priceStats['selected_max'] ?? $priceStats['max_limit'] ?? 0);
+            $rangeMin = (int) floor($this->basePriceToDisplay($resolvedMinBase));
+            $rangeMax = (int) ceil($this->basePriceToDisplay($resolvedMaxBase));
 
             $chips[] = [
                 'type' => 'price',

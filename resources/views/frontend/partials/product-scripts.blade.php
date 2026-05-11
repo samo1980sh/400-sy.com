@@ -1028,39 +1028,8 @@
         var filterRequest = null;
         var filterRequestToken = 0;
         var filterDebounceTimer = null;
-        var pendingCurrencyFilterSync = null;
-
         function shopProductsUrl() {
             return window.location.origin + window.location.pathname;
-        }
-
-        function currencyUpdateUrl() {
-            return '{{ route('front.currency') }}';
-        }
-
-        function getCurrencyRate(currencyCode) {
-            var code = String(currencyCode || '').toUpperCase();
-            var $option = $('.js-currency-select').find('option[value="' + code + '"]').first();
-            var rate = parseFloat($option.data('rate'));
-
-            if (!rate || rate <= 0) {
-                rate = 1;
-            }
-
-            return rate;
-        }
-
-        function convertFilterPriceBetweenCurrencies(amount, fromCurrency, toCurrency) {
-            var numericAmount = parseFloat(amount);
-
-            if (!isFinite(numericAmount)) {
-                return 0;
-            }
-
-            var baseAmount = numericAmount * getCurrencyRate(fromCurrency);
-            var converted = baseAmount / getCurrencyRate(toCurrency);
-
-            return Math.max(0, Math.round(converted));
         }
 
         function buildStateQueryString($filterForm, $sortForm) {
@@ -1071,6 +1040,7 @@
             var sizes = [];
             var minPrice = '';
             var maxPrice = '';
+            var hasActivePrice = false;
 
             $filterForm.find('input, select, textarea').each(function () {
                 var $field = $(this);
@@ -1131,8 +1101,15 @@
                 params.set('sizes', sizes.join(','));
             }
 
-            if (minPrice !== '' || maxPrice !== '') {
-                params.set('price', (minPrice || '0') + '-' + (maxPrice || minPrice || '0'));
+            var $priceWidget = $filterForm.find('.js-price-filter').first();
+            if ($priceWidget.length) {
+                hasActivePrice = String(minPrice || '') !== String($priceWidget.data('baseMinLimit') || '')
+                    || String(maxPrice || '') !== String($priceWidget.data('baseMaxLimit') || '');
+            }
+
+            if (hasActivePrice && (minPrice !== '' || maxPrice !== '')) {
+                params.set('min_price', minPrice || '0');
+                params.set('max_price', maxPrice || minPrice || '0');
             }
 
             params.set('sort', sortValue);
@@ -1172,6 +1149,10 @@
                     var $filter = $(response.filter_html);
                     var $existingFilter = $('[data-shop-filter]');
                     $existingFilter.find('.canvas-body').replaceWith($filter.find('.canvas-body'));
+
+                    if (window.updatePriceFilterCurrency) {
+                        window.updatePriceFilterCurrency();
+                    }
                 }
 
                 if (response.products_html) {
@@ -1291,9 +1272,23 @@
             } else if (type === 'price') {
                 var $minField = $filterForm.find('.range-min');
                 var $maxField = $filterForm.find('.range-max');
+                var $priceWidget = $filterForm.find('.js-price-filter').first();
+                var $baseMinField = $filterForm.find('[data-price-base-min-input]').first();
+                var $baseMaxField = $filterForm.find('[data-price-base-max-input]').first();
+
+                if ($priceWidget.length) {
+                    $baseMinField.val($priceWidget.data('baseMinLimit') || 0);
+                    $baseMaxField.val($priceWidget.data('baseMaxLimit') || 0);
+                    $priceWidget.data('selectedMinBase', $priceWidget.data('baseMinLimit') || 0);
+                    $priceWidget.data('selectedMaxBase', $priceWidget.data('baseMaxLimit') || 0);
+                }
 
                 $minField.val($minField.attr('min') || 0);
                 $maxField.val($maxField.attr('max') || 0);
+
+                if (window.updatePriceFilterCurrency) {
+                    window.updatePriceFilterCurrency();
+                }
             }
 
             applyAjaxFilter();
@@ -1302,41 +1297,6 @@
         window.addEventListener('popstate', function () {
             var queryString = window.location.search.replace(/^\?/, '');
             refreshShopProducts(queryString, { pushState: false });
-        });
-
-        $(document).on('change', '.js-currency-select', function () {
-            pendingCurrencyFilterSync = {
-                from: $(this).data('confirmed-currency') || $(this).find('option:selected').val() || '',
-                to: $(this).val() || ''
-            };
-        });
-
-        $(document).ajaxSuccess(function (event, xhr, settings) {
-            if (!$('[data-filter-form]').length || !pendingCurrencyFilterSync) {
-                return;
-            }
-
-            var requestUrl = String((settings && settings.url) || '');
-            if (!requestUrl || requestUrl.indexOf(currencyUpdateUrl()) === -1) {
-                return;
-            }
-
-            var $filterForm = $('[data-filter-form]').first();
-            var fromCurrency = pendingCurrencyFilterSync.from || 'SYP';
-            var toCurrency = pendingCurrencyFilterSync.to || fromCurrency;
-            var $minField = $filterForm.find('.range-min');
-            var $maxField = $filterForm.find('.range-max');
-
-            if ($minField.length) {
-                $minField.val(convertFilterPriceBetweenCurrencies($minField.val(), fromCurrency, toCurrency));
-            }
-
-            if ($maxField.length) {
-                $maxField.val(convertFilterPriceBetweenCurrencies($maxField.val(), fromCurrency, toCurrency));
-            }
-
-            pendingCurrencyFilterSync = null;
-            applyAjaxFilter();
         });
 
         $(document).on('click', '.btn-loadmore-ajax', function (event) {

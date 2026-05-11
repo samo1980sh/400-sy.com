@@ -10,10 +10,17 @@
     $selectedDropType = array_values(array_filter((array) ($selected_drop_type ?? [])));
 
     $priceStats = $filter_price_stats ?? [];
+    $baseMinLimit = max(0, (int) ($priceStats['base_min_limit'] ?? 0));
+    $baseMaxLimit = max(1, (int) ($priceStats['base_max_limit'] ?? 1));
+    $selectedMinBase = min($baseMaxLimit, max($baseMinLimit, (int) ($priceStats['selected_min_base'] ?? $baseMinLimit)));
+    $selectedMaxBase = min($baseMaxLimit, max($selectedMinBase, (int) ($priceStats['selected_max_base'] ?? $baseMaxLimit)));
+    $displayMinLimit = max(0, (int) ($priceStats['display_min_limit'] ?? 0));
+    $displayMaxLimit = max(1, (int) ($priceStats['display_max_limit'] ?? 1));
+    $selectedMinDisplay = min($displayMaxLimit, max($displayMinLimit, (int) ($priceStats['selected_min_display'] ?? $displayMinLimit)));
+    $selectedMaxDisplay = min($displayMaxLimit, max($selectedMinDisplay, (int) ($priceStats['selected_max_display'] ?? $displayMaxLimit)));
     $priceCurrency = (string) ($priceStats['currency'] ?? 'SYP');
-    $priceUpperLimit = max(1, (int) ($priceStats['max_limit'] ?? 1));
-    $priceMinValue = min($priceUpperLimit, max(0, (int) ($priceStats['selected_min'] ?? 0)));
-    $priceMaxValue = min($priceUpperLimit, max($priceMinValue, (int) ($priceStats['selected_max'] ?? $priceUpperLimit)));
+    $priceSymbol = (string) ($priceStats['symbol'] ?? $priceCurrency);
+    $priceRate = (float) ($priceStats['rate'] ?? 1);
 
     $filterAction = request()->url();
     $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
@@ -150,25 +157,36 @@
                         <span class="icon icon-arrow-up"></span>
                     </div>
                     <div id="price" class="collapse show">
-                        <div class="widget-price filter-price">
+                        <div
+                            class="widget-price filter-price js-price-filter"
+                            data-base-min-limit="{{ $baseMinLimit }}"
+                            data-base-max-limit="{{ $baseMaxLimit }}"
+                            data-selected-min-base="{{ $selectedMinBase }}"
+                            data-selected-max-base="{{ $selectedMaxBase }}"
+                            data-currency="{{ $priceCurrency }}"
+                            data-symbol="{{ $priceSymbol }}"
+                            data-rate="{{ $priceRate }}"
+                        >
                             <div class="tow-bar-block">
-                                <div class="progress-price" style="left: {{ ($priceMinValue / max(1, $priceUpperLimit)) * 100 }}%; right: {{ 100 - (($priceMaxValue / max(1, $priceUpperLimit)) * 100) }}%;"></div>
+                                <div class="progress-price" style="left: {{ ($selectedMinDisplay / max(1, $displayMaxLimit)) * 100 }}%; right: {{ 100 - (($selectedMaxDisplay / max(1, $displayMaxLimit)) * 100) }}%;"></div>
                             </div>
+                            <input type="hidden" name="min_price" value="{{ $selectedMinBase }}" data-price-base-min-input>
+                            <input type="hidden" name="max_price" value="{{ $selectedMaxBase }}" data-price-base-max-input>
                             <div class="range-input">
-                                <input class="range-min" type="range" name="min_price" min="0" max="{{ $priceUpperLimit }}" value="{{ $priceMinValue }}" data-default-value="{{ max(0, (int) ($priceStats['min_limit'] ?? 0)) }}" />
-                                <input class="range-max" type="range" name="max_price" min="0" max="{{ $priceUpperLimit }}" value="{{ $priceMaxValue }}" data-default-value="{{ $priceUpperLimit }}" />
+                                <input class="range-min" type="range" min="{{ $displayMinLimit }}" max="{{ $displayMaxLimit }}" value="{{ $selectedMinDisplay }}" data-price-display-min />
+                                <input class="range-max" type="range" min="{{ $displayMinLimit }}" max="{{ $displayMaxLimit }}" value="{{ $selectedMaxDisplay }}" data-price-display-max />
                             </div>
                             <div class="box-title-price">
                                 <span class="title-price">{{ $isArabic ? 'السعر :' : 'Price :' }}</span>
                                 <div class="caption-price">
                                     <div>
-                                        <span class="min-price">{{ $priceMinValue }}</span>
-                                        <span>{{ $priceCurrency }}</span>
+                                        <span class="min-price" data-price-min-label>{{ $selectedMinDisplay }}</span>
+                                        <span data-price-currency-label>{{ $priceCurrency }}</span>
                                     </div>
                                     <span>-</span>
                                     <div>
-                                        <span class="max-price">{{ $priceMaxValue }}</span>
-                                        <span>{{ $priceCurrency }}</span>
+                                        <span class="max-price" data-price-max-label>{{ $selectedMaxDisplay }}</span>
+                                        <span data-price-currency-label>{{ $priceCurrency }}</span>
                                     </div>
                                 </div>
                             </div>
