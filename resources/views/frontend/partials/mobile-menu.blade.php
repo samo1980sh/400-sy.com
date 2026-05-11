@@ -2,6 +2,49 @@
     $navCategories = collect($navCategories ?? []);
     $quickLinks = collect($quickLinks ?? []);
     $locale = app()->getLocale();
+
+    $categoryLabel = static function ($category) use ($locale): string {
+        return $locale === 'ar'
+            ? ($category->title_ar ?: $category->title_en ?: '')
+            : ($category->title_en ?: $category->title_ar ?: '');
+    };
+
+    $renderMobileCategoryItems = null;
+    $renderMobileCategoryItems = function ($items, int $level = 0) use (&$renderMobileCategoryItems, $categoryLabel): string {
+        $html = '';
+
+        foreach (collect($items) as $category) {
+            $children = collect($category->children ?? []);
+            $hasChildren = $children->isNotEmpty();
+            $label = $categoryLabel($category);
+            $collapseId = 'mobile-category-' . $category->id;
+
+            if ($level === 0) {
+                $html .= '<li class="nav-mb-item">';
+            } else {
+                $html .= '<li class="sub-menu-level-2">';
+            }
+
+            if ($hasChildren) {
+                $linkClass = $level === 0 ? 'mb-menu-link current' : 'sub-nav-link current';
+                $html .= '<a href="#' . e($collapseId) . '" class="collapsed ' . e($linkClass) . '" data-bs-toggle="collapse" aria-expanded="false" aria-controls="' . e($collapseId) . '">';
+                $html .= '<span>' . e($label) . '</span>';
+                $html .= '<span class="btn-open-sub"></span>';
+                $html .= '</a>';
+                $html .= '<div id="' . e($collapseId) . '" class="collapse">';
+                $html .= '<ul class="sub-nav-menu">';
+                $html .= $renderMobileCategoryItems($children, $level + 1);
+                $html .= '</ul>';
+                $html .= '</div>';
+            } else {
+                $html .= '<a href="' . e(route('front.category', $category->slug)) . '" class="' . ($level === 0 ? 'mb-menu-link' : 'menu-link-text link') . '">' . e($label) . '</a>';
+            }
+
+            $html .= '</li>';
+        }
+
+        return $html;
+    };
 @endphp
 
 <div class="offcanvas offcanvas-start canvas-mb" id="mobileMenu">
@@ -14,33 +57,7 @@
                 </li>
 
                 @if ($navCategories->isNotEmpty())
-                    @foreach ($navCategories as $category)
-                        @php
-                            $label = $locale === 'ar'
-                                ? ($category->title_ar ?: $category->title_en ?: '')
-                                : ($category->title_en ?: $category->title_ar ?: '');
-                        @endphp
-                        <li class="nav-mb-item">
-                            <a href="#mobile-category-{{ $category->id }}" class="collapsed mb-menu-link current" data-bs-toggle="collapse" aria-expanded="false" aria-controls="mobile-category-{{ $category->id }}">
-                                <span>{{ $label }}</span>
-                                <span class="btn-open-sub"></span>
-                            </a>
-                            <div id="mobile-category-{{ $category->id }}" class="collapse">
-                                <ul class="sub-nav-menu" id="sub-menu-navigation">
-                                    @foreach ($category->children as $child)
-                                        @php
-                                            $childLabel = $locale === 'ar'
-                                                ? ($child->title_ar ?: $child->title_en ?: '')
-                                                : ($child->title_en ?: $child->title_ar ?: '');
-                                        @endphp
-                                        <li>
-                                            <a href="{{ route('front.category', $child->slug) }}" class="menu-link-text link">{{ $childLabel }}</a>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        </li>
-                    @endforeach
+                    {!! $renderMobileCategoryItems($navCategories) !!}
                 @endif
 
                 <li class="nav-mb-item"><a href="{{ route('front.home') }}#featured-products" class="mb-menu-link">{{ __('front.nav.offers') }}</a></li>

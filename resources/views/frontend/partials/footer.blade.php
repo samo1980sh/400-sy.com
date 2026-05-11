@@ -35,7 +35,7 @@
                             <ul>
                                 <li><p>{{ __('front.footer.address_label') }} {{ $address }}</p></li>
                                 <li><p>{{ __('front.footer.email_label') }} <a href="mailto:{{ $email }}">{{ $email }}</a></p></li>
-                                <li><p>{{ __('front.footer.phone_label') }} <a href="tel:{{ $phone }}">{{ $phone }}</a></p></li>
+                                <li><p>{{ __('front.footer.phone_label') }} <a href="tel:{{ $phone }}" dir="ltr"><span dir="ltr">{{ $phone }}</span></a></p></li>
                             </ul>
                         </div>
                     </div>
@@ -111,7 +111,7 @@
                 <div class="row">
                     <div class="col-12">
                         <div class="footer-bottom-wrap d-flex gap-20 flex-wrap justify-content-between align-items-center">
-                            <div class="footer-menu_item">{{ __('front.footer.copyright') }}</div>
+                            <div class="footer-menu_item" dir="ltr">© 2026 400 Four HUNDRED</div>
                         </div>
                     </div>
                 </div>

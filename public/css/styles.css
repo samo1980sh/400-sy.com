@@ -2030,11 +2030,13 @@ label {
 .box-nav-ul .mega-menu .mega-menu-promo img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background-color: #fff;
 }
 .box-nav-ul .menu-heading {
-  font-size: 11px;
-  line-height: 20px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 22px;
   font-weight: 700;
   color: var(--main);
   text-transform: uppercase;
@@ -3484,7 +3486,7 @@ header.header-bg {
 .tf-slideshow.about-us-page.parallax-banner .banner-wrapper {
   height: 420px;
   background-image: url("../images/slider/about-banner-02.jpg");
-  background-size: contain;
+  background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
   background-color: #111111;
@@ -6963,10 +6965,6 @@ header.header-bg {
   line-height: 26px;
   font-weight: 500;
   color: var(--text);
-}
-.modal-shopping-cart .tf-mini-cart-empty .tf-btn {
-  min-width: 180px;
-  padding-inline: 24px;
 }
 .modal-shopping-cart .tf-minicart-recommendations {
   margin: 15px 36px;
@@ -12449,16 +12447,26 @@ blockquote .text {
   align-items: center;
   gap: 10px;
 }
+.rtl .widget-price .box-title-price {
+  direction: rtl;
+  justify-content: flex-start;
+}
 .widget-price .caption-price {
   display: flex;
   align-items: center;
   gap: 10px;
+  direction: ltr;
 }
 .widget-price .caption-price div {
-  width: 68px;
+  min-width: 92px;
+  width: auto;
   display: flex;
-  justify-content: space-between;
-  padding: 8px 10px;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  direction: ltr;
+  unicode-bidi: isolate;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 5px;
 }
@@ -19857,7 +19865,7 @@ blockquote .text {
   direction: rtl;
 }
 .rtl .tf-sw-slideshow .wrap-slider img {
-  transform: rotateY(180deg);
+  transform: none;
 }
 .rtl .slider-setup-gear .wrap-slider img {
   transform: none;
@@ -20404,6 +20412,62 @@ blockquote .text {
   transform: translateY(-50%);
 }
 
+.header-default .wrapper-header[dir="rtl"] .locale-switchers .language-select-wrap .bootstrap-select > .dropdown-toggle::after {
+  left: 9px !important;
+  right: auto !important;
+}
+
+.header-default .wrapper-header[dir="rtl"] .locale-switchers .country-select-wrap .bootstrap-select > .dropdown-toggle::after {
+  left: 12px !important;
+  right: auto !important;
+}
+
+.locale-switchers .bootstrap-select.is-rtl-select > .dropdown-toggle {
+  direction: ltr;
+  justify-content: space-between;
+}
+
+.locale-switchers .language-select-wrap .bootstrap-select.is-rtl-select > .dropdown-toggle {
+  padding: 6px 26px 6px 10px;
+}
+
+.locale-switchers .language-select-wrap .bootstrap-select.is-rtl-select > .dropdown-toggle::after {
+  right: auto;
+  left: 9px;
+}
+
+.locale-switchers .country-select-wrap .bootstrap-select.is-rtl-select > .dropdown-toggle {
+  padding: 7px 34px 7px 12px;
+}
+
+.locale-switchers .country-select-wrap .bootstrap-select.is-rtl-select > .dropdown-toggle::after {
+  right: auto;
+  left: 12px;
+}
+
+.locale-switchers .bootstrap-select.is-rtl-select .filter-option {
+  float: none !important;
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  display: block !important;
+  text-align: right !important;
+}
+
+.locale-switchers .bootstrap-select.is-rtl-select .filter-option .filter-option-inner {
+  width: 100% !important;
+  display: block !important;
+}
+
+.locale-switchers .bootstrap-select.is-rtl-select .filter-option-inner-inner {
+  direction: rtl;
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  text-align: right !important;
+  width: 100% !important;
+  unicode-bidi: isolate;
+}
+
 .locale-switchers .bootstrap-select .filter-option-inner-inner,
 .locale-switchers .bootstrap-select .dropdown-menu li a .text {
   display: flex;
@@ -20643,3 +20707,4 @@ blockquote .text {
     object-fit: cover;
   }
 }
+

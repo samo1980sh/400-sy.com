@@ -159,7 +159,7 @@
                                 <input class="range-max" type="range" name="max_price" min="0" max="{{ $priceUpperLimit }}" value="{{ $priceMaxValue }}" />
                             </div>
                             <div class="box-title-price">
-                                <span class="title-price">{{ $isArabic ? 'السعر' : 'Price' }} :</span>
+                                <span class="title-price">{{ $isArabic ? 'السعر :' : 'Price :' }}</span>
                                 <div class="caption-price">
                                     <div>
                                         <span class="min-price">{{ $priceMinValue }}</span>

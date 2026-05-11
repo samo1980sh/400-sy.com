@@ -6,7 +6,6 @@
     <div class="container">
         <div class="flat-title flex-row justify-content-between align-items-center px-0 wow fadeInUp" data-wow-delay="0s">
             <h3 class="title">{{ __('front.sections.collections') }}</h3>
-            <a href="{{ route('front.products.show', 'placeholder-product') }}" class="tf-btn btn-line">{{ __('front.sections.view_all_categories') }}<i class="icon icon-arrow1-top-left"></i></a>
         </div>
         <div class="hover-sw-nav hover-sw-2">
             <div dir="ltr" class="swiper tf-sw-collection" data-preview="4" data-tablet="3" data-mobile="2" data-space-lg="50" data-space-md="30" data-space="15" data-loop="false" data-auto-play="false">

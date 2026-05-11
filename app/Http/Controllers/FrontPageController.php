@@ -39,7 +39,9 @@ class FrontPageController extends Controller
             ->where('slug', $slug)
             ->firstOrFail();
 
-        return $this->renderProductsListing($category, $request);
+        $sort = $this->normalizeProductsSort((string) $request->query('sort', 'featured'));
+
+        return $this->renderProductsListing($category, $request, $sort);
     }
 
     public function productsIndex(Request $request): View|JsonResponse
@@ -225,11 +227,18 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             : null;
 
         $pageTitle = $locale === 'ar' ? 'المنتجات' : 'Products';
+        $pageTitleBackground = null;
 
         if ($primaryCategory instanceof Category) {
             $pageTitle = $locale === 'ar'
                 ? ($primaryCategory->title_ar ?: $primaryCategory->title_en ?: $pageTitle)
                 : ($primaryCategory->title_en ?: $primaryCategory->title_ar ?: $pageTitle);
+
+            if (blank($primaryCategory->parent_id)) {
+                $pageTitleBackground = filled($primaryCategory->banner ?? null)
+                    ? asset($primaryCategory->banner)
+                    : null;
+            }
         }
 
         $sortOptions = [
@@ -243,6 +252,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
         $viewData = array_merge($shell, [
             'page_title' => $pageTitle,
+            'page_title_background' => $pageTitleBackground,
             'page_subtitle' => $primaryCategory instanceof Category
                 ? ($locale === 'ar' ? 'تصفح منتجات هذا التصنيف' : 'Browse products in this category')
                 : ($locale === 'ar' ? 'تصفح مجموعة المنتجات مع الفلتر والفرز' : 'Browse the product catalog with filters and sorting'),

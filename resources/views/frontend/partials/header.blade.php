@@ -16,14 +16,14 @@
                 <div class="col-xl-4 tf-md-hidden">
                     <div class="header-list-categories locale-switchers">
                         <div class="country-select-wrap">
-                            <select class="image-select country-select js-country-select" aria-label="{{ __('front.ui.select_country') }}">
+                            <select class="image-select country-select js-country-select" dir="{{ $isRtl ? 'rtl' : 'ltr' }}" aria-label="{{ __('front.ui.select_country') }}">
                                 <option value="{{ $homeUrl }}" data-thumbnail="{{ asset('images/logo/syria.png') }}" selected>{{ __('front.countries.syria') }}</option>
                                 <option value="{{ $homeUrl }}" data-thumbnail="{{ asset('images/logo/egypt.png') }}">{{ __('front.countries.egypt') }}</option>
                                 <option value="{{ $homeUrl }}" data-thumbnail="{{ asset('images/logo/jordan.png') }}">{{ __('front.countries.jordan') }}</option>
                             </select>
                         </div>
                         <div class="language-select-wrap">
-                            <select class="image-select language-select js-language-select" aria-label="{{ __('front.ui.select_language') }}">
+                            <select class="image-select language-select js-language-select" dir="{{ $isRtl ? 'rtl' : 'ltr' }}" aria-label="{{ __('front.ui.select_language') }}">
                                 <option value="{{ route('front.locale', 'ar') }}" @selected($locale === 'ar')>{{ __('front.ui.arabic') }}</option>
                                 <option value="{{ route('front.locale', 'en') }}" @selected($locale === 'en')>{{ __('front.ui.english') }}</option>
                             </select>

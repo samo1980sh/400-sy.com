@@ -80,6 +80,16 @@
         }
       });
       selectIMG.selectpicker();
+      selectIMG.each((idx, elem) => {
+        const $field = $(elem);
+        const dir = ($field.attr("dir") || $("html").attr("dir") || "ltr").toLowerCase();
+        const $picker = $field.next(".bootstrap-select");
+
+        if (!$picker.length) return;
+
+        $picker.attr("dir", dir);
+        $picker.toggleClass("is-rtl-select", dir === "rtl");
+      });
     }
   };
 
@@ -1437,7 +1447,6 @@
     new WOW().init();
   });
 })(jQuery);
-
 
 
 

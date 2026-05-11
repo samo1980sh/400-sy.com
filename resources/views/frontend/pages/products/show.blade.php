@@ -153,25 +153,9 @@
         ],
     ])->filter(fn (array $item): bool => filled($item['value'] ?? null))->values();
 
-    $specifications = collect($product['specifications'] ?? [])
-        ->map(function ($specification): ?array {
-            if (is_object($specification)) {
-                $specification = (array) $specification;
-            }
+    $specifications = collect();
 
-            if (! is_array($specification)) {
-                return null;
-            }
-
-            return [
-                'label' => trim((string) ($specification['label'] ?? '')),
-                'value' => trim((string) ($specification['value'] ?? '')),
-            ];
-        })
-        ->filter(fn (?array $item): bool => is_array($item) && filled($item['label'] ?? null) && filled($item['value'] ?? null))
-        ->values();
-
-    if ($specifications->isEmpty() && $productModel && method_exists($productModel, 'relationLoaded') && $productModel->relationLoaded('details')) {
+    if ($productModel && method_exists($productModel, 'relationLoaded') && $productModel->relationLoaded('details')) {
         $specifications = collect($productModel->getRelation('details'))
             ->filter(fn ($detail): bool => (bool) ($detail->is_active ?? true))
             ->map(function ($detail) use ($locale): array {
@@ -233,7 +217,7 @@
                     <div class="tf-breadcrumb-list">
                         @foreach (($breadcrumb_items ?? []) as $crumb)
                             @if (! $loop->first)
-                                <i class="icon icon-arrow-right"></i>
+                                <i class="icon {{ app()->getLocale() === 'ar' ? 'icon-arrow-left' : 'icon-arrow-right' }}"></i>
                             @endif
 
                             @if ($loop->last)

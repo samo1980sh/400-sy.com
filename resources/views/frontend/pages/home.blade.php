@@ -65,9 +65,6 @@
                 'products' => $new_products,
             ])
 
-            @include('frontend.partials.store-section', [
-                'branches' => $branches,
-            ])
         </main>
 
         @include('frontend.partials.footer', [

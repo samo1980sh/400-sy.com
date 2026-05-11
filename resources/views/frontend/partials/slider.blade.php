@@ -2,7 +2,7 @@
     $slides = collect($slides ?? []);
 @endphp
 
-<section class="flat-spacing-13">
+<section>
     <div class="tf-slideshow slider-home-2 slider-effect-fade position-relative">
         <div dir="ltr" class="swiper tf-sw-slideshow" data-preview="1" data-tablet="1" data-mobile="1" data-centered="false" data-space="0" data-loop="true" data-auto-play="true" data-delay="3800" data-speed="1400">
             <div class="swiper-wrapper">

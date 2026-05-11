@@ -47,6 +47,7 @@
             'title' => $page_title ?? (app()->getLocale() === 'ar' ? 'المنتجات' : 'Products'),
             'subtitle' => $page_subtitle ?? '',
             'breadcrumbs' => $breadcrumb_items ?? [],
+            'background' => $page_title_background ?? null,
         ])
 
         <section class="flat-spacing-1">
