@@ -586,42 +586,15 @@
       $displayMin.attr({ min: displayMinLimit, max: displayMaxLimit }).val(selectedMinDisplay);
       $displayMax.attr({ min: displayMinLimit, max: displayMaxLimit }).val(selectedMaxDisplay);
       $currencyLabels.text(symbol || selectedCurrency);
+      $widget.data("selectedMinBase", selectedMinBase);
+      $widget.data("selectedMaxBase", selectedMaxBase);
+      $minLabel.text(Math.round(selectedMinDisplay));
+      $maxLabel.text(Math.round(selectedMaxDisplay));
 
-      var updateUi = function (source) {
-        var minDisplay = parseFloat($displayMin.val());
-        var maxDisplay = parseFloat($displayMax.val());
-
-        if (!isFinite(minDisplay)) minDisplay = displayMinLimit;
-        if (!isFinite(maxDisplay)) maxDisplay = displayMaxLimit;
-
-        if (minDisplay > maxDisplay) {
-          if (source === "min") {
-            maxDisplay = minDisplay;
-            $displayMax.val(maxDisplay);
-          } else {
-            minDisplay = maxDisplay;
-            $displayMin.val(minDisplay);
-          }
-        }
-
-        var minBase = Math.max(baseMinLimit, Math.min(baseMaxLimit, Math.floor(minDisplay * rate)));
-        var maxBase = Math.max(minBase, Math.min(baseMaxLimit, Math.ceil(maxDisplay * rate)));
-
-        $baseMinInput.val(minBase);
-        $baseMaxInput.val(maxBase);
-        $widget.data("selectedMinBase", minBase);
-        $widget.data("selectedMaxBase", maxBase);
-
-        $minLabel.text(Math.round(minDisplay));
-        $maxLabel.text(Math.round(maxDisplay));
-
-        if ($progress.length) {
-          $progress.css("left", ((minDisplay / Math.max(1, displayMaxLimit)) * 100) + "%");
-          $progress.css("right", (100 - ((maxDisplay / Math.max(1, displayMaxLimit)) * 100)) + "%");
-        }
-      };
-
-      updateUi("max");
+      if ($progress.length) {
+        $progress.css("left", ((selectedMinDisplay / Math.max(1, displayMaxLimit)) * 100) + "%");
+        $progress.css("right", (100 - ((selectedMaxDisplay / Math.max(1, displayMaxLimit)) * 100)) + "%");
+      }
     };
 
     window.updatePriceFilterCurrency = function () {
@@ -672,11 +645,11 @@
         }
       }
 
-      var minBase = Math.max(baseMinLimit, Math.min(baseMaxLimit, Math.floor(minDisplay * rate)));
-      var maxBase = Math.max(minBase, Math.min(baseMaxLimit, Math.ceil(maxDisplay * rate)));
+        var minBase = Math.max(baseMinLimit, Math.min(baseMaxLimit, Math.floor(minDisplay * rate)));
+        var maxBase = Math.max(minBase, Math.min(baseMaxLimit, Math.ceil(maxDisplay * rate)));
 
-      $baseMinInput.val(minBase);
-      $baseMaxInput.val(maxBase);
+        $baseMinInput.val(minBase);
+        $baseMaxInput.val(maxBase);
       $widget.data("selectedMinBase", minBase);
       $widget.data("selectedMaxBase", maxBase);
       $minLabel.text(Math.round(minDisplay));
