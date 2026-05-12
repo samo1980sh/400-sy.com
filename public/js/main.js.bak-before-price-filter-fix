@@ -250,28 +250,6 @@
 
   window.updateCurrencyConvertedPrices = updateCurrencyConvertedPrices;
 
-var scheduleCurrencyRefreshAfterAjax = (function () {
-  var timer = null;
-
-  return function () {
-    window.clearTimeout(timer);
-
-    timer = window.setTimeout(function () {
-      if (window.updateCurrencyConvertedPrices) {
-        window.updateCurrencyConvertedPrices();
-      }
-
-      if (window.updatePriceFilterCurrency) {
-        window.updatePriceFilterCurrency();
-      }
-    }, 30);
-  };
-})();
-
-$(document).ajaxComplete(function () {
-  scheduleCurrencyRefreshAfterAjax();
-});
-
   var refreshCurrencyFragments = function (response) {
     if (!response) {
       return;
@@ -558,202 +536,104 @@ $(document).ajaxComplete(function () {
   /* range
   -------------------------------------------------------------------------*/
   var rangePrice = function () {
-    var toNumber = function (value, fallback) {
-      var number = parseFloat(value);
-      return isFinite(number) ? number : fallback;
-    };
+    var syncPriceFilterWidget = function ($widget) {
+      if (!$widget.length) return;
 
-    var clamp = function (value, min, max) {
-      value = toNumber(value, min);
-      min = toNumber(min, 0);
-      max = toNumber(max, min);
-
-      if (max < min) {
-        var tmp = min;
-        min = max;
-        max = tmp;
-      }
-
-      return Math.max(min, Math.min(max, value));
-    };
-
-    var getCurrentPriceFilterContext = function ($widget) {
-      var context = typeof getSelectedCurrencyContext === "function"
-        ? getSelectedCurrencyContext()
-        : {};
-
-      var currency = (context.currency || $widget.attr("data-currency") || "SYP").toString().toUpperCase();
-      var rate = toNumber(context.rate, toNumber($widget.attr("data-rate"), 1));
-      var symbol = context.symbol || $widget.attr("data-symbol") || currency;
-
-      if (!rate || rate <= 0) {
-        rate = 1;
-      }
-
-      return {
-        currency: currency,
-        rate: rate,
-        symbol: symbol
-      };
-    };
-
-    var formatFilterPrice = function (value, currency) {
-      value = toNumber(value, 0);
-
-      if (currency === "SYP") {
-        return Math.round(value).toLocaleString("en-US");
-      }
-
-      return value.toLocaleString("en-US", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-      });
-    };
-
-    var readPriceFilterState = function ($widget) {
+      var $displayMin = $widget.find("[data-price-display-min]").first();
+      var $displayMax = $widget.find("[data-price-display-max]").first();
       var $baseMinInput = $widget.find("[data-price-base-min-input]").first();
       var $baseMaxInput = $widget.find("[data-price-base-max-input]").first();
-
-      var baseMinLimit = toNumber($widget.attr("data-base-min-limit"), 0);
-      var baseMaxLimit = toNumber($widget.attr("data-base-max-limit"), 1);
-
-      if (baseMaxLimit <= baseMinLimit) {
-        baseMaxLimit = baseMinLimit + 1;
-      }
-
-      var selectedMinBase = toNumber(
-        $baseMinInput.val(),
-        toNumber($widget.attr("data-selected-min-base"), baseMinLimit)
-      );
-
-      var selectedMaxBase = toNumber(
-        $baseMaxInput.val(),
-        toNumber($widget.attr("data-selected-max-base"), baseMaxLimit)
-      );
-
-      selectedMinBase = clamp(selectedMinBase, baseMinLimit, baseMaxLimit);
-      selectedMaxBase = clamp(selectedMaxBase, baseMinLimit, baseMaxLimit);
-
-      if (selectedMinBase > selectedMaxBase) {
-        var tmp = selectedMinBase;
-        selectedMinBase = selectedMaxBase;
-        selectedMaxBase = tmp;
-      }
-
-      return {
-        $baseMinInput: $baseMinInput,
-        $baseMaxInput: $baseMaxInput,
-        baseMinLimit: baseMinLimit,
-        baseMaxLimit: baseMaxLimit,
-        selectedMinBase: selectedMinBase,
-        selectedMaxBase: selectedMaxBase
-      };
-    };
-
-    var updatePriceFilterProgress = function ($widget, minDisplay, maxDisplay, minLimit, maxLimit) {
       var $progress = $widget.find(".progress-price").first();
+      var $minLabel = $widget.find("[data-price-min-label]").first();
+      var $maxLabel = $widget.find("[data-price-max-label]").first();
+      var $currencyLabels = $widget.find("[data-price-currency-label]");
 
-      if (!$progress.length) {
+      if (!$displayMin.length || !$displayMax.length || !$baseMinInput.length || !$baseMaxInput.length) {
         return;
       }
 
-      var span = Math.max(1, maxLimit - minLimit);
-      var left = ((minDisplay - minLimit) / span) * 100;
-      var right = 100 - (((maxDisplay - minLimit) / span) * 100);
+      var $select = $(".js-currency-select");
+      var selectedCurrency = ($select.val() || $widget.data("currency") || "SYP").toString().toUpperCase();
+      var $option = $select.find('option[value="' + selectedCurrency + '"]').first();
+      var rate = parseFloat($option.data("rate"));
+      var symbol = $option.data("symbol") || selectedCurrency;
 
-      $progress.css({
-        left: clamp(left, 0, 100) + "%",
-        right: clamp(right, 0, 100) + "%"
+      if (!rate || rate <= 0) {
+        rate = parseFloat($widget.data("rate")) || 1;
+      }
+
+      var baseMinLimit = parseFloat($widget.data("baseMinLimit"));
+      var baseMaxLimit = parseFloat($widget.data("baseMaxLimit"));
+      var selectedMinBase = parseFloat($baseMinInput.val() || $widget.data("selectedMinBase"));
+      var selectedMaxBase = parseFloat($baseMaxInput.val() || $widget.data("selectedMaxBase"));
+
+      if (!isFinite(baseMinLimit)) baseMinLimit = 0;
+      if (!isFinite(baseMaxLimit) || baseMaxLimit <= 0) baseMaxLimit = 1;
+      if (!isFinite(selectedMinBase)) selectedMinBase = baseMinLimit;
+      if (!isFinite(selectedMaxBase)) selectedMaxBase = baseMaxLimit;
+
+      selectedMinBase = Math.max(baseMinLimit, Math.min(baseMaxLimit, selectedMinBase));
+      selectedMaxBase = Math.max(selectedMinBase, Math.min(baseMaxLimit, selectedMaxBase));
+
+      var displayMinLimit = Math.max(0, Math.floor(baseMinLimit / rate));
+      var displayMaxLimit = Math.max(1, Math.ceil(baseMaxLimit / rate));
+      var selectedMinDisplay = Math.max(displayMinLimit, Math.min(displayMaxLimit, Math.floor(selectedMinBase / rate)));
+      var selectedMaxDisplay = Math.max(selectedMinDisplay, Math.min(displayMaxLimit, Math.ceil(selectedMaxBase / rate)));
+
+      $widget.attr("data-currency", selectedCurrency);
+      $widget.attr("data-symbol", symbol || selectedCurrency);
+      $widget.attr("data-rate", rate);
+      $displayMin.attr({ min: displayMinLimit, max: displayMaxLimit }).val(selectedMinDisplay);
+      $displayMax.attr({ min: displayMinLimit, max: displayMaxLimit }).val(selectedMaxDisplay);
+      $currencyLabels.text(symbol || selectedCurrency);
+      $widget.data("selectedMinBase", selectedMinBase);
+      $widget.data("selectedMaxBase", selectedMaxBase);
+      $minLabel.text(Math.round(selectedMinDisplay));
+      $maxLabel.text(Math.round(selectedMaxDisplay));
+
+      if ($progress.length) {
+        $progress.css("left", ((selectedMinDisplay / Math.max(1, displayMaxLimit)) * 100) + "%");
+        $progress.css("right", (100 - ((selectedMaxDisplay / Math.max(1, displayMaxLimit)) * 100)) + "%");
+      }
+    };
+
+    window.updatePriceFilterCurrency = function () {
+      $(".js-price-filter").each(function () {
+        syncPriceFilterWidget($(this));
       });
     };
 
-    var updatePriceFilterLabels = function ($widget, minDisplay, maxDisplay, context) {
-      $widget.find("[data-price-min-label]").first().text(formatFilterPrice(minDisplay, context.currency));
-      $widget.find("[data-price-max-label]").first().text(formatFilterPrice(maxDisplay, context.currency));
-      $widget.find("[data-price-currency-label]").text(context.symbol || context.currency);
-    };
+    $(document).off("input change.priceFilter", ".js-price-filter .range-input input[type='range']");
+    $(document).on("input change.priceFilter", ".js-price-filter .range-input input[type='range']", function () {
+      var $widget = $(this).closest(".js-price-filter");
+      if (!$widget.length) return;
 
-    var syncPriceFilterDisplayOnly = function ($widget) {
-      if (!$widget.length) {
-        return;
-      }
-
+      var source = $(this).is("[data-price-display-min]") ? "min" : "max";
       var $displayMin = $widget.find("[data-price-display-min]").first();
       var $displayMax = $widget.find("[data-price-display-max]").first();
+      var $baseMinInput = $widget.find("[data-price-base-min-input]").first();
+      var $baseMaxInput = $widget.find("[data-price-base-max-input]").first();
+      var $progress = $widget.find(".progress-price").first();
+      var $minLabel = $widget.find("[data-price-min-label]").first();
+      var $maxLabel = $widget.find("[data-price-max-label]").first();
+      var $select = $(".js-currency-select");
+      var selectedCurrency = ($select.val() || $widget.data("currency") || "SYP").toString().toUpperCase();
+      var $option = $select.find('option[value="' + selectedCurrency + '"]').first();
+      var rate = parseFloat($option.data("rate"));
+      var baseMinLimit = parseFloat($widget.data("baseMinLimit"));
+      var baseMaxLimit = parseFloat($widget.data("baseMaxLimit"));
+      var displayMaxLimit = parseFloat($displayMax.attr("max"));
 
-      if (!$displayMin.length || !$displayMax.length) {
-        return;
-      }
+      if (!rate || rate <= 0) rate = parseFloat($widget.data("rate")) || 1;
+      if (!isFinite(baseMinLimit)) baseMinLimit = 0;
+      if (!isFinite(baseMaxLimit) || baseMaxLimit <= 0) baseMaxLimit = 1;
+      if (!isFinite(displayMaxLimit) || displayMaxLimit <= 0) displayMaxLimit = 1;
 
-      var state = readPriceFilterState($widget);
+      var minDisplay = parseFloat($displayMin.val());
+      var maxDisplay = parseFloat($displayMax.val());
 
-      if (!state.$baseMinInput.length || !state.$baseMaxInput.length) {
-        return;
-      }
-
-      var context = getCurrentPriceFilterContext($widget);
-
-      var displayMinLimit = state.baseMinLimit / context.rate;
-      var displayMaxLimit = state.baseMaxLimit / context.rate;
-
-      if (displayMaxLimit <= displayMinLimit) {
-        displayMaxLimit = displayMinLimit + 1;
-      }
-
-      var selectedMinDisplay = clamp(state.selectedMinBase / context.rate, displayMinLimit, displayMaxLimit);
-      var selectedMaxDisplay = clamp(state.selectedMaxBase / context.rate, displayMinLimit, displayMaxLimit);
-
-      if (selectedMinDisplay > selectedMaxDisplay) {
-        selectedMaxDisplay = selectedMinDisplay;
-      }
-
-      $widget.attr("data-currency", context.currency);
-      $widget.attr("data-symbol", context.symbol || context.currency);
-      $widget.attr("data-rate", context.rate);
-
-      $displayMin.attr({
-        min: displayMinLimit,
-        max: displayMaxLimit,
-        step: "any"
-      }).val(selectedMinDisplay);
-
-      $displayMax.attr({
-        min: displayMinLimit,
-        max: displayMaxLimit,
-        step: "any"
-      }).val(selectedMaxDisplay);
-
-      updatePriceFilterLabels($widget, selectedMinDisplay, selectedMaxDisplay, context);
-      updatePriceFilterProgress($widget, selectedMinDisplay, selectedMaxDisplay, displayMinLimit, displayMaxLimit);
-
-      // مهم: لا نعدّل hidden min_price/max_price هنا.
-      // تبديل العملة يغيّر العرض فقط.
-    };
-
-    var commitPriceFilterFromSlider = function ($widget, source) {
-      if (!$widget.length) {
-        return;
-      }
-
-      var $displayMin = $widget.find("[data-price-display-min]").first();
-      var $displayMax = $widget.find("[data-price-display-max]").first();
-
-      if (!$displayMin.length || !$displayMax.length) {
-        return;
-      }
-
-      var state = readPriceFilterState($widget);
-      var context = getCurrentPriceFilterContext($widget);
-
-      var displayMinLimit = toNumber($displayMin.attr("min"), state.baseMinLimit / context.rate);
-      var displayMaxLimit = toNumber($displayMax.attr("max"), state.baseMaxLimit / context.rate);
-
-      if (displayMaxLimit <= displayMinLimit) {
-        displayMaxLimit = displayMinLimit + 1;
-      }
-
-      var minDisplay = clamp($displayMin.val(), displayMinLimit, displayMaxLimit);
-      var maxDisplay = clamp($displayMax.val(), displayMinLimit, displayMaxLimit);
+      if (!isFinite(minDisplay)) minDisplay = parseFloat($displayMin.attr("min")) || 0;
+      if (!isFinite(maxDisplay)) maxDisplay = displayMaxLimit;
 
       if (minDisplay > maxDisplay) {
         if (source === "min") {
@@ -765,50 +645,26 @@ $(document).ajaxComplete(function () {
         }
       }
 
-      var minBase = Math.floor(minDisplay * context.rate);
-      var maxBase = Math.ceil(maxDisplay * context.rate);
+        var minBase = Math.max(baseMinLimit, Math.min(baseMaxLimit, Math.floor(minDisplay * rate)));
+        var maxBase = Math.max(minBase, Math.min(baseMaxLimit, Math.ceil(maxDisplay * rate)));
 
-      minBase = clamp(minBase, state.baseMinLimit, state.baseMaxLimit);
-      maxBase = clamp(maxBase, state.baseMinLimit, state.baseMaxLimit);
+        $baseMinInput.val(minBase);
+        $baseMaxInput.val(maxBase);
+      $widget.data("selectedMinBase", minBase);
+      $widget.data("selectedMaxBase", maxBase);
+      $minLabel.text(Math.round(minDisplay));
+      $maxLabel.text(Math.round(maxDisplay));
 
-      if (minBase > maxBase) {
-        if (source === "min") {
-          maxBase = minBase;
-        } else {
-          minBase = maxBase;
-        }
+      if ($progress.length) {
+        $progress.css("left", ((minDisplay / displayMaxLimit) * 100) + "%");
+        $progress.css("right", (100 - ((maxDisplay / displayMaxLimit) * 100)) + "%");
       }
-
-      state.$baseMinInput.val(Math.round(minBase));
-      state.$baseMaxInput.val(Math.round(maxBase));
-
-      $widget.attr("data-selected-min-base", Math.round(minBase));
-      $widget.attr("data-selected-max-base", Math.round(maxBase));
-
-      updatePriceFilterLabels($widget, minDisplay, maxDisplay, context);
-      updatePriceFilterProgress($widget, minDisplay, maxDisplay, displayMinLimit, displayMaxLimit);
-    };
-
-    window.updatePriceFilterCurrency = function () {
-      $(".js-price-filter").each(function () {
-        syncPriceFilterDisplayOnly($(this));
-      });
-    };
-
-    $(document).off("input.priceFilter change.priceFilter", ".js-price-filter .range-input input[type='range']");
-
-    $(document).on("input.priceFilter change.priceFilter", ".js-price-filter .range-input input[type='range']", function () {
-      var $input = $(this);
-      var $widget = $input.closest(".js-price-filter");
-      var source = $input.is("[data-price-display-min]") ? "min" : "max";
-
-      commitPriceFilterFromSlider($widget, source);
     });
 
     window.updatePriceFilterCurrency();
   }
 
-/* sidebar mobile
+  /* sidebar mobile
   -------------------------------------------------------------------------*/
   var sidebarMobile = function () {
     if ($(".wrap-sidebar-mobile,.wrap-sidebar-account").length > 0) {
@@ -1691,8 +1547,6 @@ $(document).ajaxComplete(function () {
     new WOW().init();
   });
 })(jQuery);
-
-
 
 
 

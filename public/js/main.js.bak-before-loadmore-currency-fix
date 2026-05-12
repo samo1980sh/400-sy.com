@@ -250,28 +250,6 @@
 
   window.updateCurrencyConvertedPrices = updateCurrencyConvertedPrices;
 
-var scheduleCurrencyRefreshAfterAjax = (function () {
-  var timer = null;
-
-  return function () {
-    window.clearTimeout(timer);
-
-    timer = window.setTimeout(function () {
-      if (window.updateCurrencyConvertedPrices) {
-        window.updateCurrencyConvertedPrices();
-      }
-
-      if (window.updatePriceFilterCurrency) {
-        window.updatePriceFilterCurrency();
-      }
-    }, 30);
-  };
-})();
-
-$(document).ajaxComplete(function () {
-  scheduleCurrencyRefreshAfterAjax();
-});
-
   var refreshCurrencyFragments = function (response) {
     if (!response) {
       return;
@@ -1691,7 +1669,6 @@ $(document).ajaxComplete(function () {
     new WOW().init();
   });
 })(jQuery);
-
 
 
 

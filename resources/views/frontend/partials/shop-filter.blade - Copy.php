@@ -168,7 +168,7 @@
                             data-rate="{{ $priceRate }}"
                         >
                             <div class="tow-bar-block">
-                                <div class="progress-price" style="left: {{ (($selectedMinDisplay - $displayMinLimit) / max(1, $displayMaxLimit - $displayMinLimit)) * 100 }}%; right: {{ 100 - ((($selectedMaxDisplay - $displayMinLimit) / max(1, $displayMaxLimit - $displayMinLimit)) * 100) }}%;"></div>
+                                <div class="progress-price" style="left: {{ ($selectedMinDisplay / max(1, $displayMaxLimit)) * 100 }}%; right: {{ 100 - (($selectedMaxDisplay / max(1, $displayMaxLimit)) * 100) }}%;"></div>
                             </div>
                             <input type="hidden" name="min_price" value="{{ $selectedMinBase }}" data-price-base-min-input>
                             <input type="hidden" name="max_price" value="{{ $selectedMaxBase }}" data-price-base-max-input>
@@ -181,12 +181,12 @@
                                 <div class="caption-price">
                                     <div>
                                         <span class="min-price" data-price-min-label>{{ $selectedMinDisplay }}</span>
-                                        <span data-price-currency-label>{{ $priceSymbol }}</span>
+                                        <span data-price-currency-label>{{ $priceCurrency }}</span>
                                     </div>
                                     <span>-</span>
                                     <div>
                                         <span class="max-price" data-price-max-label>{{ $selectedMaxDisplay }}</span>
-                                        <span data-price-currency-label>{{ $priceSymbol }}</span>
+                                        <span data-price-currency-label>{{ $priceCurrency }}</span>
                                     </div>
                                 </div>
                             </div>
