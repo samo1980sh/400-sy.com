@@ -286,6 +286,10 @@
     if (window.updateCurrencyConvertedPrices) {
       window.updateCurrencyConvertedPrices();
     }
+
+    if (window.updatePriceFilterCurrency) {
+      window.updatePriceFilterCurrency();
+    }
   };
 
   window.refreshCurrencyFragments = refreshCurrencyFragments;
@@ -576,6 +580,9 @@
       var selectedMinDisplay = Math.max(displayMinLimit, Math.min(displayMaxLimit, Math.floor(selectedMinBase / rate)));
       var selectedMaxDisplay = Math.max(selectedMinDisplay, Math.min(displayMaxLimit, Math.ceil(selectedMaxBase / rate)));
 
+      $widget.attr("data-currency", selectedCurrency);
+      $widget.attr("data-symbol", symbol || selectedCurrency);
+      $widget.attr("data-rate", rate);
       $displayMin.attr({ min: displayMinLimit, max: displayMaxLimit }).val(selectedMinDisplay);
       $displayMax.attr({ min: displayMinLimit, max: displayMaxLimit }).val(selectedMaxDisplay);
       $currencyLabels.text(symbol || selectedCurrency);
