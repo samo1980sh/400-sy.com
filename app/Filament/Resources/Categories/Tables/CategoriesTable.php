@@ -88,7 +88,7 @@ class CategoriesTable
                     ->action(function (Category $record, array $data): void {
                         try {
                             if (! blank($record->parent_id)) {
-                                unset($data['image'], $data['banner'], $data['show_in_home']);
+                                unset($data['image'], $data['show_in_home']);
                             }
 
                             $record->update($data);

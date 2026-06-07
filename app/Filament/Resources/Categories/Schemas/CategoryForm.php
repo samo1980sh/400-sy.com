@@ -19,8 +19,10 @@ class CategoryForm
         return $schema->components(static::components());
     }
 
-    public static function components(?Category $editingRecord = null): array
+    public static function components(?Category $editingRecord = null, ?int $parentId = null): array
     {
+        $contextParentId = $editingRecord?->parent_id ?? $parentId ?? (request()->integer('parent') ?: null);
+
         return [
             Grid::make()
                 ->columns(2)
@@ -30,23 +32,21 @@ class CategoryForm
                         ->numeric()
                         ->default(fn (): int => ((int) (Category::max('sort_order') ?? 0)) + 1)
                         ->required()
-                        ->columnSpanFull(),
+                        ->columnSpan(1),
                     Select::make('parent_id')
                         ->label('التصنيف الأب')
                         ->options(fn (): array => Category::hierarchyOptions($editingRecord?->getKey()))
-                        ->default(fn (): ?int => request()->integer('parent') ?: null)
+                        ->default(fn (): ?int => $contextParentId)
                         ->disableOptionWhen(function (string|int $value) use ($editingRecord): bool {
                             if (! $editingRecord?->getKey()) {
                                 return false;
                             }
 
-                            return in_array((int) $value, Category::blockedSelectionIds($editingRecord->getKey()), true);
+                            return in_array((int) $value, [$editingRecord->getKey(), ...Category::descendantIds($editingRecord->getKey())], true);
                         })
                         ->native()
-                        ->placeholder('تصنيف رئيسي'),
-                    Toggle::make('show_in_home')
-                        ->label('يظهر في الصفحة الرئيسية')
-                        ->visible(fn (?Category $record): bool => $record === null || blank($record->parent_id)),
+                        ->placeholder('تصنيف رئيسي')
+                        ->columnSpan(1),
                     TextInput::make('title_ar')
                         ->label('العنوان بالعربية')
                         ->required(),
@@ -62,13 +62,14 @@ class CategoryForm
                         ->deleteUploadedFileUsing(fn (string $file): bool => Storage::disk('public')->delete($file))
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                         ->image()
-                        ->imagePreviewHeight('120')
-                        ->panelAspectRatio('1:1')
-                        ->panelLayout('integrated')
+                        ->imagePreviewHeight('80')
+                        ->panelLayout('compact')
                         ->imageEditor()
                         ->maxSize(2048)
                         ->columnSpan(1)
-                        ->visible(fn (?Category $record): bool => $record === null || blank($record->parent_id)),
+                        ->visible(fn (?Category $record): bool => $record instanceof Category
+                            ? blank($record->parent_id)
+                            : blank($contextParentId)),
                     FileUpload::make('banner')
                         ->label('بانر التصنيف')
                         ->helperText('صورة عريضة مخصصة للهيدر أو المساحات العرضية. تستخدم للتصنيفات الرئيسية فقط.')
@@ -78,13 +79,17 @@ class CategoryForm
                         ->deleteUploadedFileUsing(fn (string $file): bool => Storage::disk('public')->delete($file))
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                         ->image()
-                        ->imagePreviewHeight('120')
-                        ->panelAspectRatio('16:9')
-                        ->panelLayout('integrated')
+                        ->imagePreviewHeight('80')
+                        ->panelLayout('compact')
                         ->imageEditor()
                         ->maxSize(4096)
-                        ->columnSpan(1)
-                        ->visible(fn (?Category $record): bool => $record === null || blank($record->parent_id)),
+                        ->columnSpan(1),
+                    Toggle::make('show_in_home')
+                        ->label('يظهر في الصفحة الرئيسية')
+                        ->visible(fn (?Category $record): bool => $record instanceof Category
+                            ? blank($record->parent_id)
+                            : blank($contextParentId))
+                        ->columnSpanFull(),
                     Hidden::make('slug'),
                 ]),
         ];

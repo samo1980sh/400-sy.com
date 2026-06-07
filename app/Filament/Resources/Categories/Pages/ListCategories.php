@@ -90,7 +90,7 @@ class ListCategories extends ListRecords
             ->modalHeading('إضافة تصنيف')
             ->modalSubmitActionLabel('حفظ')
             ->modalWidth('4xl')
-            ->schema(CategoryForm::components())
+            ->schema(fn (): array => CategoryForm::components(parentId: $this->parent))
             ->action(function (array $data): void {
                 $data['parent_id'] = $data['parent_id'] ?? $this->parent;
 

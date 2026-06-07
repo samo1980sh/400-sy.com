@@ -296,7 +296,7 @@ class Category extends Model
         return $options;
     }
 
-    protected static function descendantIds(int $categoryId): array
+    public static function descendantIds(int $categoryId): array
     {
         $ids = [];
 
