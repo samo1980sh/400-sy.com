@@ -355,9 +355,15 @@
                                                 <div class="variant-picker-values" data-detail-sizes>
                                                     @foreach ($sizeOptions as $index => $size)
                                                         <input type="radio" name="detail_size" id="detail-size-{{ $index }}" value="{{ $size['value'] }}" data-size-index="{{ $index }}" data-size-id="{{ $size['size_id'] ?? '' }}" data-size-code="{{ $size['size_code'] ?? '' }}" data-variant-id="{{ $size['variant_id'] ?? '' }}" data-product-color-id="{{ $size['product_color_id'] ?? '' }}" @checked(($size['value'] ?? '') === $defaultSize && empty($size['is_sold_out_normalized'])) @disabled(! empty($size['is_sold_out_normalized']))>
-                                                        <label class="style-text" for="detail-size-{{ $index }}" data-value="{{ $size['value'] }}" @if (! empty($size['is_sold_out_normalized'])) aria-disabled="true" @endif>
-                                                            <span class="size-label">{{ $size['value'] }}</span>
-                                                        </label>
+                                                        @if (! empty($size['is_sold_out_normalized']))
+                                                            <span class="style-text disabled" data-value="{{ $size['value'] }}" aria-disabled="true">
+                                                                <span class="size-label">{{ $size['value'] }}</span>
+                                                            </span>
+                                                        @else
+                                                            <label class="style-text" for="detail-size-{{ $index }}" data-value="{{ $size['value'] }}">
+                                                                <span class="size-label">{{ $size['value'] }}</span>
+                                                            </label>
+                                                        @endif
                                                     @endforeach
                                                 </div>
                                             </div>

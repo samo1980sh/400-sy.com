@@ -131,7 +131,13 @@
         }
 
         function selectedSize() {
-            return currentSizes()[selectedSizeIndex] || null;
+            var size = currentSizes()[selectedSizeIndex] || null;
+
+            if (isSoldOut(size)) {
+                return null;
+            }
+
+            return size;
         }
 
         function normalizeSizeLabel(item) {
@@ -169,7 +175,7 @@
                 }
             }
 
-            return 0;
+            return -1;
         }
 
         function selectedQuantity() {
@@ -466,9 +472,11 @@
                         checked ? ' checked' : '',
                         soldOut ? ' disabled' : '',
                     '>',
-                    '<label class="style-text" for="detail-size-js-', index, '" data-value="', escapeHtml(label), '"', soldOut ? ' aria-disabled="true"' : '', '>',
+                    soldOut
+                        ? '<span class="style-text disabled" data-value="' + escapeHtml(label) + '" aria-disabled="true">'
+                        : '<label class="style-text" for="detail-size-js-' + index + '" data-value="' + escapeHtml(label) + '">',
                         '<span class="size-label">', escapeHtml(label), '</span>',
-                    '</label>'
+                    soldOut ? '</span>' : '</label>'
                 ].join('');
             }).join(''));
         }
@@ -652,6 +660,37 @@
             });
         }
 
+        function bindDisabledSizeGuards() {
+            var rootElement = $root.get(0);
+
+            if (! rootElement || rootElement.dataset.detailDisabledSizeGuard === '1') {
+                return;
+            }
+
+            rootElement.dataset.detailDisabledSizeGuard = '1';
+
+            rootElement.addEventListener('click', function (event) {
+                var target = event.target;
+
+                if (! target || ! target.closest) {
+                    return;
+                }
+
+                var disabledSize = target.closest('[data-detail-sizes] [aria-disabled="true"], [data-detail-sizes] .style-text.disabled');
+
+                if (! disabledSize || ! rootElement.contains(disabledSize)) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (typeof event.stopImmediatePropagation === 'function') {
+                    event.stopImmediatePropagation();
+                }
+            }, true);
+        }
+
         /**
          * Events
          */
@@ -666,7 +705,16 @@
         });
 
         $(document).on('change', SELECTORS.sizesWrap + ' ' + SELECTORS.sizeInput, function () {
-            selectedSizeIndex = Number($(this).data('size-index') || 0);
+            var nextSizeIndex = Number($(this).data('size-index') || 0);
+            var nextSize = currentSizes()[nextSizeIndex] || null;
+
+            if (this.disabled || isSoldOut(nextSize)) {
+                $(this).prop('checked', false);
+                syncPriceAndLabels();
+                return;
+            }
+
+            selectedSizeIndex = nextSizeIndex;
             syncPriceAndLabels();
         });
 
@@ -722,6 +770,7 @@
          */
         selectedColorIndex = initialColorIndexFromUrl();
         detachGlobalTemplateGalleryHandlers();
+        bindDisabledSizeGuards();
         bindDetailColorClicks();
         initScopedGallery();
         syncColorInputs();
