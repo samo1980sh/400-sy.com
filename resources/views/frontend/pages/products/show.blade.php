@@ -387,14 +387,6 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
                                         @endif
                                     </div>
 
-                                    <div class="tf-product-info-quantity">
-                                        <div class="quantity-title fw-6">{{ __('front.products.quantity') }}</div>
-                                        <div class="wg-quantity">
-                                            <span class="btn-quantity btn-decrease" data-detail-qty="decrease">-</span>
-                                            <input type="text" class="quantity-product" name="number" value="1" data-detail-quantity>
-                                            <span class="btn-quantity btn-increase" data-detail-qty="increase">+</span>
-                                        </div>
-                                    </div>
 
                                     <div class="tf-product-info-buy-button">
                                         <form data-detail-cart-form data-cart-url="{{ $cartAddUrl }}">
