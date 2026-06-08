@@ -1470,3 +1470,119 @@
     }, true);
 })();
 </script>
+
+<script data-card-product-code-color-sync-01>
+(function cardProductCodeColorSync() {
+    function clean(value) {
+        value = (value || '').toString().trim();
+        return (value === '---' || value === '—') ? '' : value;
+    }
+
+    function buildProductCode(baseCode, colorCode) {
+        var base = clean(baseCode);
+        var color = clean(colorCode);
+
+        if (!base) {
+            return '';
+        }
+
+        if (!color) {
+            return base;
+        }
+
+        var suffix = '-' + color;
+
+        if (base.toLowerCase().endsWith(suffix.toLowerCase())) {
+            return base;
+        }
+
+        return base + suffix;
+    }
+
+    function findProductCard(element) {
+        if (!element || !element.closest) {
+            return null;
+        }
+
+        return element.closest('.card-product, .product-card, [data-product-card], .product-item, .tf-product-card, .swiper-slide');
+    }
+
+    function readSwatchColorCode(swatch) {
+        if (!swatch) {
+            return '';
+        }
+
+        return clean(
+            swatch.getAttribute('data-color-code') ||
+            (swatch.dataset ? swatch.dataset.colorCode : '') ||
+            ''
+        );
+    }
+
+    function syncCardProductCode(card, colorCode) {
+        if (!card) {
+            return;
+        }
+
+        var codeElement = card.querySelector('[data-card-product-code]');
+
+        if (!codeElement) {
+            return;
+        }
+
+        var baseCode = clean(codeElement.getAttribute('data-base-product-code'));
+
+        if (!baseCode) {
+            baseCode = clean(codeElement.textContent);
+            codeElement.setAttribute('data-base-product-code', baseCode);
+        }
+
+        codeElement.textContent = buildProductCode(baseCode, colorCode);
+    }
+
+    function findSwatch(target) {
+        if (!target || !target.closest) {
+            return null;
+        }
+
+        return target.closest('[data-color-code]');
+    }
+
+    function handleSwatchEvent(event) {
+        var swatch = findSwatch(event.target);
+
+        if (!swatch) {
+            return;
+        }
+
+        var card = findProductCard(swatch);
+
+        if (!card) {
+            return;
+        }
+
+        syncCardProductCode(card, readSwatchColorCode(swatch));
+    }
+
+    function syncInitialCards() {
+        document.querySelectorAll('[data-card-product-code]').forEach(function (codeElement) {
+            var card = findProductCard(codeElement);
+
+            if (!card) {
+                return;
+            }
+
+            var activeSwatch = card.querySelector('[data-color-code].active, .active[data-color-code], input[data-color-code]:checked, [data-color-code][aria-checked="true"]');
+
+            if (activeSwatch) {
+                syncCardProductCode(card, readSwatchColorCode(activeSwatch));
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', syncInitialCards);
+    document.addEventListener('pointerover', handleSwatchEvent, true);
+    document.addEventListener('click', handleSwatchEvent, true);
+    document.addEventListener('change', handleSwatchEvent, true);
+})();
+</script>
