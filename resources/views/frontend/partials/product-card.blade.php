@@ -4,6 +4,16 @@
     $listUrl = $product['list_url'] ?? ($product['url'] ?? '#');
     $detailUrl = $product['detail_url'] ?? ($product['url'] ?? '#');
     $loadmoreHidden = $loadmore_hidden ?? true;
+    $cardDefaultColorCode = '';
+
+    foreach (($product['colors'] ?? []) as $cardColor) {
+        $candidateColorCode = trim((string) ($cardColor['color_code'] ?? ''));
+
+        if ($candidateColorCode !== '') {
+            $cardDefaultColorCode = $candidateColorCode;
+            break;
+        }
+    }
 @endphp
 
 <article class="card-product {{ $loadmoreHidden ? 'fl-item' : '' }} card-product-skeleton" data-product='@json($product)'>
@@ -54,7 +64,10 @@
     <div class="card-product-info" style="text-align:center">
         <a href="{{ $detailUrl }}" class="title link">{{ $product['title'] ?? '' }}</a>
         @if (!empty($product['product_code']))
-            <div class="product-card-code">{{ __('front.products.product_code') }}: {{ $product['product_code'] }}</div>
+            <div class="product-card-code">
+                {{ __('front.products.product_code') }}:
+                <span dir="ltr" data-card-product-code data-base-product-code="{{ $product['product_code'] }}">{{ $product['product_code'] }}@if ($cardDefaultColorCode !== '')-{{ $cardDefaultColorCode }}@endif</span>
+            </div>
         @endif
         <div class="product-card-price">
             <span class="price js-currency-price" data-base-price="{{ $product['price_current'] ?? $product['base_price'] ?? 0 }}" data-base-currency="{{ $product['base_currency'] ?? 'SYP' }}">{{ $product['price_current_label'] ?? $product['price_label'] ?? '' }}</span>
