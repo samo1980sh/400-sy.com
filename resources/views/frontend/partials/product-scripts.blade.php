@@ -1390,3 +1390,83 @@
         });
     })(jQuery);
 </script>
+
+<script>
+(function frontProductCodeColorCombiner() {
+    function clean(value) {
+        value = (value || '').toString().trim();
+        return (value === '---' || value === '—') ? '' : value;
+    }
+
+    function buildCode(baseCode, colorCode) {
+        baseCode = clean(baseCode);
+        colorCode = clean(colorCode);
+
+        if (!baseCode) {
+            return '---';
+        }
+
+        if (!colorCode || baseCode.endsWith('-' + colorCode)) {
+            return baseCode;
+        }
+
+        return baseCode + '-' + colorCode;
+    }
+
+    function syncCode(codeSelector, colorSelector) {
+        var codeEl = document.querySelector(codeSelector);
+        if (!codeEl) {
+            return;
+        }
+
+        var colorEl = document.querySelector(colorSelector);
+        var colorCode = clean(colorEl ? colorEl.textContent : '');
+        var currentCode = clean(codeEl.textContent);
+        var baseCode = clean(codeEl.getAttribute('data-base-product-code'));
+
+        if (!baseCode && currentCode) {
+            baseCode = currentCode;
+            codeEl.setAttribute('data-base-product-code', baseCode);
+        }
+
+        codeEl.textContent = buildCode(baseCode, colorCode);
+    }
+
+    function syncAllProductCodes() {
+        syncCode('[data-detail-product-code]', '[data-detail-color-code]');
+        syncCode('[data-qv-product-code]', '[data-qv-color-code]');
+        syncCode('[data-qadd-product-code]', '[data-qadd-color-code]');
+    }
+
+    function observe(selector) {
+        var el = document.querySelector(selector);
+        if (!el || !window.MutationObserver) {
+            return;
+        }
+
+        var observer = new MutationObserver(function () {
+            window.setTimeout(syncAllProductCodes, 0);
+        });
+
+        observer.observe(el, { childList: true, characterData: true, subtree: true });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        syncAllProductCodes();
+        observe('[data-detail-product-code]');
+        observe('[data-detail-color-code]');
+        observe('[data-qv-product-code]');
+        observe('[data-qv-color-code]');
+        observe('[data-qadd-product-code]');
+        observe('[data-qadd-color-code]');
+    });
+
+    document.addEventListener('click', function () {
+        window.setTimeout(syncAllProductCodes, 0);
+    }, true);
+
+    document.addEventListener('change', function () {
+        window.setTimeout(syncAllProductCodes, 0);
+    }, true);
+})();
+</script>

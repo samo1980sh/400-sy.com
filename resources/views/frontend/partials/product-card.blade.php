@@ -54,7 +54,16 @@
     <div class="card-product-info" style="text-align:center">
         <a href="{{ $detailUrl }}" class="title link">{{ $product['title'] ?? '' }}</a>
         @if (!empty($product['product_code']))
-            <div class="product-card-code">{{ __('front.products.product_code') }}: {{ $product['product_code'] }}</div>
+            <div class="product-card-code">@php
+    $cardProductBaseCode = trim((string) ($product['product_code'] ?? ''));
+    $cardFirstColor = collect($product['colors'] ?? [])->first();
+    $cardFirstColorCode = is_array($cardFirstColor) ? trim((string) ($cardFirstColor['color_code'] ?? '')) : '';
+    $cardProductDisplayCode = $cardProductBaseCode;
+    if ($cardProductBaseCode !== '' && $cardFirstColorCode !== '' && ! str_ends_with($cardProductBaseCode, '-' . $cardFirstColorCode)) {
+        $cardProductDisplayCode = $cardProductBaseCode . '-' . $cardFirstColorCode;
+    }
+@endphp
+{{ __('front.products.product_code') }}: {{ $cardProductDisplayCode }}</div>
         @endif
         <div class="product-card-price">
             <span class="price js-currency-price" data-base-price="{{ $product['price_current'] ?? $product['base_price'] ?? 0 }}" data-base-currency="{{ $product['base_currency'] ?? 'SYP' }}">{{ $product['price_current_label'] ?? $product['price_label'] ?? '' }}</span>

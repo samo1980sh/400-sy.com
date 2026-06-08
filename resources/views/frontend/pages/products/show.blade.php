@@ -32,6 +32,12 @@
 
     $defaultColorIndex = $defaultColorIndex === false ? 0 : (int) $defaultColorIndex;
     $defaultColor = $colors->get($defaultColorIndex) ?? [];
+$frontProductBaseCode = trim((string) ($product['product_code'] ?? ''));
+$frontDefaultColorCode = trim((string) ($defaultColor['color_code'] ?? ''));
+$frontProductDisplayCode = $frontProductBaseCode;
+if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_with($frontProductBaseCode, '-' . $frontDefaultColorCode)) {
+    $frontProductDisplayCode = $frontProductBaseCode . '-' . $frontDefaultColorCode;
+}
 
     $gallery = collect($defaultColor['gallery'] ?? [])
         ->merge($defaultColor['image'] ?? [])
@@ -293,10 +299,23 @@
                                             {{ $product['compare_price_label'] ?? '' }}
                                         </div>
                                     </div>
+                                    @php
+                                        $detailProductCodeBase = trim((string) ($product['product_code'] ?? ''));
+                                        $detailDefaultColorCode = trim((string) ($defaultColor['color_code'] ?? ''));
+                                        $detailDisplayProductCode = $detailProductCodeBase;
 
-                                    @if (! empty($product['product_code']))
+                                        if ($detailProductCodeBase !== '' && $detailDefaultColorCode !== '') {
+                                            $detailColorSuffix = '-' . $detailDefaultColorCode;
+
+                                            if (! str_ends_with(mb_strtolower($detailDisplayProductCode), mb_strtolower($detailColorSuffix))) {
+                                                $detailDisplayProductCode .= $detailColorSuffix;
+                                            }
+                                        }
+                                    @endphp
+
+                                    @if ($detailProductCodeBase !== '')
                                         <div class="tf-product-info-liveview">
-                                            <p>{{ __('front.products.product_code') }}: <span class="fw-6">{{ $product['product_code'] }}</span></p>
+                                            <p>{{ __('front.products.product_code') }}: <span class="fw-6" data-detail-product-code data-base-product-code="{{ $detailProductCodeBase }}">{{ $detailDisplayProductCode }}</span></p>
                                         </div>
                                     @endif
 
@@ -315,7 +334,7 @@
                                                     {{ __('front.products.color') }}:
                                                     <span class="fw-6 variant-picker-label-value" data-detail-color-label>{{ $defaultColor['name'] ?? '' }}</span>
                                                 </div>
-                                                <div class="tf-product-info-code color-code">
+                                                <div class="tf-product-info-code color-code d-none" aria-hidden="true">
                                                     <span class="label">{{ __('front.products.color_code') }}:</span>
                                                     <span class="value" data-detail-color-code>{{ $defaultColor['color_code'] ?? '' }}</span>
                                                 </div>

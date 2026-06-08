@@ -764,3 +764,86 @@
 
     window.initProductDetailPhotoSwipe();
 </script>
+
+<script data-front-product-code-color-fix-03>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.__frontProductCodeColorFix03Initialized) {
+            return;
+        }
+
+        window.__frontProductCodeColorFix03Initialized = true;
+
+        const productCodeElement = document.querySelector('[data-detail-product-code]');
+
+        if (! productCodeElement) {
+            return;
+        }
+
+        const clean = function (value) {
+            return String(value || '').trim();
+        };
+
+        const baseProductCode = clean(productCodeElement.dataset.baseProductCode || productCodeElement.getAttribute('data-base-product-code') || productCodeElement.textContent);
+
+        productCodeElement.dataset.baseProductCode = baseProductCode;
+
+        const formatProductCode = function (colorCode) {
+            const base = clean(productCodeElement.dataset.baseProductCode || baseProductCode);
+            const color = clean(colorCode);
+
+            if (! base) {
+                return '';
+            }
+
+            if (! color) {
+                return base;
+            }
+
+            const suffix = '-' + color;
+
+            if (base.toLowerCase().endsWith(suffix.toLowerCase())) {
+                return base;
+            }
+
+            return base + suffix;
+        };
+
+        const resolveColorCodeFromInput = function (input) {
+            if (! input) {
+                return '';
+            }
+
+            const inputId = input.getAttribute('id') || '';
+            let label = null;
+
+            if (inputId !== '') {
+                if (window.CSS && typeof window.CSS.escape === 'function') {
+                    label = document.querySelector('label[for="' + window.CSS.escape(inputId) + '"]');
+                } else {
+                    label = document.querySelector('label[for="' + inputId.replace(/"/g, '\\"') + '"]');
+                }
+            }
+
+            return clean((label && label.dataset ? label.dataset.colorCode : '') || input.dataset.colorCode || '');
+        };
+
+        const updateProductCode = function (colorCode) {
+            productCodeElement.textContent = formatProductCode(colorCode);
+        };
+
+        const checkedColorInput = document.querySelector('input[name="detail_color"]:checked');
+        const hiddenColorCodeElement = document.querySelector('[data-detail-color-code]');
+
+        updateProductCode(resolveColorCodeFromInput(checkedColorInput) || (hiddenColorCodeElement ? hiddenColorCodeElement.textContent : ''));
+
+        document.querySelectorAll('input[name="detail_color"]').forEach(function (input) {
+            input.addEventListener('change', function () {
+                const colorCode = resolveColorCodeFromInput(input);
+
+                window.setTimeout(function () {
+                    updateProductCode(colorCode);
+                }, 0);
+            });
+        });
+    });
+</script>
