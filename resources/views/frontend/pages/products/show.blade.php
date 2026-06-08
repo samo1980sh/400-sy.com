@@ -110,10 +110,18 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
         ->values();
 
     $defaultSize = trim((string) ($defaultColor['default_size'] ?? ($product['default_size'] ?? '')));
+    $availableDefaultSize = $sizeOptions->firstWhere('is_sold_out_normalized', false);
 
-    if ($defaultSize === '' && $sizeOptions->isNotEmpty()) {
-        $defaultSize = (string) (($sizeOptions->firstWhere('is_sold_out_normalized', false)['value'] ?? null)
-            ?: ($sizeOptions->first()['value'] ?? ''));
+    if ($defaultSize !== '') {
+        $defaultSizeOption = $sizeOptions->firstWhere('value', $defaultSize);
+
+        if (! $defaultSizeOption || ! empty($defaultSizeOption['is_sold_out_normalized'])) {
+            $defaultSize = '';
+        }
+    }
+
+    if ($defaultSize === '' && $availableDefaultSize) {
+        $defaultSize = (string) ($availableDefaultSize['value'] ?? '');
     }
     $description = trim((string) ($product['description'] ?? ''));
     $descriptionHtml = $description !== '' ? nl2br(e($description)) : '';
@@ -199,6 +207,7 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
     <link rel="stylesheet" href="{{ asset('css/photoswipe.css') }}">
     <style>
         .detail-thumbs-slider { display: flex; gap: 10px; }
+        [data-detail-sizes] label[aria-disabled="true"] { pointer-events: none; opacity: .45; cursor: not-allowed; }
         @media (max-width: 767.98px) {
             .detail-thumbs-slider { flex-direction: column !important; }
             .detail-thumbs-slider > div { width: 100%; }
@@ -378,7 +387,7 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
                                                 <div class="variant-picker-values" data-detail-sizes>
                                                     @foreach ($sizeOptions as $index => $size)
                                                         <input type="radio" name="detail_size" id="detail-size-{{ $index }}" value="{{ $size['value'] }}" data-size-index="{{ $index }}" data-size-id="{{ $size['size_id'] ?? '' }}" data-size-code="{{ $size['size_code'] ?? '' }}" data-variant-id="{{ $size['variant_id'] ?? '' }}" data-product-color-id="{{ $size['product_color_id'] ?? '' }}" @checked(($size['value'] ?? '') === $defaultSize && empty($size['is_sold_out_normalized'])) @disabled(! empty($size['is_sold_out_normalized']))>
-                                                        <label class="style-text" for="detail-size-{{ $index }}" data-value="{{ $size['value'] }}" @if (! empty($size['is_sold_out_normalized'])) aria-disabled="true" @endif>
+                                                        <label class="style-text {{ ! empty($size['is_sold_out_normalized']) ? 'disabled' : '' }}" for="detail-size-{{ $index }}" data-value="{{ $size['value'] }}" @if (! empty($size['is_sold_out_normalized'])) aria-disabled="true" data-size-unavailable="true" @endif>
                                                             <span class="size-label">{{ $size['value'] }}</span>
                                                         </label>
                                                     @endforeach

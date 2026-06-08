@@ -131,7 +131,13 @@
         }
 
         function selectedSize() {
-            return currentSizes()[selectedSizeIndex] || null;
+            if (selectedSizeIndex < 0) {
+                return null;
+            }
+
+            var size = currentSizes()[selectedSizeIndex] || null;
+
+            return isSoldOut(size) ? null : size;
         }
 
         function normalizeSizeLabel(item) {
@@ -169,7 +175,7 @@
                 }
             }
 
-            return 0;
+            return -1;
         }
 
         function selectedQuantity() {
@@ -466,7 +472,7 @@
                         checked ? ' checked' : '',
                         soldOut ? ' disabled' : '',
                     '>',
-                    '<label class="style-text" for="detail-size-js-', index, '" data-value="', escapeHtml(label), '"', soldOut ? ' aria-disabled="true"' : '', '>',
+                    '<label class="style-text', soldOut ? ' disabled' : '', '" for="detail-size-js-', index, '" data-value="', escapeHtml(label), '"', soldOut ? ' aria-disabled="true" data-size-unavailable="true"' : '', '>',
                         '<span class="size-label">', escapeHtml(label), '</span>',
                     '</label>'
                 ].join('');
@@ -665,8 +671,21 @@
             syncPriceAndLabels();
         });
 
+        $(document).on('click', SELECTORS.sizesWrap + ' label[aria-disabled="true"]', function (event) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        });
+
         $(document).on('change', SELECTORS.sizesWrap + ' ' + SELECTORS.sizeInput, function () {
-            selectedSizeIndex = Number($(this).data('size-index') || 0);
+            var nextIndex = Number($(this).data('size-index') || 0);
+            var size = currentSizes()[nextIndex] || null;
+
+            if ($(this).is(':disabled') || isSoldOut(size)) {
+                $(this).prop('checked', false);
+                return;
+            }
+
+            selectedSizeIndex = nextIndex;
             syncPriceAndLabels();
         });
 
