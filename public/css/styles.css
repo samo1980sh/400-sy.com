@@ -20852,3 +20852,15 @@ blockquote .text {
     align-items: center;
     gap: 8px;
 }
+
+/* CARD_HOVER_SECOND_IMAGE_01_START */
+@media (hover: hover) and (pointer: fine) {
+    .card-product .img-product {
+        transition: opacity 0.18s ease-in-out;
+    }
+
+    .card-product.card-product-hover-second-image-active .img-product {
+        opacity: 0.98;
+    }
+}
+/* CARD_HOVER_SECOND_IMAGE_01_END */
