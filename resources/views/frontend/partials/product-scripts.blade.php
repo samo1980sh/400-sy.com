@@ -465,7 +465,8 @@
                     name: $swatch.data('colorName') || '',
                     code: $swatch.data('colorCode') || '',
                     className: $swatch.data('colorClass') || '',
-                    image: $swatch.data('colorImage') || ''
+                    image: $swatch.data('colorImage') || '',
+                    hoverImage: $swatch.data('colorHoverImage') || ''
                 };
                 var colorIndex = findProductColorIndex(product.colors, colorRef, index);
 
@@ -483,6 +484,7 @@
                 product.colors[colorIndex].card_swatch_style = swatchStyle || product.colors[colorIndex].card_swatch_style || '';
                 product.colors[colorIndex].swatch_image = swatchImage || product.colors[colorIndex].swatch_image || '';
                 product.colors[colorIndex].hex = hex || product.colors[colorIndex].hex || '';
+                product.colors[colorIndex].hover_image = colorRef.hoverImage || product.colors[colorIndex].hover_image || '';
             });
 
             return product;
@@ -501,6 +503,7 @@
                 code: $active.data('colorCode') || '',
                 className: cardSwatchClass($active) || $active.data('colorClass') || '',
                 image: $active.data('colorImage') || '',
+                hoverImage: $active.data('colorHoverImage') || '',
                 swatchStyle: cardSwatchDisplayStyle($active),
                 swatchImage: $active.data('colorSwatch') || $active.data('colorSwatchImage') || '',
                 hex: $active.data('colorHex') || ''
@@ -980,6 +983,7 @@
 
             var $card = $swatch.closest('.card-product');
             var imageSrc = $swatch.data('colorImage') || $swatch.find('img').attr('src') || '';
+            var hoverImageSrc = $swatch.data('colorHoverImage') || '';
 
             if (persistActive) {
                 $card.find('.list-color-item.color-swatch').removeClass('active');
@@ -989,7 +993,19 @@
             }
 
             if (imageSrc) {
-                $card.find('.img-product').attr('src', imageSrc).attr('data-src', imageSrc);
+                $card.find('[data-card-primary-image]').attr('src', imageSrc).attr('data-src', imageSrc);
+            }
+
+            var $imageLink = $card.find('.collection-image').first();
+            var $hoverImage = $card.find('[data-card-hover-image]').first();
+
+            if ($hoverImage.length) {
+                if (hoverImageSrc) {
+                    $hoverImage.attr('src', hoverImageSrc).attr('data-src', hoverImageSrc);
+                    $imageLink.addClass('product-img has-card-hover-image');
+                } else {
+                    $imageLink.removeClass('has-card-hover-image');
+                }
             }
 
             updateCardDetailLinks($card);

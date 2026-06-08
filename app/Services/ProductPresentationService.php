@@ -49,6 +49,11 @@ class ProductPresentationService
             'compare_price_label' => $pricing['compare_label'],
         ]);
         $imageUrl = filled($defaultColor['image'] ?? null) ? (string) $defaultColor['image'] : $fallbackImageUrl;
+        $defaultColorGallery = $defaultColor['gallery'] ?? [];
+        $hoverImageUrl = filled($defaultColor['hover_image'] ?? null)
+            ? (string) $defaultColor['hover_image']
+            : (is_array($defaultColorGallery) && ! empty($defaultColorGallery[1]) ? (string) $defaultColorGallery[1] : '');
+
         $gallery = collect(array_merge([$imageUrl], array_map(fn (array $color): string => $color['image'] ?? '', $colors)))
             ->filter()
             ->unique()
@@ -79,6 +84,7 @@ class ProductPresentationService
             'detail_url' => filled($product->slug) ? route('front.products.show', $product->slug) : route('front.home') . '#featured-products',
             'cart_add_url' => filled($product->slug) ? route('front.cart.add', $product->slug) : null,
             'image' => $imageUrl,
+            'hover_image' => $hoverImageUrl,
             'gallery' => $gallery,
             'price_current' => $displayPricing['price_current'] ?? $pricing['current'],
             'compare_price' => $displayPricing['compare_price'] ?? $pricing['compare'],
@@ -224,7 +230,7 @@ class ProductPresentationService
             ->values()
             ->map(function (array $color, int $index) use ($product, $locale, $currency, $pricing, $variantsByColor, $productColorsById): array {
                 $fallbackImage = asset('images/products/4brouwn1.jpg');
-                $gallery = $color['detail_urls'] ?? $color['thumb_urls'] ?? [];
+                $gallery = $color['card_urls'] ?? $color['detail_urls'] ?? $color['thumb_urls'] ?? [];
                 $productColorId = (int) ($color['id'] ?? 0);
                 $productColor = $productColorsById->get($productColorId);
                 $filterColor = $productColor instanceof ProductColor ? $productColor->filterColor : null;
@@ -239,6 +245,13 @@ class ProductPresentationService
                 $sizes = $this->sizeLabelsForVariants($sizeOptions, $locale);
                 $defaultSize = $this->selectDefaultSize($sizeOptions) ?: ($this->variantSizeLabel($defaultVariant, $locale) ?: ($sizes[0] ?? null));
 
+                $colorGallery = is_array($gallery) && $gallery !== []
+                    ? array_values($gallery)
+                    : [$color['primary_thumb_url'] ?? $fallbackImage];
+                $hoverImage = $color['card_urls'][1]
+                    ?? $colorGallery[1]
+                    ?? null;
+
                 return [
                     'id' => $productColorId,
                     'name' => $this->localizedValue($color['name_ar'] ?? null, $color['name_en'] ?? null, $locale) ?: ($color['name'] ?? '-'),
@@ -249,7 +262,8 @@ class ProductPresentationService
                     'swatch_image' => $swatchImage,
                     'swatch_style' => $swatchStyle,
                     'image' => $color['primary_thumb_url'] ?? $fallbackImage,
-                    'gallery' => is_array($gallery) && $gallery !== [] ? array_values($gallery) : [$color['primary_thumb_url'] ?? $fallbackImage],
+                    'hover_image' => $hoverImage,
+                    'gallery' => $colorGallery,
                     'active' => $index === 0,
                     'sizes' => $sizes,
                     'size_options' => $sizeOptions,

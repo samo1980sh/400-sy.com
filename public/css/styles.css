@@ -20852,3 +20852,26 @@ blockquote .text {
     align-items: center;
     gap: 8px;
 }
+
+/* Product card second image hover: desktop only */
+.card-product .card-product-wrapper:hover .product-img:not(.has-card-hover-image) .img-product {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 992px) {
+  .card-product .card-product-wrapper .product-img.has-card-hover-image .img-hover {
+    display: block;
+  }
+}
+
+@media (hover: none), (pointer: coarse), (max-width: 991.98px) {
+  .card-product .card-product-wrapper .product-img.has-card-hover-image .img-product {
+    opacity: 1 !important;
+  }
+
+  .card-product .card-product-wrapper .product-img.has-card-hover-image .img-hover {
+    display: none !important;
+    opacity: 0 !important;
+  }
+}
+

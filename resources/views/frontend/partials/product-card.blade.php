@@ -1,6 +1,23 @@
 @php
     $product = $product ?? [];
     $imageUrl = $product['image'] ?? '';
+    $hoverImageUrl = trim((string) ($product['hover_image'] ?? ''));
+
+    if ($hoverImageUrl === '') {
+        foreach (($product['colors'] ?? []) as $cardHoverColor) {
+            $candidateHoverImage = trim((string) ($cardHoverColor['hover_image'] ?? ''));
+
+            if ($candidateHoverImage !== '') {
+                $hoverImageUrl = $candidateHoverImage;
+                break;
+            }
+        }
+    }
+
+    if ($hoverImageUrl === '' && ! empty($product['gallery'][1])) {
+        $hoverImageUrl = (string) $product['gallery'][1];
+    }
+
     $listUrl = $product['list_url'] ?? ($product['url'] ?? '#');
     $detailUrl = $product['detail_url'] ?? ($product['url'] ?? '#');
     $loadmoreHidden = $loadmore_hidden ?? true;
@@ -29,8 +46,11 @@
                 <span></span><span></span><span></span><span></span>
             </div>
         </div>
-        <a href="{{ $listUrl }}" class="collection-image img-style">
-            <img class="lazyload img-product" data-src="{{ $imageUrl }}" src="{{ $imageUrl }}" alt="{{ $product['title'] ?? '' }}">
+        <a href="{{ $listUrl }}" class="collection-image img-style {{ $hoverImageUrl !== '' ? 'product-img has-card-hover-image' : '' }}">
+            <img class="lazyload img-product" data-card-primary-image data-src="{{ $imageUrl }}" src="{{ $imageUrl }}" alt="{{ $product['title'] ?? '' }}">
+            @if ($hoverImageUrl !== '')
+                <img class="lazyload img-hover" data-card-hover-image data-src="{{ $hoverImageUrl }}" src="{{ $hoverImageUrl }}" alt="{{ $product['title'] ?? '' }}">
+            @endif
         </a>
         @if (!empty($product['badge']))
             <span class="product-card-badge {{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</span>
@@ -79,8 +99,13 @@
             @foreach (($product['colors'] ?? []) as $index => $color)
                 @php
                     $swatchStyle = trim((string) ($color['swatch_style'] ?? ''));
+                    $colorHoverImage = trim((string) ($color['hover_image'] ?? ''));
+
+                    if ($colorHoverImage === '' && ! empty($color['gallery'][1])) {
+                        $colorHoverImage = (string) $color['gallery'][1];
+                    }
                 @endphp
-                <li class="list-color-item color-swatch {{ $index === 0 ? 'active' : '' }}" data-color-id="{{ $color['id'] ?? '' }}" data-color-name="{{ $color['name'] ?? '' }}" data-color-code="{{ $color['color_code'] ?? '' }}" data-color-class="{{ $color['class_name'] ?? '' }}" data-color-hex="{{ $color['hex'] ?? '' }}" data-color-swatch="{{ $color['swatch_image'] ?? '' }}" data-color-image="{{ $color['image'] ?? '' }}">
+                <li class="list-color-item color-swatch {{ $index === 0 ? 'active' : '' }}" data-color-id="{{ $color['id'] ?? '' }}" data-color-name="{{ $color['name'] ?? '' }}" data-color-code="{{ $color['color_code'] ?? '' }}" data-color-class="{{ $color['class_name'] ?? '' }}" data-color-hex="{{ $color['hex'] ?? '' }}" data-color-swatch="{{ $color['swatch_image'] ?? '' }}" data-color-image="{{ $color['image'] ?? '' }}" data-color-hover-image="{{ $colorHoverImage }}">
                     <span class="tooltip">{{ $color['name'] ?? '' }}</span>
                     <span class="swatch-value {{ $color['class_name'] ?? 'four-Black' }}" @if ($swatchStyle !== '') style="{{ $swatchStyle }}" @endif></span>
                     <img class="lazyload" data-src="{{ $color['image'] ?? '' }}" src="{{ $color['image'] ?? '' }}" alt="image-product">
