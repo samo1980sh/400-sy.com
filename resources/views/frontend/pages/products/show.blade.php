@@ -296,7 +296,7 @@
 
                                     @if (! empty($product['product_code']))
                                         <div class="tf-product-info-liveview">
-                                            <p>{{ __('front.products.product_code') }}: <span class="fw-6">{{ $product['product_code'] }}</span></p>
+                                            <p>{{ __('front.products.product_code') }}: <span class="fw-6" dir="ltr">{{ $product['product_code'] }}@if (! empty($defaultColor['color_code']))-<span data-detail-color-code>{{ $defaultColor['color_code'] }}</span>@endif</span></p>
                                         </div>
                                     @endif
 
@@ -314,10 +314,6 @@
                                                 <div class="variant-picker-label">
                                                     {{ __('front.products.color') }}:
                                                     <span class="fw-6 variant-picker-label-value" data-detail-color-label>{{ $defaultColor['name'] ?? '' }}</span>
-                                                </div>
-                                                <div class="tf-product-info-code color-code">
-                                                    <span class="label">{{ __('front.products.color_code') }}:</span>
-                                                    <span class="value" data-detail-color-code>{{ $defaultColor['color_code'] ?? '' }}</span>
                                                 </div>
                                                 <div class="variant-picker-values" data-detail-colors>
                                                     @foreach ($colors as $index => $color)
