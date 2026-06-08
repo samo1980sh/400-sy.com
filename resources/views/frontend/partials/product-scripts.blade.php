@@ -1038,6 +1038,10 @@
             var categories = [];
             var colors = [];
             var sizes = [];
+            var bodyFits = [];
+            var dropTypes = [];
+            var collections = [];
+            var specialOffers = [];
             var minPrice = '';
             var maxPrice = '';
             var hasActivePrice = false;
@@ -1076,6 +1080,26 @@
                     return;
                 }
 
+                if (name === 'body_fit[]') {
+                    bodyFits.push(String(value));
+                    return;
+                }
+
+                if (name === 'drop_type[]') {
+                    dropTypes.push(String(value));
+                    return;
+                }
+
+                if (name === 'collections[]') {
+                    collections.push(String(value));
+                    return;
+                }
+
+                if (name === 'special_offers[]') {
+                    specialOffers.push(String(value));
+                    return;
+                }
+
                 if (name === 'min_price') {
                     minPrice = String(value);
                     return;
@@ -1101,6 +1125,22 @@
                 params.set('sizes', sizes.join(','));
             }
 
+            if (bodyFits.length) {
+                params.set('body_fit', bodyFits.join(','));
+            }
+
+            if (dropTypes.length) {
+                params.set('drop_type', dropTypes.join(','));
+            }
+
+            if (collections.length) {
+                params.set('collections', collections.join(','));
+            }
+
+            if (specialOffers.length) {
+                params.set('special_offers', specialOffers.join(','));
+            }
+
             var $priceWidget = $filterForm.find('.js-price-filter').first();
             if ($priceWidget.length) {
                 hasActivePrice = String(minPrice || '') !== String($priceWidget.data('baseMinLimit') || '')
@@ -1116,7 +1156,6 @@
 
             return params.toString();
         }
-
         function refreshShopProducts(queryString, options) {
             options = options || {};
 
@@ -1208,7 +1247,7 @@
             applyAjaxFilter();
         });
 
-        $(document).on('change', '[data-filter-form] input[name="category[]"], [data-filter-form] input[name="color[]"], [data-filter-form] input[name="size[]"]', function () {
+        $(document).on('change', '[data-filter-form] input[name="category[]"], [data-filter-form] input[name="color[]"], [data-filter-form] input[name="size[]"], [data-filter-form] input[name="body_fit[]"], [data-filter-form] input[name="drop_type[]"], [data-filter-form] input[name="collections[]"], [data-filter-form] input[name="special_offers[]"]', function () {
             var $form = $(this).closest('[data-filter-form]');
 
             if ($(this).attr('name') === 'category[]') {
@@ -1269,7 +1308,14 @@
                 $filterForm.find('input[name="color[]"][value="' + value.replace(/"/g, '\\"') + '"]').prop('checked', false);
             } else if (type === 'size') {
                 $filterForm.find('input[name="size[]"][value="' + value.replace(/"/g, '\\"') + '"]').prop('checked', false);
-            } else if (type === 'price') {
+            } else if (type === 'body_fit') {
+                $filterForm.find('input[name="body_fit[]"][value="' + value.replace(/"/g, '\"') + '"]').prop('checked', false);
+            } else if (type === 'drop_type') {
+                $filterForm.find('input[name="drop_type[]"][value="' + value.replace(/"/g, '\"') + '"]').prop('checked', false);
+            } else if (type === 'collection') {
+                $filterForm.find('input[name="collections[]"][value="' + value.replace(/"/g, '\"') + '"]').prop('checked', false);
+            } else if (type === 'special_offer') {
+                $filterForm.find('input[name="special_offers[]"][value="' + value.replace(/"/g, '\"') + '"]').prop('checked', false);            } else if (type === 'price') {
                 var $minField = $filterForm.find('.range-min');
                 var $maxField = $filterForm.find('.range-max');
                 var $priceWidget = $filterForm.find('.js-price-filter').first();

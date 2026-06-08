@@ -1,4 +1,4 @@
-﻿/* ---------------------------------------------------------
+/* ---------------------------------------------------------
     
 
 
@@ -20708,3 +20708,103 @@ blockquote .text {
   }
 }
 
+
+.tf-breadcrumb .breadcrumb-item + .breadcrumb-item {
+  padding-left: 0;
+}
+
+.tf-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+  content: none;
+}
+
+.rtl .tf-breadcrumb .breadcrumb-item + .breadcrumb-item {
+  padding-right: 0;
+}
+@media (max-width: 767px) {
+  html,
+  body,
+  .front-shell {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  #header .main-header .container-full {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  #header .main-header .wrapper-header {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  #header .main-header .wrapper-header > [class*="col-"] {
+    padding-left: 4px;
+    padding-right: 4px;
+    min-width: 0;
+  }
+
+  #header .main-header .logo-header {
+    padding-inline: 0 !important;
+    max-width: 100%;
+  }
+
+  #header .main-header .logo-header img.logo {
+    width: min(150px, 42vw) !important;
+    max-width: 100% !important;
+    height: 42px !important;
+  }
+
+  #header .nav-icon {
+    gap: 8px !important;
+    justify-content: flex-end;
+  }
+
+  #header .nav-icon .nav-currency .bootstrap-select {
+    width: 86px !important;
+    max-width: 30vw;
+  }
+
+  .tf-slideshow {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .tf-slideshow .wrap-slider {
+    max-width: 100%;
+  }
+}
+@media (max-width: 767px) {
+  .tf-page-title {
+    padding-top: 46px;
+    padding-bottom: 44px;
+  }
+
+  .tf-page-title .heading {
+    margin-bottom: 8px;
+  }
+
+  .tf-page-title .text-2 {
+    margin-bottom: 12px;
+  }
+
+  .tf-page-title .tf-breadcrumb {
+    margin-top: 12px;
+  }
+
+  .tf-page-title .tf-breadcrumb .breadcrumb {
+    justify-content: center;
+    row-gap: 6px;
+    column-gap: 8px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .tf-page-title .tf-breadcrumb .breadcrumb-item {
+    max-width: 100%;
+    word-break: normal;
+  }
+}

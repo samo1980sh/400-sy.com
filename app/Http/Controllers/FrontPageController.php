@@ -82,8 +82,11 @@ class FrontPageController extends Controller
         $selectedSizes = $this->requestList($request, 'sizes', 'size');
         $selectedBodyFit = $this->requestList($request, 'body_fit', 'body_fit');
         $selectedDropType = $this->requestList($request, 'drop_type', 'drop_type');
+        $selectedCollections = $this->requestList($request, 'collections', 'collection');
+        $selectedSpecialOffers = $this->requestList($request, 'special_offers', 'special_offer');
+        $specialOfferOnly = in_array('offer', array_map('strtolower', $selectedSpecialOffers), true);
         [$minPrice, $maxPrice] = $this->requestPriceRange($request);
-        $queryWithoutFilters = Arr::except($request->query(), ['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
+        $queryWithoutFilters = Arr::except($request->query(), ['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'collection', 'collections', 'special_offer', 'special_offers', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
         $resetUrl = $request->url();
         $primaryCategory = $baseCategory instanceof Category
             ? $baseCategory
@@ -109,7 +112,9 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'sizes' => $selectedSizes,
             'body_fit' => $selectedBodyFit,
             'drop_type' => $selectedDropType,
-        ];
+                            'collections' => $selectedCollections,
+                    'special_offer' => $specialOfferOnly,
+];
 
         $query = $this->newProductsListingQuery();
         $this->applyProductsFilters($query, $filters);
@@ -161,7 +166,9 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'sizes' => $selectedSizes,
             'body_fit' => $selectedBodyFit,
             'drop_type' => $selectedDropType,
-        ]);
+                            'collections' => $selectedCollections,
+                    'special_offer' => $specialOfferOnly,
+]);
         $filterColorOptions = $this->buildColorOptions([
             'category_ids' => $filters['category_ids'],
             'min_price' => $minPrice,
@@ -170,7 +177,9 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'sizes' => $selectedSizes,
             'body_fit' => $selectedBodyFit,
             'drop_type' => $selectedDropType,
-        ], $locale, $selectedColors);
+                            'collections' => $selectedCollections,
+                    'special_offer' => $specialOfferOnly,
+], $locale, $selectedColors);
         $filterSizeOptions = $this->buildSizeOptions([
             'category_ids' => $filters['category_ids'],
             'min_price' => $minPrice,
@@ -179,7 +188,9 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'sizes' => [],
             'body_fit' => $selectedBodyFit,
             'drop_type' => $selectedDropType,
-        ], $locale, $selectedSizes);
+                            'collections' => $selectedCollections,
+                    'special_offer' => $specialOfferOnly,
+], $locale, $selectedSizes);
         $filterBodyFitOptions = $this->buildBodyFitOptions([
             'category_ids' => $filters['category_ids'],
             'min_price' => $minPrice,
@@ -188,7 +199,9 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'sizes' => $selectedSizes,
             'body_fit' => [],
             'drop_type' => $selectedDropType,
-        ], $selectedBodyFit);
+                            'collections' => $selectedCollections,
+                    'special_offer' => $specialOfferOnly,
+], $selectedBodyFit);
         $filterDropOptions = $this->buildDropOptions([
             'category_ids' => $filters['category_ids'],
             'min_price' => $minPrice,
@@ -198,6 +211,28 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'body_fit' => $selectedBodyFit,
             'drop_type' => [],
         ], $selectedDropType);
+        $filterCollectionOptions = $this->buildCollectionOptions([
+            'category_ids' => $filters['category_ids'],
+            'min_price' => $minPrice,
+            'max_price' => $maxPrice,
+            'colors' => $selectedColors,
+            'sizes' => $selectedSizes,
+            'body_fit' => $selectedBodyFit,
+            'drop_type' => $selectedDropType,
+            'collections' => [],
+            'special_offer' => $specialOfferOnly,
+        ], $selectedCollections);
+        $filterSpecialOfferOption = $this->buildSpecialOfferOption([
+            'category_ids' => $filters['category_ids'],
+            'min_price' => $minPrice,
+            'max_price' => $maxPrice,
+            'colors' => $selectedColors,
+            'sizes' => $selectedSizes,
+            'body_fit' => $selectedBodyFit,
+            'drop_type' => $selectedDropType,
+            'collections' => $selectedCollections,
+            'special_offer' => false,
+        ], $specialOfferOnly, $locale);
         $filterPriceStats = $this->buildPriceStats([
             'category_ids' => $filters['category_ids'],
             'min_price' => null,
@@ -206,13 +241,17 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'sizes' => $selectedSizes,
             'body_fit' => $selectedBodyFit,
             'drop_type' => $selectedDropType,
-        ], $minPrice, $maxPrice);
+                            'collections' => $selectedCollections,
+                    'special_offer' => $specialOfferOnly,
+], $minPrice, $maxPrice);
         $activeFilterChips = $this->buildActiveFilterChips(
             $selectedCategoryModels,
             $selectedColors,
             $selectedSizes,
             $selectedBodyFit,
             $selectedDropType,
+            $selectedCollections,
+            $specialOfferOnly,
             $filterPriceStats,
             $minPrice,
             $maxPrice,
@@ -268,11 +307,15 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'selected_sizes' => $selectedSizes,
             'selected_body_fit' => $selectedBodyFit,
             'selected_drop_type' => $selectedDropType,
+            'selected_collections' => $selectedCollections,
+            'selected_special_offers' => $specialOfferOnly ? ['offer'] : [],
             'filter_categories' => $filterCategories,
             'filter_color_options' => $filterColorOptions,
             'filter_size_options' => $filterSizeOptions,
             'filter_body_fit_options' => $filterBodyFitOptions,
             'filter_drop_options' => $filterDropOptions,
+            'filter_collection_options' => $filterCollectionOptions,
+            'filter_special_offer_option' => $filterSpecialOfferOption,
             'filter_price_stats' => $filterPriceStats,
             'active_filter_chips' => $activeFilterChips,
             'category_context_chip' => $categoryContextChip,
@@ -724,6 +767,8 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         $sizes = $this->resolveSizeFilterTerms($this->normalizeStringArray($filters['sizes'] ?? []));
         $bodyFits = $this->normalizeStringArray($filters['body_fit'] ?? []);
         $dropTypes = $this->normalizeStringArray($filters['drop_type'] ?? []);
+        $collections = $this->normalizeStringArray($filters['collections'] ?? []);
+        $specialOffer = (bool) ($filters['special_offer'] ?? false);
 
         if ($minPrice !== null && $maxPrice !== null && $minPrice > $maxPrice) {
             [$minPrice, $maxPrice] = [$maxPrice, $minPrice];
@@ -769,6 +814,14 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
         if ($dropTypes !== []) {
             $query->whereIn('drop_type', $dropTypes);
+        }
+
+        if ($collections !== []) {
+            $query->whereIn('collection', $collections);
+        }
+
+        if ($specialOffer) {
+            $query->where('is_special_offer', true);
         }
 
         return $query;
@@ -973,6 +1026,56 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             ->values();
     }
 
+    protected function buildCollectionOptions(array $filters, array $selectedCollections): Collection
+    {
+        $selected = $this->normalizeStringArray($selectedCollections);
+        $query = $this->newProductsListingQuery();
+        $this->applyProductsFilters($query, array_merge($filters, ['collections' => []]));
+
+        return (clone $query)
+            ->whereNotNull('collection')
+            ->where('collection', '!=', '')
+            ->selectRaw('collection, COUNT(DISTINCT products.id) as products_count')
+            ->groupBy('collection')
+            ->orderBy('collection')
+            ->get()
+            ->map(fn ($row): array => [
+                'value' => (string) $row->collection,
+                'label' => (string) $row->collection,
+                'count' => (int) $row->products_count,
+                'selected' => in_array((string) $row->collection, $selected, true),
+            ])
+            ->values();
+    }
+
+    protected function buildSpecialOfferOption(array $filters, bool $selectedSpecialOffer, string $locale): ?array
+    {
+        $option = $this->buildSpecialOfferOptions($filters, $selectedSpecialOffer)->first();
+
+        return is_array($option) ? $option : null;
+    }
+    protected function buildSpecialOfferOptions(array $filters, bool $selectedSpecialOffer): Collection
+    {
+        $query = $this->newProductsListingQuery();
+        $this->applyProductsFilters($query, array_merge($filters, ['special_offer' => false]));
+
+        $count = (int) (clone $query)
+            ->where('is_special_offer', true)
+            ->count();
+
+        if ($count <= 0 && ! $selectedSpecialOffer) {
+            return collect();
+        }
+
+        return collect([
+            [
+                'value' => 'offer',
+                'label' => app()->getLocale() === 'ar' ? 'عروض خاصة' : 'Special offers',
+                'count' => $count,
+                'selected' => $selectedSpecialOffer,
+            ],
+        ]);
+    }
     protected function buildPriceStats(array $filters, ?float $selectedMin, ?float $selectedMax): array
     {
         $query = $this->newProductsListingQuery();
@@ -1019,6 +1122,8 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         array $selectedSizes,
         array $selectedBodyFit,
         array $selectedDropType,
+        array $selectedCollections,
+        bool $selectedSpecialOffer,
         array $priceStats,
         ?float $selectedMin,
         ?float $selectedMax,
@@ -1069,6 +1174,22 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
                 'type' => 'drop_type',
                 'value' => (string) $dropType,
                 'label' => (string) $dropType,
+            ];
+        }
+
+        foreach ($selectedCollections as $collection) {
+            $chips[] = [
+                'type' => 'collection',
+                'value' => (string) $collection,
+                'label' => (string) $collection,
+            ];
+        }
+
+        if ($selectedSpecialOffer) {
+            $chips[] = [
+                'type' => 'special_offer',
+                'value' => 'offer',
+                'label' => $locale === 'ar' ? 'عروض خاصة' : 'Special offers',
             ];
         }
 

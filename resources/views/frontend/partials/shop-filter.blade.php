@@ -8,6 +8,8 @@
     $selectedSizes = array_values(array_filter((array) ($selected_sizes ?? [])));
     $selectedBodyFit = array_values(array_filter((array) ($selected_body_fit ?? [])));
     $selectedDropType = array_values(array_filter((array) ($selected_drop_type ?? [])));
+    $selectedCollections = array_values(array_filter((array) ($selected_collections ?? [])));
+    $selectedSpecialOffers = array_values(array_filter((array) ($selected_special_offers ?? [])));
 
     $priceStats = $filter_price_stats ?? [];
     $baseMinLimit = max(0, (int) ($priceStats['base_min_limit'] ?? 0));
@@ -23,7 +25,7 @@
     $priceRate = (float) ($priceStats['rate'] ?? 1);
 
     $filterAction = request()->url();
-    $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
+    $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'collection', 'collections', 'special_offer', 'special_offers', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
     $resetUrl = $filter_reset_url ?? request()->url();
 
     $categoryLabel = function ($category) use ($isArabic) {
@@ -36,6 +38,8 @@
     $sizeOptions = collect($filter_size_options ?? []);
     $bodyFitOptions = collect($filter_body_fit_options ?? []);
     $dropOptions = collect($filter_drop_options ?? []);
+    $collectionOptions = collect($filter_collection_options ?? []);
+    $specialOfferOption = $filter_special_offer_option ?? null;
 
     $colorClassFromValue = function (?string $value): string {
         $normalized = \Illuminate\Support\Str::of((string) $value)
@@ -289,6 +293,47 @@
                                         </label>
                                     </li>
                                 @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+
+
+                @if ($collectionOptions->isNotEmpty())
+                    <div class="widget-facet">
+                        <div class="facet-title" data-bs-target="#collection-filter" data-bs-toggle="collapse" aria-expanded="true" aria-controls="collection-filter">
+                            <span>{{ $isArabic ? 'التشكيلة' : 'Collection' }}</span>
+                            <span class="icon icon-arrow-up"></span>
+                        </div>
+                        <div id="collection-filter" class="collapse show">
+                            <ul class="tf-filter-group current-scrollbar">
+                                @foreach ($collectionOptions as $index => $option)
+                                    <li class="list-item d-flex gap-12 align-items-center">
+                                        <input type="checkbox" name="collections[]" class="tf-check" value="{{ $option['value'] }}" id="collection-filter-{{ $index }}" @checked(!empty($option['selected']))>
+                                        <label for="collection-filter-{{ $index }}" class="label">
+                                            <span>{{ $option['label'] }}</span>&nbsp;<span>({{ $option['count'] }})</span>
+                                        </label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+
+                @if (!empty($specialOfferOption))
+                    <div class="widget-facet">
+                        <div class="facet-title" data-bs-target="#special-offer-filter" data-bs-toggle="collapse" aria-expanded="true" aria-controls="special-offer-filter">
+                            <span>{{ $isArabic ? 'العروض' : 'Offers' }}</span>
+                            <span class="icon icon-arrow-up"></span>
+                        </div>
+                        <div id="special-offer-filter" class="collapse show">
+                            <ul class="tf-filter-group current-scrollbar">
+                                <li class="list-item d-flex gap-12 align-items-center">
+                                    <input type="checkbox" name="special_offers[]" class="tf-check" value="offer" id="special-offer-filter-option" @checked(!empty($specialOfferOption['selected']))>
+                                    <label for="special-offer-filter-option" class="label">
+                                        <span>{{ $specialOfferOption['label'] ?? ($isArabic ? 'عروض خاصة' : 'Special offers') }}</span>&nbsp;<span>({{ $specialOfferOption['count'] ?? 0 }})</span>
+                                    </label>
+                                </li>
                             </ul>
                         </div>
                     </div>
