@@ -7,6 +7,9 @@
     $navCategories = collect($navCategories ?? []);
     $currencyOptions = collect($currencyOptions ?? []);
     $cartCount = (int) ($cartCount ?? 0);
+    $languageSwitchLocale = $locale === 'ar' ? 'en' : 'ar';
+    $languageSwitchLabel = $locale === 'ar' ? __('front.ui.english') : __('front.ui.arabic');
+    $languageSwitchUrl = route('front.locale', $languageSwitchLocale);
 @endphp
 
 <header id="header" class="header-default header-style-2">
@@ -23,11 +26,15 @@
                             </select>
                         </div>
                         <div class="language-select-wrap">
-                            <select class="image-select language-select js-language-select" dir="{{ $isRtl ? 'rtl' : 'ltr' }}" aria-label="{{ __('front.ui.select_language') }}">
-                                <option value="{{ route('front.locale', 'ar') }}" @selected($locale === 'ar')>{{ __('front.ui.arabic') }}</option>
-                                <option value="{{ route('front.locale', 'en') }}" @selected($locale === 'en')>{{ __('front.ui.english') }}</option>
-                            </select>
-                        </div>
+                        <a href="{{ $languageSwitchUrl }}"
+                           class="image-select language-select language-switch-link"
+                           dir="{{ $isRtl ? 'rtl' : 'ltr' }}"
+                           aria-label="{{ __('front.ui.select_language') }}"
+                           data-language-switch-opposite>
+                            <span class="language-switch-icon" aria-hidden="true">🌐</span>
+                            <span class="language-switch-label">{{ $languageSwitchLabel }}</span>
+                        </a>
+                    </div>
                     </div>
                 </div>
                 <div class="col-md-4 col-3 tf-lg-hidden">
