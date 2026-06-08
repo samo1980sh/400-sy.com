@@ -32,12 +32,6 @@
 
     $defaultColorIndex = $defaultColorIndex === false ? 0 : (int) $defaultColorIndex;
     $defaultColor = $colors->get($defaultColorIndex) ?? [];
-$frontProductBaseCode = trim((string) ($product['product_code'] ?? ''));
-$frontDefaultColorCode = trim((string) ($defaultColor['color_code'] ?? ''));
-$frontProductDisplayCode = $frontProductBaseCode;
-if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_with($frontProductBaseCode, '-' . $frontDefaultColorCode)) {
-    $frontProductDisplayCode = $frontProductBaseCode . '-' . $frontDefaultColorCode;
-}
 
     $gallery = collect($defaultColor['gallery'] ?? [])
         ->merge($defaultColor['image'] ?? [])
@@ -110,18 +104,10 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
         ->values();
 
     $defaultSize = trim((string) ($defaultColor['default_size'] ?? ($product['default_size'] ?? '')));
-    $availableDefaultSize = $sizeOptions->firstWhere('is_sold_out_normalized', false);
 
-    if ($defaultSize !== '') {
-        $defaultSizeOption = $sizeOptions->firstWhere('value', $defaultSize);
-
-        if (! $defaultSizeOption || ! empty($defaultSizeOption['is_sold_out_normalized'])) {
-            $defaultSize = '';
-        }
-    }
-
-    if ($defaultSize === '' && $availableDefaultSize) {
-        $defaultSize = (string) ($availableDefaultSize['value'] ?? '');
+    if ($defaultSize === '' && $sizeOptions->isNotEmpty()) {
+        $defaultSize = (string) (($sizeOptions->firstWhere('is_sold_out_normalized', false)['value'] ?? null)
+            ?: ($sizeOptions->first()['value'] ?? ''));
     }
     $description = trim((string) ($product['description'] ?? ''));
     $descriptionHtml = $description !== '' ? nl2br(e($description)) : '';
@@ -207,7 +193,6 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
     <link rel="stylesheet" href="{{ asset('css/photoswipe.css') }}">
     <style>
         .detail-thumbs-slider { display: flex; gap: 10px; }
-        [data-detail-sizes] label[aria-disabled="true"] { pointer-events: none; opacity: .45; cursor: not-allowed; }
         @media (max-width: 767.98px) {
             .detail-thumbs-slider { flex-direction: column !important; }
             .detail-thumbs-slider > div { width: 100%; }
@@ -308,23 +293,10 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
                                             {{ $product['compare_price_label'] ?? '' }}
                                         </div>
                                     </div>
-                                    @php
-                                        $detailProductCodeBase = trim((string) ($product['product_code'] ?? ''));
-                                        $detailDefaultColorCode = trim((string) ($defaultColor['color_code'] ?? ''));
-                                        $detailDisplayProductCode = $detailProductCodeBase;
 
-                                        if ($detailProductCodeBase !== '' && $detailDefaultColorCode !== '') {
-                                            $detailColorSuffix = '-' . $detailDefaultColorCode;
-
-                                            if (! str_ends_with(mb_strtolower($detailDisplayProductCode), mb_strtolower($detailColorSuffix))) {
-                                                $detailDisplayProductCode .= $detailColorSuffix;
-                                            }
-                                        }
-                                    @endphp
-
-                                    @if ($detailProductCodeBase !== '')
+                                    @if (! empty($product['product_code']))
                                         <div class="tf-product-info-liveview">
-                                            <p>{{ __('front.products.product_code') }}: <span class="fw-6" data-detail-product-code data-base-product-code="{{ $detailProductCodeBase }}">{{ $detailDisplayProductCode }}</span></p>
+                                            <p>{{ __('front.products.product_code') }}: <span class="fw-6">{{ $product['product_code'] }}</span></p>
                                         </div>
                                     @endif
 
@@ -343,7 +315,7 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
                                                     {{ __('front.products.color') }}:
                                                     <span class="fw-6 variant-picker-label-value" data-detail-color-label>{{ $defaultColor['name'] ?? '' }}</span>
                                                 </div>
-                                                <div class="tf-product-info-code color-code d-none" aria-hidden="true">
+                                                <div class="tf-product-info-code color-code">
                                                     <span class="label">{{ __('front.products.color_code') }}:</span>
                                                     <span class="value" data-detail-color-code>{{ $defaultColor['color_code'] ?? '' }}</span>
                                                 </div>
@@ -387,7 +359,7 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
                                                 <div class="variant-picker-values" data-detail-sizes>
                                                     @foreach ($sizeOptions as $index => $size)
                                                         <input type="radio" name="detail_size" id="detail-size-{{ $index }}" value="{{ $size['value'] }}" data-size-index="{{ $index }}" data-size-id="{{ $size['size_id'] ?? '' }}" data-size-code="{{ $size['size_code'] ?? '' }}" data-variant-id="{{ $size['variant_id'] ?? '' }}" data-product-color-id="{{ $size['product_color_id'] ?? '' }}" @checked(($size['value'] ?? '') === $defaultSize && empty($size['is_sold_out_normalized'])) @disabled(! empty($size['is_sold_out_normalized']))>
-                                                        <label class="style-text {{ ! empty($size['is_sold_out_normalized']) ? 'disabled' : '' }}" for="detail-size-{{ $index }}" data-value="{{ $size['value'] }}" @if (! empty($size['is_sold_out_normalized'])) aria-disabled="true" data-size-unavailable="true" @endif>
+                                                        <label class="style-text" for="detail-size-{{ $index }}" data-value="{{ $size['value'] }}" @if (! empty($size['is_sold_out_normalized'])) aria-disabled="true" @endif>
                                                             <span class="size-label">{{ $size['value'] }}</span>
                                                         </label>
                                                     @endforeach
@@ -396,6 +368,14 @@ if ($frontProductBaseCode !== '' && $frontDefaultColorCode !== '' && ! str_ends_
                                         @endif
                                     </div>
 
+                                    <div class="tf-product-info-quantity">
+                                        <div class="quantity-title fw-6">{{ __('front.products.quantity') }}</div>
+                                        <div class="wg-quantity">
+                                            <span class="btn-quantity btn-decrease" data-detail-qty="decrease">-</span>
+                                            <input type="text" class="quantity-product" name="number" value="1" data-detail-quantity>
+                                            <span class="btn-quantity btn-increase" data-detail-qty="increase">+</span>
+                                        </div>
+                                    </div>
 
                                     <div class="tf-product-info-buy-button">
                                         <form data-detail-cart-form data-cart-url="{{ $cartAddUrl }}">

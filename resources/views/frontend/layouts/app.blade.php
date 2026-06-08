@@ -36,7 +36,7 @@
 <body class="front-shell preload-wrapper {{ $direction === 'rtl' ? 'rtl' : '' }}">
     <div class="preload preload-container">
         <div class="preload-logo">
-            <img src="{{ asset('images/logo/loader.gif') }}" alt="Loading" class="preload-logo-img">
+            <img src="{{ asset('images/logo/loader.png') }}" alt="Loading" class="preload-logo-img">
         </div>
     </div>
 

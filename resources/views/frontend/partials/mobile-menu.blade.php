@@ -2,9 +2,6 @@
     $navCategories = collect($navCategories ?? []);
     $quickLinks = collect($quickLinks ?? []);
     $locale = app()->getLocale();
-    $languageSwitchLocale = $locale === 'ar' ? 'en' : 'ar';
-    $languageSwitchLabel = $locale === 'ar' ? __('front.ui.english') : __('front.ui.arabic');
-    $languageSwitchUrl = route('front.locale', $languageSwitchLocale);
 
     $categoryLabel = static function ($category) use ($locale): string {
         return $locale === 'ar'
@@ -65,7 +62,7 @@
 
                 <li class="nav-mb-item"><a href="{{ route('front.home') }}#featured-products" class="mb-menu-link">{{ __('front.nav.offers') }}</a></li>
                 <li class="nav-mb-item"><a href="{{ route('front.home') }}#store-locations" class="mb-menu-link">{{ __('front.nav.branches') }}</a></li>
-                <li class="nav-mb-item"><a href="{{ $languageSwitchUrl }}" class="mb-menu-link mobile-language-switch-link"><span class="language-switch-icon" aria-hidden="true">🌐</span><span class="language-switch-label">{{ $languageSwitchLabel }}</span></a></li>
+                <li class="nav-mb-item"><a href="{{ route('front.locale', $locale === 'ar' ? 'en' : 'ar') }}" class="mb-menu-link">{{ __('front.footer.language_link') }}</a></li>
             </ul>
             <div class="mb-bottom">
                 <div class="mb-other-content">

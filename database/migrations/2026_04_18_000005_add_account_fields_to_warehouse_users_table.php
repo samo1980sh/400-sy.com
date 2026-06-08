@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('warehouse_users', function (Blueprint $table): void {
             $table->string('username')->unique()->nullable()->after('account_no');
-            $table->string('country')->default('سورية')->after('username');
+            $table->string('country')->default('سوريا')->after('username');
             $table->string('account_type')->default('point_of_sale')->after('country');
         });
     }

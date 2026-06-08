@@ -37,7 +37,7 @@
                         </div>
                         <div class="tf-product-info-code">
                             <span class="label">{{ __('front.products.product_code') }}:</span>
-                            <span class="value" data-qv-product-code data-base-product-code="">---</span>
+                            <span class="value" data-qv-product-code>---</span>
                         </div>
                         <div class="tf-product-info-liveview d-none" data-qv-body-fit-wrap>
                             <p>{{ app()->getLocale() === 'ar' ? 'قصة الجسم' : 'Body Fit' }}: <span class="fw-6" data-qv-body-fit>—</span></p>
@@ -50,7 +50,7 @@
                                 <div class="variant-picker-label">
                                     {{ __('front.products.color') }}: <span class="fw-6 variant-picker-label-value" data-qv-color-label>{{ __('front.products.placeholder_color') }}</span>
                                 </div>
-                                <div class="tf-product-info-code color-code d-none" aria-hidden="true">
+                                <div class="tf-product-info-code color-code">
                                     <span class="label">{{ __('front.products.color_code') }}:</span>
                                     <span class="value" data-qv-color-code>---</span>
                                 </div>
