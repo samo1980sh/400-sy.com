@@ -50,9 +50,9 @@ class WarehouseUserForm
                     Select::make('country')
                         ->label('البلد')
                         ->options([
-                            'سوريا' => 'سوريا',
+                            'سورية' => 'سورية',
                         ])
-                        ->default('سوريا')
+                        ->default('سورية')
                         ->required(),
                     Select::make('account_type')
                         ->label('الصنف')
