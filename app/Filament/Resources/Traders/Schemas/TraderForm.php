@@ -20,7 +20,8 @@ class TraderForm
     {
         return [
             Grid::make()
-                ->columns(2)
+                ->columnSpanFull()
+                ->columns(['default' => 1, 'md' => 2])
                 ->schema([
                     TextInput::make('account_no')
                         ->label('رقم الحساب')
