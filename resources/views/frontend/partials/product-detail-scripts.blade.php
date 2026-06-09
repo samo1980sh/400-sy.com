@@ -481,6 +481,47 @@
             }).join(''));
         }
 
+        function whatsappDataValue($element, key) {
+            var value = $element.attr('data-' + key) || '';
+
+            return String(value || '').trim();
+        }
+
+        function buildWhatsappInquiryText($link, color) {
+            var intro = whatsappDataValue($link, 'whatsapp-intro') || 'مرحبًا، أود الاستفسار عن المنتج:';
+            var productLabel = whatsappDataValue($link, 'whatsapp-product-label') || 'رمز المنتج';
+            var colorLabel = whatsappDataValue($link, 'whatsapp-color-label') || 'رمز اللون';
+            var productCode = whatsappDataValue($link, 'whatsapp-product-code');
+            var colorCode = String((color && color.color_code) || '').trim();
+            var lines = [intro];
+
+            if (productCode) {
+                lines.push(productLabel + ': ' + productCode);
+            }
+
+            if (colorCode) {
+                lines.push(colorLabel + ': ' + colorCode);
+            }
+
+            return lines.join('\n');
+        }
+
+        function syncWhatsappInquiryLink(color) {
+            var $link = $root.find('[data-detail-whatsapp-inquiry]').first();
+
+            if (! $link.length) {
+                return;
+            }
+
+            var phone = whatsappDataValue($link, 'whatsapp-phone').replace(/[^0-9]/g, '');
+
+            if (! phone) {
+                return;
+            }
+
+            $link.attr('href', 'https://wa.me/' + phone + '?text=' + encodeURIComponent(buildWhatsappInquiryText($link, color || currentColor())));
+        }
+
         function syncPriceAndLabels() {
             var color = currentColor();
             var size = selectedSize();
@@ -511,6 +552,7 @@
             $root.find('[data-detail-color-label]').text(color.name || '');
             $root.find('[data-detail-color-code]').text(color.color_code || '');
             $root.find('[data-detail-size-label]').text(sizeLabel || '');
+            syncWhatsappInquiryLink(color);
 
             if (window.updateCurrencyConvertedPrices) {
                 window.updateCurrencyConvertedPrices();

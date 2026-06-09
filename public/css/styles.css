@@ -20942,3 +20942,34 @@ blockquote .text {
   color: #216fdb;
 }
 
+/* Product detail WhatsApp inquiry button */
+.product-whatsapp-inquiry-btn {
+    gap: 10px;
+    border-color: #25D366 !important;
+    background-color: #25D366 !important;
+    color: #fff !important;
+    box-shadow: 0 8px 18px rgba(37, 211, 102, .22);
+}
+
+.product-whatsapp-inquiry-btn:hover {
+    border-color: #1ebe5d !important;
+    background-color: #1ebe5d !important;
+    color: #fff !important;
+    box-shadow: 0 10px 22px rgba(37, 211, 102, .32);
+}
+
+.product-whatsapp-inquiry-btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+}
+
+.product-whatsapp-inquiry-btn__icon svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+}
