@@ -20902,3 +20902,43 @@ blockquote .text {
 [data-detail-sizes] > span.style-text[aria-disabled="true"] .size-label {
     text-decoration: line-through;
 }
+
+/* Product detail badges near description */
+.product-detail-description-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.product-detail-description-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: auto;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  background: rgba(17, 17, 17, 0.08);
+  color: var(--text);
+}
+.product-detail-description-badge.badge-offer,
+.product-detail-description-badge[data-badge-class="badge-offer"] {
+  background: rgba(208, 70, 55, 0.1);
+  color: #d04637;
+}
+.product-detail-description-badge.badge-best-seller,
+.product-detail-description-badge[data-badge-class="badge-best-seller"] {
+  background: rgba(34, 139, 82, 0.1);
+  color: #228b52;
+}
+.product-detail-description-badge.badge-new,
+.product-detail-description-badge[data-badge-class="badge-new"] {
+  background: rgba(33, 111, 219, 0.1);
+  color: #216fdb;
+}
+

@@ -279,11 +279,6 @@
                                         <h5>{{ $product['title'] ?? '' }}</h5>
                                     </div>
 
-                                    @if (! empty($product['badge']))
-                                        <div class="tf-product-info-badges">
-                                            <div class="badges {{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</div>
-                                        </div>
-                                    @endif
 
                                     <div class="tf-product-info-price">
                                         <div class="price-on-sale js-currency-price" data-detail-current-price data-base-price="{{ $product['price_current'] ?? $product['base_price'] ?? 0 }}" data-base-currency="{{ $product['base_currency'] ?? 'SYP' }}">
@@ -370,14 +365,6 @@
                                         @endif
                                     </div>
 
-                                    <div class="tf-product-info-quantity">
-                                        <div class="quantity-title fw-6">{{ __('front.products.quantity') }}</div>
-                                        <div class="wg-quantity">
-                                            <span class="btn-quantity btn-decrease" data-detail-qty="decrease">-</span>
-                                            <input type="text" class="quantity-product" name="number" value="1" data-detail-quantity>
-                                            <span class="btn-quantity btn-increase" data-detail-qty="increase">+</span>
-                                        </div>
-                                    </div>
 
                                     <div class="tf-product-info-buy-button">
                                         <form data-detail-cart-form data-cart-url="{{ $cartAddUrl }}">
@@ -401,28 +388,35 @@
             </div>
         </section>
 
-        @if ($descriptionHtml !== '' || $specifications->isNotEmpty())
+        @if ($descriptionHtml !== '' || $specifications->isNotEmpty() || ! empty($product['badge']))
             <section class="flat-spacing-17 pt_0">
                 <div class="container">
                     <div class="row">
                         <div class="col-12">
                             <div class="widget-tabs style-has-border">
                                 <ul class="widget-menu-tab">
-                                    @if ($descriptionHtml !== '')
+                                    @if ($descriptionHtml !== '' || ! empty($product['badge']))
                                         <li class="item-title active"><span class="inner">{{ $isArabic ? 'وصف المنتج' : 'Description' }}</span></li>
                                     @endif
                                     @if ($specifications->isNotEmpty())
-                                        <li class="item-title {{ $descriptionHtml === '' ? 'active' : '' }}"><span class="inner">{{ $isArabic ? 'المواصفات' : 'Additional Information' }}</span></li>
+                                        <li class="item-title {{ ($descriptionHtml === '' && empty($product['badge'])) ? 'active' : '' }}"><span class="inner">{{ $isArabic ? 'المواصفات' : 'Additional Information' }}</span></li>
                                     @endif
                                 </ul>
                                 <div class="widget-content-tab">
-                                    @if ($descriptionHtml !== '')
+                                    @if ($descriptionHtml !== '' || ! empty($product['badge']))
                                         <div class="widget-content-inner active">
-                                            <div class="tab-description"><p>{!! $descriptionHtml !!}</p></div>
+                                            @if (! empty($product['badge']))
+                                                <div class="product-detail-description-badges">
+                                                    <span class="product-detail-description-badge {{ $product['badge_class'] ?? '' }}" data-badge-class="{{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</span>
+                                                </div>
+                                            @endif
+                                            @if ($descriptionHtml !== '')
+                                                <div class="tab-description"><p>{!! $descriptionHtml !!}</p></div>
+                                            @endif
                                         </div>
                                     @endif
                                     @if ($specifications->isNotEmpty())
-                                        <div class="widget-content-inner {{ $descriptionHtml === '' ? 'active' : '' }}">
+                                        <div class="widget-content-inner {{ ($descriptionHtml === '' && empty($product['badge'])) ? 'active' : '' }}">
                                             <div class="tf-page-privacy-policy">
                                                 @foreach ($specifications as $spec)
                                                     <div class="d-flex justify-content-between flex-wrap gap-3 py-3 border-bottom">
