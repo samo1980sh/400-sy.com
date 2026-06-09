@@ -1082,6 +1082,8 @@ class RetailExcelImportService
                     ],
                 );
 
+                $this->ensureImportedProductSlug($product, $code);
+
                 $this->syncProductColors($product, $rows, $colorCodeMap, $summary);
                 $this->syncRetailCustomerGroups($product, $visibility['show_retail'] ? $customerGroups : []);
                 $this->syncWholesaleCustomerGroups($product, $visibility['show_wholesale'] ? $customerGroups : []);
@@ -1253,6 +1255,8 @@ class RetailExcelImportService
                         'is_special_offer' => $flags['is_special_offer'],
                     ]
                 );
+
+                $this->ensureImportedProductSlug($product, $code);
 
                 $productIdsByCode[$code] = $product->id;
                 $productsByCode[$code] = $product;
@@ -1815,6 +1819,40 @@ class RetailExcelImportService
                 ->whereNotIn('color_code', array_keys($colors))
                 ->delete();
         }
+    }
+
+    private function ensureImportedProductSlug(Product $product, string $code): void
+    {
+        $slug = $this->generateUniqueImportedProductSlug($code, $product->getKey());
+
+        if ($product->slug === $slug) {
+            return;
+        }
+
+        $product->forceFill([
+            'slug' => $slug,
+        ])->saveQuietly();
+    }
+
+    private function generateUniqueImportedProductSlug(string $source, ?int $ignoreId = null): string
+    {
+        $baseSlug = Str::slug(trim($source));
+        $baseSlug = $baseSlug !== '' ? $baseSlug : 'product';
+
+        $slug = $baseSlug;
+        $counter = 2;
+
+        while (
+            Product::query()
+                ->when($ignoreId !== null, fn ($query) => $query->whereKeyNot($ignoreId))
+                ->where('slug', $slug)
+                ->exists()
+        ) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 
     public function joinDescription(array $parts): ?string
