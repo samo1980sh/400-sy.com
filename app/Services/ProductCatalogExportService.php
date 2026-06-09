@@ -32,7 +32,7 @@ class ProductCatalogExportService
         $products = Product::query()
             ->with([
                 'category.parent.parent.parent.parent',
-                'productColors',
+                'productColors.filterColor',
                 'retailGroupAssignments.retailCustomerGroup',
                 'wholesaleGroupAssignments.wholesaleCustomerGroup',
                 'wholesaleQuantities.wholesaleColor',
@@ -150,7 +150,7 @@ class ProductCatalogExportService
             $product->title_en,
             $this->decimalValue($product->price),
             $this->decimalValue($product->compare_price),
-            $product->structure,
+            $this->structureValueForExport($product, $color),
             $product->collection,
             $product->body_fit,
             $product->drop_type,
@@ -169,6 +169,23 @@ class ProductCatalogExportService
             $color ? ($color->status === 'active' ? 'تفعيل' : 'إيقاف') : '',
             $color ? $this->wholesaleSeriesSourceForColor($product, (string) $color->color_code) : '',
         ];
+    }
+
+    protected function structureValueForExport(Product $product, ?ProductColor $color): string
+    {
+        $filterColor = $color?->filterColor;
+
+        if ($filterColor !== null) {
+            foreach (['name_ar', 'name_en', 'code'] as $attribute) {
+                $value = trim((string) ($filterColor->{$attribute} ?? ''));
+
+                if ($value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        return trim((string) ($product->structure ?? ''));
     }
 
     /**
