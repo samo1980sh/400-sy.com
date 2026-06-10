@@ -19,6 +19,56 @@
     <link rel="stylesheet" href="{{ asset('css/animate.css') }}">
     <link rel="stylesheet" href="{{ asset('css/bootstrap-select.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
+    <style>
+        .home-featured-categories .collection-item-circle,
+        .home-featured-categories .collection-item-circle .collection-image,
+        .home-featured-categories .collection-item-circle .collection-image.img-style,
+        .home-featured-categories .collection-item-circle .collection-image::before,
+        .home-featured-categories .collection-item-circle .collection-image::after {
+            border-radius: 0 !important;
+            clip-path: none !important;
+            transform: none !important;
+        }
+
+        .home-featured-categories .collection-item-circle .collection-image {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+
+        .home-featured-categories .collection-item-circle .collection-image img {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            height: auto !important;
+            object-fit: contain;
+            border-radius: 0 !important;
+            clip-path: none !important;
+            transform: none !important;
+        }
+
+        .home-featured-categories .collection-item-circle.hover-img:hover .collection-image img,
+        .home-featured-categories .collection-item-circle .collection-image:hover img {
+            transform: none !important;
+        }
+
+        @media (min-width: 1200px) {
+            .home-featured-categories .container,
+            .home-featured-categories .container-full,
+            .home-featured-categories .tf-container {
+                max-width: 1720px !important;
+            }
+
+            .home-featured-categories .collection-item-circle {
+                width: 100%;
+            }
+
+            .home-featured-categories .collection-item-circle .collection-image img {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body class="preload-wrapper {{ $locale === 'ar' ? 'rtl' : '' }}">
     <div class="preload preload-container">
@@ -45,9 +95,11 @@
                 'slides' => $hero_slides,
             ])
 
-            @include('frontend.partials.collections', [
-                'collections' => $collections,
-            ])
+            <div class="home-featured-categories">
+                @include('frontend.partials.collections', [
+                    'collections' => $collections,
+                ])
+            </div>
 
             @include('frontend.partials.product-section', [
                 'sectionId' => 'trending-now',
