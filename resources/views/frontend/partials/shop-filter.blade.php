@@ -23,6 +23,7 @@
     $priceCurrency = (string) ($priceStats['currency'] ?? 'SYP');
     $priceSymbol = (string) ($priceStats['symbol'] ?? $priceCurrency);
     $priceRate = (float) ($priceStats['rate'] ?? 1);
+    $priceFilterApplied = filled(request()->query('price')) || filled(request()->query('min_price')) || filled(request()->query('max_price'));
 
     $filterAction = request()->url();
     $queryWithoutPage = request()->except(['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'collection', 'collections', 'special_offer', 'special_offers', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
@@ -170,12 +171,13 @@
                             data-currency="{{ $priceCurrency }}"
                             data-symbol="{{ $priceSymbol }}"
                             data-rate="{{ $priceRate }}"
+                            data-price-filter-active="{{ $priceFilterApplied ? '1' : '0' }}"
                         >
                             <div class="tow-bar-block">
                                 <div class="progress-price" style="left: {{ (($selectedMinDisplay - $displayMinLimit) / max(1, $displayMaxLimit - $displayMinLimit)) * 100 }}%; right: {{ 100 - ((($selectedMaxDisplay - $displayMinLimit) / max(1, $displayMaxLimit - $displayMinLimit)) * 100) }}%;"></div>
                             </div>
-                            <input type="hidden" name="min_price" value="{{ $selectedMinBase }}" data-price-base-min-input>
-                            <input type="hidden" name="max_price" value="{{ $selectedMaxBase }}" data-price-base-max-input>
+                            <input type="hidden" name="min_price" value="{{ $selectedMinBase }}" data-price-base-min-input @disabled(! $priceFilterApplied)>
+                            <input type="hidden" name="max_price" value="{{ $selectedMaxBase }}" data-price-base-max-input @disabled(! $priceFilterApplied)>
                             <div class="range-input">
                                 <input class="range-min" type="range" min="{{ $displayMinLimit }}" max="{{ $displayMaxLimit }}" value="{{ $selectedMinDisplay }}" data-price-display-min />
                                 <input class="range-max" type="range" min="{{ $displayMinLimit }}" max="{{ $displayMaxLimit }}" value="{{ $selectedMaxDisplay }}" data-price-display-max />
@@ -351,3 +353,169 @@
         </div>
     </div>
 </div>
+
+@once
+    @push('scripts')
+        <script>
+            (function () {
+                var priceFilterForms = document.querySelectorAll('[data-filter-form]');
+
+                if (!priceFilterForms.length) {
+                    return;
+                }
+
+                function asNumber(value, fallback) {
+                    var number = parseFloat(value);
+
+                    return Number.isFinite(number) ? number : fallback;
+                }
+
+                function formatNumber(value) {
+                    if (!Number.isFinite(value)) {
+                        return '0';
+                    }
+
+                    var fixed = value.toFixed(4);
+
+                    return fixed.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+                }
+
+                function getWidgetParts(widget) {
+                    return {
+                        minRange: widget.querySelector('[data-price-display-min]'),
+                        maxRange: widget.querySelector('[data-price-display-max]'),
+                        minInput: widget.querySelector('[data-price-base-min-input]'),
+                        maxInput: widget.querySelector('[data-price-base-max-input]'),
+                        minLabel: widget.querySelector('[data-price-min-label]'),
+                        maxLabel: widget.querySelector('[data-price-max-label]'),
+                        progress: widget.querySelector('.progress-price')
+                    };
+                }
+
+                function setPriceInputsEnabled(widget, enabled) {
+                    var parts = getWidgetParts(widget);
+
+                    [parts.minInput, parts.maxInput].forEach(function (input) {
+                        if (!input) {
+                            return;
+                        }
+
+                        if (enabled) {
+                            input.removeAttribute('disabled');
+                        } else {
+                            input.setAttribute('disabled', 'disabled');
+                        }
+                    });
+
+                    widget.dataset.priceFilterActive = enabled ? '1' : '0';
+                }
+
+                function syncPriceWidget(widget, activate, changedInput) {
+                    var parts = getWidgetParts(widget);
+
+                    if (!parts.minRange || !parts.maxRange || !parts.minInput || !parts.maxInput) {
+                        return;
+                    }
+
+                    if (activate) {
+                        setPriceInputsEnabled(widget, true);
+                    }
+
+                    var minLimit = asNumber(parts.minRange.min, 0);
+                    var maxLimit = asNumber(parts.minRange.max, asNumber(parts.maxRange.max, minLimit + 1));
+                    var minValue = asNumber(parts.minRange.value, minLimit);
+                    var maxValue = asNumber(parts.maxRange.value, maxLimit);
+
+                    if (minValue > maxValue) {
+                        if (changedInput === parts.minRange) {
+                            maxValue = minValue;
+                            parts.maxRange.value = String(maxValue);
+                        } else {
+                            minValue = maxValue;
+                            parts.minRange.value = String(minValue);
+                        }
+                    }
+
+                    var rate = asNumber(widget.dataset.rate, 1);
+                    if (rate <= 0) {
+                        rate = 1;
+                    }
+
+                    parts.minInput.value = formatNumber(minValue * rate);
+                    parts.maxInput.value = formatNumber(maxValue * rate);
+
+                    if (parts.minLabel) {
+                        parts.minLabel.textContent = formatNumber(minValue);
+                    }
+
+                    if (parts.maxLabel) {
+                        parts.maxLabel.textContent = formatNumber(maxValue);
+                    }
+
+                    if (parts.progress) {
+                        var denominator = Math.max(1, maxLimit - minLimit);
+                        var left = ((minValue - minLimit) / denominator) * 100;
+                        var right = 100 - (((maxValue - minLimit) / denominator) * 100);
+
+                        parts.progress.style.left = Math.max(0, Math.min(100, left)) + '%';
+                        parts.progress.style.right = Math.max(0, Math.min(100, right)) + '%';
+                    }
+                }
+
+                document.addEventListener('input', function (event) {
+                    var range = event.target.closest('[data-price-display-min], [data-price-display-max]');
+
+                    if (!range) {
+                        return;
+                    }
+
+                    var widget = range.closest('[data-price-filter-active]');
+                    if (widget) {
+                        syncPriceWidget(widget, true, range);
+                    }
+                }, true);
+
+                document.addEventListener('change', function (event) {
+                    var range = event.target.closest('[data-price-display-min], [data-price-display-max]');
+
+                    if (!range) {
+                        return;
+                    }
+
+                    var widget = range.closest('[data-price-filter-active]');
+                    if (widget) {
+                        syncPriceWidget(widget, true, range);
+                    }
+                }, true);
+
+                document.addEventListener('submit', function (event) {
+                    var form = event.target.closest('[data-filter-form]');
+
+                    if (!form) {
+                        return;
+                    }
+
+                    form.querySelectorAll('[data-price-filter-active]').forEach(function (widget) {
+                        if (widget.dataset.priceFilterActive === '1') {
+                            syncPriceWidget(widget, false, null);
+                        } else {
+                            setPriceInputsEnabled(widget, false);
+                        }
+                    });
+                }, true);
+
+                priceFilterForms.forEach(function (form) {
+                    form.querySelectorAll('[data-price-filter-active]').forEach(function (widget) {
+                        if (widget.dataset.priceFilterActive === '1') {
+                            setPriceInputsEnabled(widget, true);
+                            syncPriceWidget(widget, false, null);
+                        } else {
+                            setPriceInputsEnabled(widget, false);
+                        }
+                    });
+                });
+            })();
+        </script>
+    @endpush
+@endonce
+

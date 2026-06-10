@@ -1238,7 +1238,11 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
     protected function buildPriceStats(array $filters, ?float $selectedMin, ?float $selectedMax): array
     {
         $query = $this->newProductsListingQuery();
-        $this->applyProductsFilters($query, $filters);
+        $priceIndependentFilters = array_merge($filters, [
+            'min_price' => null,
+            'max_price' => null,
+        ]);
+        $this->applyProductsFilters($query, $priceIndependentFilters);
 
         $minBase = (float) ((clone $query)->min('price') ?? 0);
         $maxBase = (float) ((clone $query)->max('price') ?? 0);
