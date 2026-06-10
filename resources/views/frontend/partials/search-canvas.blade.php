@@ -12,11 +12,11 @@
                 </div>
             </div>
             <div class="tf-search-sticky">
-                <form class="tf-mini-search-frm">
+                <form class="tf-mini-search-frm" method="GET" action="{{ route('front.products.index') }}">
                     <fieldset class="text">
-                        <input type="text" placeholder="{{ __('front.search.input') }}" class="" name="text" tabindex="0" value="" aria-required="true" required="">
+                        <input type="text" placeholder="{{ __('front.search.input') }}" class="" name="q" tabindex="0" value="{{ request('q', request('text', request('search', ''))) }}" aria-required="true" required autocomplete="off" dir="auto">
                     </fieldset>
-                    <button class="" type="submit"><i class="icon-search"></i></button>
+                    <button class="" type="submit" aria-label="{{ __('front.search.title') }}"><i class="icon-search"></i></button>
                 </form>
             </div>
         </header>

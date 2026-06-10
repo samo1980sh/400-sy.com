@@ -66,6 +66,7 @@ class FrontPageController extends Controller
         $shell = $this->homePageData->build();
         $locale = app()->getLocale();
         $selectedGrid = $this->normalizeProductsGrid((string) $request->query('grid', 'grid-4'));
+        $searchTerm = $this->normalizeSearchTerm($request->query('q', $request->query('text', $request->query('search', ''))));
         $baseCategory = $category;
         $filterScopeCategory = $this->determineCategoryFilterScope($baseCategory);
         $selectedCategorySlugs = $this->resolveSelectedCategorySlugs($request);
@@ -86,7 +87,7 @@ class FrontPageController extends Controller
         $selectedSpecialOffers = $this->requestList($request, 'special_offers', 'special_offer');
         $specialOfferOnly = in_array('offer', array_map('strtolower', $selectedSpecialOffers), true);
         [$minPrice, $maxPrice] = $this->requestPriceRange($request);
-        $queryWithoutFilters = Arr::except($request->query(), ['page', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'collection', 'collections', 'special_offer', 'special_offers', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
+        $queryWithoutFilters = Arr::except($request->query(), ['page', 'q', 'text', 'search', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'collection', 'collections', 'special_offer', 'special_offers', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
         $resetUrl = $request->url();
         $primaryCategory = $baseCategory instanceof Category
             ? $baseCategory
@@ -114,6 +115,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'drop_type' => $selectedDropType,
                             'collections' => $selectedCollections,
                     'special_offer' => $specialOfferOnly,
+            'search' => $searchTerm,
 ];
 
         $query = $this->newProductsListingQuery();
@@ -168,6 +170,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'drop_type' => $selectedDropType,
                             'collections' => $selectedCollections,
                     'special_offer' => $specialOfferOnly,
+            'search' => $searchTerm,
 ]);
         $filterColorOptions = $this->buildColorOptions([
             'category_ids' => $filters['category_ids'],
@@ -179,6 +182,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'drop_type' => $selectedDropType,
                             'collections' => $selectedCollections,
                     'special_offer' => $specialOfferOnly,
+            'search' => $searchTerm,
 ], $locale, $selectedColors);
         $filterSizeOptions = $this->buildSizeOptions([
             'category_ids' => $filters['category_ids'],
@@ -190,6 +194,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'drop_type' => $selectedDropType,
                             'collections' => $selectedCollections,
                     'special_offer' => $specialOfferOnly,
+            'search' => $searchTerm,
 ], $locale, $selectedSizes);
         $filterBodyFitOptions = $this->buildBodyFitOptions([
             'category_ids' => $filters['category_ids'],
@@ -201,6 +206,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'drop_type' => $selectedDropType,
                             'collections' => $selectedCollections,
                     'special_offer' => $specialOfferOnly,
+            'search' => $searchTerm,
 ], $selectedBodyFit);
         $filterDropOptions = $this->buildDropOptions([
             'category_ids' => $filters['category_ids'],
@@ -210,6 +216,9 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'sizes' => $selectedSizes,
             'body_fit' => $selectedBodyFit,
             'drop_type' => [],
+            'collections' => $selectedCollections,
+            'special_offer' => $specialOfferOnly,
+            'search' => $searchTerm,
         ], $selectedDropType);
         $filterCollectionOptions = $this->buildCollectionOptions([
             'category_ids' => $filters['category_ids'],
@@ -221,6 +230,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'drop_type' => $selectedDropType,
             'collections' => [],
             'special_offer' => $specialOfferOnly,
+            'search' => $searchTerm,
         ], $selectedCollections);
         $filterSpecialOfferOption = $this->buildSpecialOfferOption([
             'category_ids' => $filters['category_ids'],
@@ -232,6 +242,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'drop_type' => $selectedDropType,
             'collections' => $selectedCollections,
             'special_offer' => false,
+            'search' => $searchTerm,
         ], $specialOfferOnly, $locale);
         $filterPriceStats = $this->buildPriceStats([
             'category_ids' => $filters['category_ids'],
@@ -243,6 +254,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'drop_type' => $selectedDropType,
                             'collections' => $selectedCollections,
                     'special_offer' => $specialOfferOnly,
+            'search' => $searchTerm,
 ], $minPrice, $maxPrice);
         $activeFilterChips = $this->buildActiveFilterChips(
             $selectedCategoryModels,
@@ -280,6 +292,15 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             }
         }
 
+        if ($searchTerm !== '') {
+            $pageTitle = $locale === 'ar' ? 'نتائج البحث' : 'Search Results';
+            $pageSubtitle = ($locale === 'ar' ? 'نتائج البحث عن: ' : 'Search results for: ') . $searchTerm;
+        } else {
+            $pageSubtitle = $primaryCategory instanceof Category
+                ? ($locale === 'ar' ? 'تصفح منتجات هذا التصنيف' : 'Browse products in this category')
+                : ($locale === 'ar' ? 'تصفح مجموعة المنتجات مع الفلتر والفرز' : 'Browse the product catalog with filters and sorting');
+        }
+
         $sortOptions = [
             'featured' => $locale === 'ar' ? 'مميز' : 'Featured',
             'best_selling' => $locale === 'ar' ? 'الأكثر مبيعًا' : 'Best selling',
@@ -292,9 +313,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         $viewData = array_merge($shell, [
             'page_title' => $pageTitle,
             'page_title_background' => $pageTitleBackground,
-            'page_subtitle' => $primaryCategory instanceof Category
-                ? ($locale === 'ar' ? 'تصفح منتجات هذا التصنيف' : 'Browse products in this category')
-                : ($locale === 'ar' ? 'تصفح مجموعة المنتجات مع الفلتر والفرز' : 'Browse the product catalog with filters and sorting'),
+            'page_subtitle' => $pageSubtitle,
             'breadcrumb_items' => $breadcrumbItems,
             'products' => $paginator,
             'selected_sort' => $sort,
@@ -309,6 +328,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'selected_drop_type' => $selectedDropType,
             'selected_collections' => $selectedCollections,
             'selected_special_offers' => $specialOfferOnly ? ['offer'] : [],
+            'selected_search_term' => $searchTerm,
             'filter_categories' => $filterCategories,
             'filter_color_options' => $filterColorOptions,
             'filter_size_options' => $filterSizeOptions,
@@ -769,9 +789,14 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         $dropTypes = $this->normalizeStringArray($filters['drop_type'] ?? []);
         $collections = $this->normalizeStringArray($filters['collections'] ?? []);
         $specialOffer = (bool) ($filters['special_offer'] ?? false);
+        $searchTerm = $this->normalizeSearchTerm($filters['search'] ?? '');
 
         if ($minPrice !== null && $maxPrice !== null && $minPrice > $maxPrice) {
             [$minPrice, $maxPrice] = [$maxPrice, $minPrice];
+        }
+
+        if ($searchTerm !== '') {
+            $this->applyProductsSearch($query, $searchTerm);
         }
 
         if ($categoryIds !== []) {
@@ -825,6 +850,140 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         }
 
         return $query;
+    }
+
+
+    protected function normalizeSearchTerm(mixed $value): string
+    {
+        $term = trim(strip_tags((string) $value));
+
+        if ($term === '') {
+            return '';
+        }
+
+        $term = preg_replace('/\s+/u', ' ', $term) ?: $term;
+
+        return mb_substr($term, 0, 120);
+    }
+
+    protected function applyProductsSearch(Builder $query, string $term): void
+    {
+        $terms = $this->searchTerms($term);
+
+        if ($terms === []) {
+            return;
+        }
+
+        $query->where(function (Builder $searchQuery) use ($terms): void {
+            foreach ($terms as $searchTerm) {
+                $like = $this->searchLikeTerm($searchTerm);
+
+                $searchQuery->where(function (Builder $termQuery) use ($like): void {
+                    $this->addProductSearchConditions($termQuery, $like);
+
+                    $termQuery->orWhereHas('complements.relatedProduct', function (Builder $relatedQuery) use ($like): void {
+                        $relatedQuery
+                            ->where('show_web', true)
+                            ->where('is_active', true)
+                            ->where(function (Builder $relatedSearchQuery) use ($like): void {
+                                $this->addProductSearchConditions($relatedSearchQuery, $like);
+                            });
+                    });
+                });
+            }
+        });
+    }
+
+    protected function addProductSearchConditions(Builder $query, string $like): void
+    {
+        $query
+            ->where('model_no', 'like', $like)
+            ->orWhere('slug', 'like', $like)
+            ->orWhere('title_ar', 'like', $like)
+            ->orWhere('title_en', 'like', $like)
+            ->orWhere('description_ar', 'like', $like)
+            ->orWhere('description_en', 'like', $like)
+            ->orWhere('structure', 'like', $like)
+            ->orWhere('body_fit', 'like', $like)
+            ->orWhere('drop_type', 'like', $like)
+            ->orWhere('collection', 'like', $like)
+            ->orWhereHas('category', function (Builder $categoryQuery) use ($like): void {
+                $categoryQuery
+                    ->where('title_ar', 'like', $like)
+                    ->orWhere('title_en', 'like', $like)
+                    ->orWhere('slug', 'like', $like);
+            })
+            ->orWhereHas('structureColor', function (Builder $structureColorQuery) use ($like): void {
+                $structureColorQuery
+                    ->where('code', 'like', $like)
+                    ->orWhere('name_ar', 'like', $like)
+                    ->orWhere('name_en', 'like', $like);
+            })
+            ->orWhereHas('productColors', function (Builder $colorQuery) use ($like): void {
+                $colorQuery
+                    ->where('status', 'active')
+                    ->where(function (Builder $colorSearchQuery) use ($like): void {
+                        $colorSearchQuery
+                            ->where('color_code', 'like', $like)
+                            ->orWhere('color_name_ar', 'like', $like)
+                            ->orWhere('color_name_en', 'like', $like)
+                            ->orWhere('color_hex', 'like', $like)
+                            ->orWhereHas('filterColor', function (Builder $filterColorQuery) use ($like): void {
+                                $filterColorQuery
+                                    ->where('code', 'like', $like)
+                                    ->orWhere('name_ar', 'like', $like)
+                                    ->orWhere('name_en', 'like', $like);
+                            });
+                    });
+            })
+            ->orWhereHas('variants', function (Builder $variantQuery) use ($like): void {
+                $variantQuery
+                    ->whereHas('productColor', fn (Builder $colorQuery) => $colorQuery->where('status', 'active'))
+                    ->where(function (Builder $variantSearchQuery) use ($like): void {
+                        $variantSearchQuery
+                            ->where('sku', 'like', $like)
+                            ->orWhere('barcode', 'like', $like)
+                            ->orWhereHas('size', function (Builder $sizeQuery) use ($like): void {
+                                $sizeQuery
+                                    ->where('code', 'like', $like)
+                                    ->orWhere('name_ar', 'like', $like)
+                                    ->orWhere('name_en', 'like', $like);
+                            });
+                    });
+            })
+            ->orWhereHas('details', function (Builder $detailQuery) use ($like): void {
+                $detailQuery
+                    ->where('is_active', true)
+                    ->where(function (Builder $detailSearchQuery) use ($like): void {
+                        $detailSearchQuery
+                            ->where('label_ar', 'like', $like)
+                            ->orWhere('label_en', 'like', $like)
+                            ->orWhere('value_ar', 'like', $like)
+                            ->orWhere('value_en', 'like', $like);
+                    });
+            });
+    }
+
+    protected function searchTerms(string $term): array
+    {
+        $normalized = $this->normalizeSearchTerm($term);
+
+        if ($normalized === '') {
+            return [];
+        }
+
+        return collect(preg_split('/\s+/u', $normalized) ?: [])
+            ->map(fn ($item): string => trim((string) $item))
+            ->filter(fn (string $item): bool => $item !== '')
+            ->unique()
+            ->take(8)
+            ->values()
+            ->all();
+    }
+
+    protected function searchLikeTerm(string $term): string
+    {
+        return '%' . addcslashes($term, '\\%_') . '%';
     }
 
     protected function buildFilterCategories(Collection $categories, array $filters): Collection
