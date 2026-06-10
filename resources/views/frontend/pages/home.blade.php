@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 @php
     $pageTitle = __('front.brand');
     $locale = app()->getLocale();
@@ -23,7 +23,7 @@
 <body class="preload-wrapper {{ $locale === 'ar' ? 'rtl' : '' }}">
     <div class="preload preload-container">
         <div class="preload-logo">
-            <img src="{{ asset('images/logo/loader.png') }}" alt="{{ __('front.ui.loading') }}" class="preload-logo-img">
+            <img src="{{ asset('images/logo/loader.gif') }}" alt="{{ __('front.ui.loading') }}" class="preload-logo-img">
         </div>
     </div>
 
