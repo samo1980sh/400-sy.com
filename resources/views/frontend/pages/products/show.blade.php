@@ -221,6 +221,32 @@
 
 @push('styles')
     <style>
+        .product-detail-breadcrumb-wrap {
+            gap: 18px;
+        }
+
+        .product-detail-breadcrumb-wrap .tf-breadcrumb-prev-next {
+            flex: 0 0 auto;
+        }
+
+        .product-detail-breadcrumb-wrap.is-rtl .tf-breadcrumb-prev-next {
+            padding-left: 25px;
+        }
+
+        .product-detail-breadcrumb-wrap.is-ltr .tf-breadcrumb-prev-next {
+            padding-right: 25px;
+        }
+
+        @media (max-width: 767.98px) {
+            .product-detail-breadcrumb-wrap.is-rtl .tf-breadcrumb-prev-next {
+                padding-left: 12px;
+            }
+
+            .product-detail-breadcrumb-wrap.is-ltr .tf-breadcrumb-prev-next {
+                padding-right: 12px;
+            }
+        }
+
         .tf-breadcrumb-prev-next .product-category-return-link {
             display: inline-flex;
             align-items: center;
@@ -326,7 +352,7 @@
     <main>
         <div class="tf-breadcrumb">
             <div class="container">
-                <div class="tf-breadcrumb-wrap d-flex justify-content-between flex-wrap align-items-center">
+                <div class="tf-breadcrumb-wrap d-flex justify-content-between flex-wrap align-items-center product-detail-breadcrumb-wrap {{ $isArabic ? 'is-rtl' : 'is-ltr' }}">
                     <div class="tf-breadcrumb-list">
                         @foreach (($breadcrumb_items ?? []) as $crumb)
                             @if (! $loop->first)
