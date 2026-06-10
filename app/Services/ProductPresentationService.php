@@ -703,7 +703,7 @@ class ProductPresentationService
                 }
 
                 foreach ($rows as $row) {
-                    if (filled($row[$key] ?? null)) {
+                    if ($this->isMeaningfulMeasurementChartValue($row[$key] ?? null)) {
                         return true;
                     }
                 }
@@ -716,6 +716,55 @@ class ProductPresentationService
             ])
             ->values()
             ->all();
+    }
+
+    protected function isMeaningfulMeasurementChartValue(mixed $value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        $normalized = strtr($value, [
+            '٠' => '0',
+            '١' => '1',
+            '٢' => '2',
+            '٣' => '3',
+            '٤' => '4',
+            '٥' => '5',
+            '٦' => '6',
+            '٧' => '7',
+            '٨' => '8',
+            '٩' => '9',
+            '۰' => '0',
+            '۱' => '1',
+            '۲' => '2',
+            '۳' => '3',
+            '۴' => '4',
+            '۵' => '5',
+            '۶' => '6',
+            '۷' => '7',
+            '۸' => '8',
+            '۹' => '9',
+            ',' => '.',
+        ]);
+
+        $numericCandidate = preg_replace('/\s+/u', '', $normalized);
+
+        if (is_numeric($numericCandidate)) {
+            return (float) $numericCandidate !== 0.0;
+        }
+
+        if (preg_match('/^0+(?:\.0+)?(?:\s*(?:cm|سم|مم|in|inch|"))?$/iu', $normalized) === 1) {
+            return false;
+        }
+
+        return true;
     }
 
     protected function localizedValue(?string $ar, ?string $en, ?string $locale = null): ?string
