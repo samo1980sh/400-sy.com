@@ -219,6 +219,59 @@
     </style>
 @endpush
 
+@push('styles')
+    <style>
+        .tf-breadcrumb-prev-next .product-category-return-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: row;
+            width: auto;
+            min-width: 0;
+            height: 38px;
+            gap: 7px;
+            padding: 0 13px;
+            border: 1px solid #111;
+            border-radius: 6px;
+            background: #111;
+            color: #fff;
+            box-shadow: none;
+            text-decoration: none;
+            transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+        }
+
+        .tf-breadcrumb-prev-next .product-category-return-link:hover {
+            background: #fff;
+            color: #111;
+            border-color: #111;
+            transform: translateY(-1px);
+        }
+
+        .tf-breadcrumb-prev-next .product-category-return-link i {
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        .tf-breadcrumb-prev-next .product-category-return-link span {
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 575.98px) {
+            .tf-breadcrumb-prev-next .product-category-return-link {
+                height: 36px;
+                padding: 0 10px;
+                gap: 6px;
+            }
+
+            .tf-breadcrumb-prev-next .product-category-return-link span {
+                font-size: 11px;
+            }
+        }
+    </style>
+@endpush
 @section('content')
     @include('frontend.partials.announcement-bar', ['tickerItems' => $ticker_items ?? [], 'socialLinks' => $social_links ?? []])
     @include('frontend.partials.header', [
@@ -246,8 +299,9 @@
                         @endforeach
                     </div>
                     <div class="tf-breadcrumb-prev-next">
-                        <a href="{{ $categoryUrl }}" class="tf-breadcrumb-back hover-tooltip center">
-                            <i class="icon icon-shop"></i>
+                        <a href="{{ $categoryUrl }}" class="tf-breadcrumb-back product-category-return-link center" title="{{ $isArabic ? 'عرض منتجات نفس التصنيف' : 'View products in this category' }}" aria-label="{{ $isArabic ? 'عرض منتجات نفس التصنيف' : 'View products in this category' }}">
+                            <i class="icon icon-shop" aria-hidden="true"></i>
+                            <span>{{ $isArabic ? 'منتجات التصنيف' : 'Category products' }}</span>
                         </a>
                     </div>
                 </div>
