@@ -129,6 +129,20 @@ class Product extends Model
         return $this->hasMany(ProductDetail::class)->orderBy('sort_order');
     }
 
+    public function scopeVisibleToFrontendVisitor(Builder $query): Builder
+    {
+        return $query
+            ->where('show_web', true)
+            ->where('show_retail', true);
+    }
+
+    public function isVisibleToFrontendVisitor(): bool
+    {
+        return (bool) $this->show_web
+            && (bool) $this->show_retail
+            && (bool) $this->is_active;
+    }
+
     public function scopeVisibleOnWeb(Builder $query): Builder
     {
         return $query->where('show_web', true);

@@ -386,7 +386,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         $product = Product::query()
             ->with($this->productDetailRelations())
             ->where('slug', $slug)
-            ->where('show_web', true)
+            ->visibleToFrontendVisitor()
             ->where('is_active', true)
             ->firstOrFail();
 
@@ -452,7 +452,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
                 ->with([
                     'relatedProduct' => fn ($relatedQuery) => $relatedQuery
                         ->with($this->productCardRelations())
-                        ->where('show_web', true)
+                        ->visibleToFrontendVisitor()
                         ->where('is_active', true),
                 ]),
         ];
@@ -549,6 +549,8 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
     public function quickView(Product $product): JsonResponse
     {
+        abort_unless($product->isVisibleToFrontendVisitor(), 404);
+
         return response()->json([
             'product' => $this->homePageData->presentProduct($product, app()->getLocale()),
         ]);
@@ -556,6 +558,8 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
     public function addToCart(Request $request, Product $product, FrontCartService $cart): JsonResponse
     {
+        abort_unless($product->isVisibleToFrontendVisitor(), 404);
+
         $payload = $request->validate([
             'quantity' => ['nullable', 'integer', 'min:1', 'max:99'],
             'size' => ['nullable', 'string', 'max:100'],
@@ -773,7 +777,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
                 'measurementChartGroup',
                 'category',
             ])
-            ->where('show_web', true)
+            ->visibleToFrontendVisitor()
             ->whereHas('productColors', fn (Builder $query) => $query->where('status', 'active'))
             ->where('is_active', true);
     }
@@ -883,7 +887,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
                     $termQuery->orWhereHas('complements.relatedProduct', function (Builder $relatedQuery) use ($like): void {
                         $relatedQuery
-                            ->where('show_web', true)
+                            ->visibleToFrontendVisitor()
                             ->where('is_active', true)
                             ->where(function (Builder $relatedSearchQuery) use ($like): void {
                                 $this->addProductSearchConditions($relatedSearchQuery, $like);

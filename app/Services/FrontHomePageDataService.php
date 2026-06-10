@@ -45,7 +45,7 @@ class FrontHomePageDataService
                 'measurementCharts',
                 'category',
             ])
-            ->where('show_web', true)
+            ->visibleToFrontendVisitor()
             ->whereHas('productColors', fn ($query) => $query->where('status', 'active'))
             ->where('is_active', true);
 
