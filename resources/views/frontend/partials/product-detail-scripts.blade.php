@@ -594,6 +594,8 @@
                 $tableWrap.removeClass('col-lg-8').addClass('col-lg-12');
             }
 
+            renderSizeFinder(columns, rows);
+
             if (! rows.length || ! columns.length) {
                 $table.addClass('d-none');
                 $empty.removeClass('d-none');
@@ -607,7 +609,9 @@
             }).join(''));
 
             $body.html(rows.map(function (row) {
-                return '<tr>' + columns.map(function (column) {
+                var rowSize = String(row.size_code || row.size || '').trim();
+
+                return '<tr data-size-chart-row-size="' + escapeHtml(rowSize) + '">' + columns.map(function (column) {
                     var value = row[column.key];
 
                     if (value === null || typeof value === 'undefined' || value === '') {
@@ -620,6 +624,246 @@
 
             $empty.addClass('d-none');
             $table.removeClass('d-none');
+        }
+
+        function sizeFinderText(key, fallback) {
+            var $panel = $('#find_size').find('[data-size-finder-panel]').first();
+            var value = $panel.data(key);
+
+            return typeof value === 'undefined' || value === null || value === '' ? fallback : String(value);
+        }
+
+        function normalizeMeasurementNumber(value) {
+            if (value === null || typeof value === 'undefined') {
+                return null;
+            }
+
+            var normalized = String(value || '').trim();
+
+            if (! normalized) {
+                return null;
+            }
+
+            normalized = normalized.replace(/[٠-٩]/g, function (digit) {
+                return '٠١٢٣٤٥٦٧٨٩'.indexOf(digit);
+            }).replace(/[۰-۹]/g, function (digit) {
+                return '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit);
+            }).replace(',', '.');
+
+            var match = normalized.match(/-?\d+(?:\.\d+)?/);
+
+            if (! match) {
+                return null;
+            }
+
+            var number = parseFloat(match[0]);
+
+            return Number.isFinite(number) && number > 0 ? number : null;
+        }
+
+        function measurementFields(columns, rows) {
+            return columns.filter(function (column) {
+                if (! column || column.key === 'size_code') {
+                    return false;
+                }
+
+                return rows.some(function (row) {
+                    return normalizeMeasurementNumber(row[column.key]) !== null;
+                });
+            });
+        }
+
+        function renderSizeFinder(columns, rows) {
+            var $modal = $('#find_size');
+            var $panel = $modal.find('[data-size-finder-panel]');
+            var $fields = $modal.find('[data-size-finder-fields]');
+            var $result = $modal.find('[data-size-finder-result]');
+            var fields = measurementFields(columns, rows);
+            var suffix = sizeFinderText('fieldSuffix', 'cm');
+
+            $result.addClass('d-none').empty();
+
+            if (! rows.length || ! fields.length) {
+                $panel.addClass('d-none');
+                $fields.empty();
+                return;
+            }
+
+            $panel.removeClass('d-none');
+            $fields.html(fields.map(function (field) {
+                return [
+                    '<div class="size-finder-field">',
+                        '<label for="size-finder-', escapeHtml(field.key), '">', escapeHtml(field.label || field.key), '</label>',
+                        '<input type="number" inputmode="decimal" min="0" step="0.1" ',
+                            'id="size-finder-', escapeHtml(field.key), '" ',
+                            'data-size-finder-input="', escapeHtml(field.key), '" ',
+                            'placeholder="', escapeHtml(suffix), '">',
+                    '</div>'
+                ].join('');
+            }).join(''));
+        }
+
+        function collectSizeFinderInputs() {
+            var values = {};
+
+            $('#find_size').find('[data-size-finder-input]').each(function () {
+                var key = String($(this).data('size-finder-input') || '').trim();
+                var value = normalizeMeasurementNumber($(this).val());
+
+                if (key && value !== null) {
+                    values[key] = value;
+                }
+            });
+
+            return values;
+        }
+
+        function suggestSizeFromMeasurements(values) {
+            var chart = product.size_chart || {};
+            var rows = Array.isArray(chart.rows) ? chart.rows : [];
+            var columns = Array.isArray(chart.columns) ? chart.columns : [];
+            var fields = measurementFields(columns, rows).filter(function (field) {
+                return Object.prototype.hasOwnProperty.call(values, field.key);
+            });
+
+            if (! rows.length || ! fields.length) {
+                return null;
+            }
+
+            var candidates = rows.map(function (row, index) {
+                var score = 0;
+                var tightCount = 0;
+                var missingCount = 0;
+                var matchedCount = 0;
+
+                fields.forEach(function (field) {
+                    var wanted = values[field.key];
+                    var available = normalizeMeasurementNumber(row[field.key]);
+
+                    if (wanted === null || available === null) {
+                        missingCount += 1;
+                        score += 10000;
+                        return;
+                    }
+
+                    matchedCount += 1;
+
+                    var room = available - wanted;
+
+                    if (room >= 0) {
+                        score += room;
+                    } else {
+                        tightCount += 1;
+                        score += Math.abs(room) * 4 + 1000;
+                    }
+                });
+
+                return {
+                    row: row,
+                    index: index,
+                    size: String(row.size_code || row.size || '').trim(),
+                    score: score,
+                    tightCount: tightCount,
+                    missingCount: missingCount,
+                    matchedCount: matchedCount
+                };
+            }).filter(function (candidate) {
+                return candidate.size && candidate.matchedCount > 0;
+            });
+
+            if (! candidates.length) {
+                return null;
+            }
+
+            candidates.sort(function (first, second) {
+                if (first.tightCount !== second.tightCount) {
+                    return first.tightCount - second.tightCount;
+                }
+
+                if (first.missingCount !== second.missingCount) {
+                    return first.missingCount - second.missingCount;
+                }
+
+                if (first.score !== second.score) {
+                    return first.score - second.score;
+                }
+
+                return first.index - second.index;
+            });
+
+            return candidates[0];
+        }
+
+        function highlightSuggestedSize(size) {
+            var normalized = normalizeSizeValue(size);
+            var $modal = $('#find_size');
+
+            $modal.find('[data-size-chart-row-size]').removeClass('is-recommended');
+
+            if (! normalized) {
+                return;
+            }
+
+            $modal.find('[data-size-chart-row-size]').each(function () {
+                if (normalizeSizeValue($(this).data('size-chart-row-size')) === normalized) {
+                    $(this).addClass('is-recommended');
+                }
+            });
+        }
+
+        function normalizeSizeValue(value) {
+            return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+        }
+
+        function selectDetailSizeByLabel(size) {
+            var normalized = normalizeSizeValue(size);
+            var $inputs = $root.find(SELECTORS.sizesWrap + ' ' + SELECTORS.sizeInput);
+            var $target = $();
+
+            if (! normalized || ! $inputs.length) {
+                return false;
+            }
+
+            $inputs.each(function () {
+                var $input = $(this);
+                var values = [
+                    $input.val(),
+                    $input.data('size-code'),
+                    $input.closest('.variant-picker-values').find('label[for="' + $input.attr('id') + '"] .size-label').text()
+                ];
+
+                var matched = values.some(function (value) {
+                    return normalizeSizeValue(value) === normalized;
+                });
+
+                if (matched && ! this.disabled && ! $target.length) {
+                    $target = $input;
+                }
+            });
+
+            if (! $target.length) {
+                return false;
+            }
+
+            $target.prop('checked', true).trigger('change');
+
+            return true;
+        }
+
+        function showSizeFinderMessage(message, type, size) {
+            var $result = $('#find_size').find('[data-size-finder-result]');
+            var safeSize = size ? String(size) : '';
+            var html = '<div>' + escapeHtml(message || '') + (safeSize ? ' <span class="size-finder-result__size">' + escapeHtml(safeSize) + '</span>' : '') + '</div>';
+
+            if (safeSize) {
+                html += '<button type="button" class="size-finder-result__select" data-size-finder-select="' + escapeHtml(safeSize) + '">' + escapeHtml(sizeFinderText('select', 'Select this size')) + '</button>';
+                html += '<span class="size-finder-result__note">' + escapeHtml(sizeFinderText('note', 'This suggestion is guidance.')) + '</span>';
+            }
+
+            $result
+                .removeClass('d-none')
+                .attr('data-size-finder-result-type', type || 'info')
+                .html(html);
         }
 
         /**
@@ -780,6 +1024,57 @@
             event.preventDefault();
             renderSizeChart();
             showModal('#find_size');
+        });
+
+        $(document).on('click', '[data-size-finder-submit]', function (event) {
+            event.preventDefault();
+
+            var values = collectSizeFinderInputs();
+            var hasValues = Object.keys(values).length > 0;
+
+            if (! hasValues) {
+                highlightSuggestedSize('');
+                showSizeFinderMessage(sizeFinderText('empty', 'Enter at least one value to get a suggestion.'), 'warning');
+                return;
+            }
+
+            var suggestion = suggestSizeFromMeasurements(values);
+
+            if (! suggestion) {
+                highlightSuggestedSize('');
+                showSizeFinderMessage(sizeFinderText('unavailable', 'There are not enough measurement fields for this product.'), 'warning');
+                return;
+            }
+
+            highlightSuggestedSize(suggestion.size);
+            showSizeFinderMessage(
+                suggestion.tightCount > 0 ? sizeFinderText('nearestPrefix', 'The closest size based on your values is') : sizeFinderText('resultPrefix', 'Your best suggested size is'),
+                suggestion.tightCount > 0 ? 'nearest' : 'recommended',
+                suggestion.size
+            );
+        });
+
+        $(document).on('click', '[data-size-finder-reset]', function (event) {
+            event.preventDefault();
+
+            var $modal = $('#find_size');
+
+            $modal.find('[data-size-finder-input]').val('');
+            $modal.find('[data-size-finder-result]').addClass('d-none').empty();
+            $modal.find('[data-size-chart-row-size]').removeClass('is-recommended');
+        });
+
+        $(document).on('click', '[data-size-finder-select]', function (event) {
+            event.preventDefault();
+
+            var size = $(this).data('size-finder-select') || '';
+            var selected = selectDetailSizeByLabel(size);
+
+            showSizeFinderMessage(
+                selected ? sizeFinderText('selected', 'The suggested size has been selected.') : sizeFinderText('notSelectable', 'The suggested size is not currently available to select.'),
+                selected ? 'selected' : 'warning',
+                selected ? size : ''
+            );
         });
 
         $(document).on('submit', SELECTORS.cartForm, function (event) {
