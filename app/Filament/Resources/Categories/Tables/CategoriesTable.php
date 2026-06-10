@@ -41,10 +41,16 @@ class CategoriesTable
                 ImageColumn::make('image')
                     ->label('صورة البطاقة')
                     ->disk('public')
-                    ->height(48)
-                    ->width(48)
-                    ->square()
-                    ->toggleable(),
+                    ->imageWidth(190)
+                    ->imageHeight(107)
+                    ->extraCellAttributes([
+                        'style' => 'text-align: left; width: 220px; min-width: 220px;',
+                    ])
+                    ->extraImgAttributes([
+                        'style' => 'display: block; width: 190px; height: 107px; object-fit: contain; object-position: left center; margin-left: 0; margin-right: auto; border-radius: 0.5rem; background-color: transparent;',
+                        'loading' => 'lazy',
+                    ])
+                    ->visibility('public'),
                 ImageColumn::make('banner')
                     ->label('البانر')
                     ->disk('public')
