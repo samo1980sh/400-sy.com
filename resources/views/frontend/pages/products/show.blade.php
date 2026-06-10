@@ -270,6 +270,48 @@
                 font-size: 11px;
             }
         }
+
+
+        .product-detail-inline-info {
+            margin: 22px 0 20px;
+        }
+
+        .product-detail-inline-info .widget-tabs {
+            padding: 18px;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .product-detail-inline-info .widget-menu-tab {
+            margin-bottom: 14px;
+        }
+
+        .product-detail-inline-info .widget-menu-tab .item-title {
+            font-size: 14px;
+        }
+
+        .product-detail-inline-info .tab-description p {
+            margin-bottom: 0;
+        }
+
+        .product-detail-inline-info .tf-page-privacy-policy .d-flex:first-child {
+            padding-top: 0 !important;
+        }
+
+        .product-detail-inline-info .tf-page-privacy-policy .d-flex:last-child {
+            padding-bottom: 0 !important;
+            border-bottom: 0 !important;
+        }
+
+        @media (max-width: 575.98px) {
+            .product-detail-inline-info {
+                margin: 18px 0;
+            }
+
+            .product-detail-inline-info .widget-tabs {
+                padding: 14px;
+            }
+        }
     </style>
 @endpush
 @section('content')
@@ -438,6 +480,47 @@
                                     </div>
 
 
+                                    @if ($descriptionHtml !== '' || $specifications->isNotEmpty() || ! empty($product['badge']))
+                                        <div class="product-detail-inline-info">
+                                            <div class="widget-tabs style-has-border">
+                                                <ul class="widget-menu-tab">
+                                                    @if ($descriptionHtml !== '' || ! empty($product['badge']))
+                                                        <li class="item-title active"><span class="inner">{{ $isArabic ? 'وصف المنتج' : 'Description' }}</span></li>
+                                                    @endif
+                                                    @if ($specifications->isNotEmpty())
+                                                        <li class="item-title {{ ($descriptionHtml === '' && empty($product['badge'])) ? 'active' : '' }}"><span class="inner">{{ $isArabic ? 'المواصفات' : 'Additional Information' }}</span></li>
+                                                    @endif
+                                                </ul>
+                                                <div class="widget-content-tab">
+                                                    @if ($descriptionHtml !== '' || ! empty($product['badge']))
+                                                        <div class="widget-content-inner active">
+                                                            @if (! empty($product['badge']))
+                                                                <div class="product-detail-description-badges">
+                                                                    <span class="product-detail-description-badge {{ $product['badge_class'] ?? '' }}" data-badge-class="{{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</span>
+                                                                </div>
+                                                            @endif
+                                                            @if ($descriptionHtml !== '')
+                                                                <div class="tab-description"><p>{!! $descriptionHtml !!}</p></div>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+                                                    @if ($specifications->isNotEmpty())
+                                                        <div class="widget-content-inner {{ ($descriptionHtml === '' && empty($product['badge'])) ? 'active' : '' }}">
+                                                            <div class="tf-page-privacy-policy">
+                                                                @foreach ($specifications as $spec)
+                                                                    <div class="d-flex justify-content-between flex-wrap gap-3 py-3 border-bottom">
+                                                                        <div class="fw-6">{{ $spec['label'] }}</div>
+                                                                        <div>{!! nl2br(e($spec['value'])) !!}</div>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
                                     <div class="tf-product-info-buy-button">
                                         <form data-detail-cart-form data-cart-url="{{ $cartAddUrl }}">
                                             @csrf
@@ -468,52 +551,6 @@
             </div>
         </section>
 
-        @if ($descriptionHtml !== '' || $specifications->isNotEmpty() || ! empty($product['badge']))
-            <section class="flat-spacing-17 pt_0">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="widget-tabs style-has-border">
-                                <ul class="widget-menu-tab">
-                                    @if ($descriptionHtml !== '' || ! empty($product['badge']))
-                                        <li class="item-title active"><span class="inner">{{ $isArabic ? 'وصف المنتج' : 'Description' }}</span></li>
-                                    @endif
-                                    @if ($specifications->isNotEmpty())
-                                        <li class="item-title {{ ($descriptionHtml === '' && empty($product['badge'])) ? 'active' : '' }}"><span class="inner">{{ $isArabic ? 'المواصفات' : 'Additional Information' }}</span></li>
-                                    @endif
-                                </ul>
-                                <div class="widget-content-tab">
-                                    @if ($descriptionHtml !== '' || ! empty($product['badge']))
-                                        <div class="widget-content-inner active">
-                                            @if (! empty($product['badge']))
-                                                <div class="product-detail-description-badges">
-                                                    <span class="product-detail-description-badge {{ $product['badge_class'] ?? '' }}" data-badge-class="{{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</span>
-                                                </div>
-                                            @endif
-                                            @if ($descriptionHtml !== '')
-                                                <div class="tab-description"><p>{!! $descriptionHtml !!}</p></div>
-                                            @endif
-                                        </div>
-                                    @endif
-                                    @if ($specifications->isNotEmpty())
-                                        <div class="widget-content-inner {{ ($descriptionHtml === '' && empty($product['badge'])) ? 'active' : '' }}">
-                                            <div class="tf-page-privacy-policy">
-                                                @foreach ($specifications as $spec)
-                                                    <div class="d-flex justify-content-between flex-wrap gap-3 py-3 border-bottom">
-                                                        <div class="fw-6">{{ $spec['label'] }}</div>
-                                                        <div>{!! nl2br(e($spec['value'])) !!}</div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        @endif
 
         @if ($relatedProducts->isNotEmpty())
             <section class="flat-spacing-1 pt_0">
