@@ -24,7 +24,7 @@ class FrontCartService
             ->filter(fn (array $item): bool => filled($item['key'] ?? null))
             ->values();
 
-        $count = (int) $items->sum('qty');
+        $count = $items->count();
         $subtotal = (int) $items->sum(fn (array $item): int => (int) ($item['unit_price'] ?? $item['base_price'] ?? 0) * (int) ($item['qty'] ?? 0));
         $currency = strtoupper((string) (
             session('selectedCurrency')
