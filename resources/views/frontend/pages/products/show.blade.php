@@ -324,32 +324,36 @@
             margin-bottom: 0;
         }
 
-        .product-detail-description-badges {
+        .product-title-fit-drop {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-top: 10px;
         }
 
-        .product-detail-description-badge {
+        .product-title-fit-drop-badge {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            min-height: 24px;
-            padding: 4px 10px;
+            min-height: 26px;
+            padding: 5px 11px;
+            border: 1px solid #dedede;
             border-radius: 999px;
+            background: #f7f7f7;
+            color: #222;
             font-size: 11px;
-            font-weight: 700;
             line-height: 1;
             white-space: nowrap;
         }
 
-        .product-detail-fit-badge {
-            border: 1px solid #dedede;
-            background: #f7f7f7;
-            color: #222;
-            font-weight: 600;
+        .product-title-fit-drop-label {
+            margin-inline-end: 4px;
+            color: #777;
+            font-weight: 500;
+        }
+
+        .product-title-fit-drop-value {
+            font-weight: 700;
         }
 
         .product-detail-inline-info .tf-page-privacy-policy .d-flex:first-child {
@@ -454,6 +458,17 @@
                                                 <span class="product-card-badge {{ $product['badge_class'] ?? '' }}">{{ $product['badge'] }}</span>
                                             @endif
                                         </div>
+
+                                        @if ($productInfoItems->isNotEmpty())
+                                            <div class="product-title-fit-drop" aria-label="{{ $isArabic ? 'قصة الجسم والدروب' : 'Body fit and drop' }}">
+                                                @foreach ($productInfoItems as $infoItem)
+                                                    <span class="product-title-fit-drop-badge">
+                                                        <span class="product-title-fit-drop-label">{{ $infoItem['label'] }}:</span>
+                                                        <span class="product-title-fit-drop-value">{{ $infoItem['value'] }}</span>
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
                                     </div>
 
 
@@ -535,34 +550,25 @@
                                     </div>
 
 
-                                    @if ($descriptionHtml !== '' || $productInfoItems->isNotEmpty() || $specifications->isNotEmpty())
+                                    @if ($descriptionHtml !== '' || $specifications->isNotEmpty())
                                         <div class="product-detail-inline-info">
                                             <div class="widget-tabs style-has-border">
                                                 <ul class="widget-menu-tab">
-                                                    @if ($descriptionHtml !== '' || $productInfoItems->isNotEmpty())
+                                                    @if ($descriptionHtml !== '')
                                                         <li class="item-title active"><span class="inner">{{ $isArabic ? "\u{0648}\u{0635}\u{0641} \u{0627}\u{0644}\u{0645}\u{0646}\u{062a}\u{062c}" : 'Description' }}</span></li>
                                                     @endif
                                                     @if ($specifications->isNotEmpty())
-                                                        <li class="item-title {{ ($descriptionHtml === '' && $productInfoItems->isEmpty()) ? 'active' : '' }}"><span class="inner">{{ $isArabic ? "\u{0627}\u{0644}\u{0645}\u{0648}\u{0627}\u{0635}\u{0641}\u{0627}\u{062a}" : 'Additional Information' }}</span></li>
+                                                        <li class="item-title {{ $descriptionHtml === '' ? 'active' : '' }}"><span class="inner">{{ $isArabic ? "\u{0627}\u{0644}\u{0645}\u{0648}\u{0627}\u{0635}\u{0641}\u{0627}\u{062a}" : 'Additional Information' }}</span></li>
                                                     @endif
                                                 </ul>
                                                 <div class="widget-content-tab">
-                                                    @if ($descriptionHtml !== '' || $productInfoItems->isNotEmpty())
+                                                    @if ($descriptionHtml !== '')
                                                         <div class="widget-content-inner active">
-                                                            @if ($productInfoItems->isNotEmpty())
-                                                                <div class="product-detail-description-badges" aria-label="{{ $isArabic ? 'شارات المنتج والقصة' : 'Product badges and fit' }}">
-                                                                    @foreach ($productInfoItems as $infoItem)
-                                                                        <span class="product-detail-description-badge product-detail-fit-badge">{{ $infoItem['value'] }}</span>
-                                                                    @endforeach
-                                                                </div>
-                                                            @endif
-                                                            @if ($descriptionHtml !== '')
-                                                                <div class="tab-description"><p>{!! $descriptionHtml !!}</p></div>
-                                                            @endif
+                                                            <div class="tab-description"><p>{!! $descriptionHtml !!}</p></div>
                                                         </div>
                                                     @endif
                                                     @if ($specifications->isNotEmpty())
-                                                        <div class="widget-content-inner {{ ($descriptionHtml === '' && $productInfoItems->isEmpty()) ? 'active' : '' }}">
+                                                        <div class="widget-content-inner {{ $descriptionHtml === '' ? 'active' : '' }}">
                                                             <div class="tf-page-privacy-policy">
                                                                 @foreach ($specifications as $spec)
                                                                     <div class="d-flex justify-content-between flex-wrap gap-3 py-3 border-bottom">
