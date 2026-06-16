@@ -83,6 +83,7 @@
                     'category_context_chip' => $category_context_chip ?? null,
                     'filter_reset_url' => $filter_reset_url ?? request()->url(),
                     'selected_grid' => $selected_grid ?? 'grid-4',
+                    'empty_state_message' => $empty_state_message ?? null,
                 ])
 
                 @include('frontend.partials.loadmore', [

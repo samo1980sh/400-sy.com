@@ -2,7 +2,7 @@
     $locale = app()->getLocale();
     $isRtl = $locale === 'ar';
     $homeUrl = route('front.home');
-    $offersUrl = route('front.home') . '#featured-products';
+    $offersUrl = route('front.offers');
     $branchesUrl = route('front.home') . '#store-locations';
     $navCategories = collect($navCategories ?? []);
     $currencyOptions = collect($currencyOptions ?? []);

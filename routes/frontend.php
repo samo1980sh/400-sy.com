@@ -10,6 +10,7 @@ Route::middleware('front.locale')->group(function (): void {
     Route::get('/lang/{locale}', [FrontPageController::class, 'setLocale'])->name('front.locale');
     Route::post('/currency', [CurrencyController::class, 'update'])->name('front.currency');
     Route::get('/products', [FrontPageController::class, 'productsIndex'])->name('front.products.index');
+    Route::get('/offers', [FrontPageController::class, 'offers'])->name('front.offers');
     Route::get('/products/{slug}', [FrontPageController::class, 'product'])->name('front.products.show');
     Route::get('/products/{product:slug}/quick-view', [FrontPageController::class, 'quickView'])->name('front.products.quick-view');
     Route::get('/cart', [FrontPageController::class, 'cart'])->name('front.cart.view');

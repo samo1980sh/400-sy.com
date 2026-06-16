@@ -63,7 +63,7 @@
                     {!! $renderMobileCategoryItems($navCategories) !!}
                 @endif
 
-                <li class="nav-mb-item"><a href="{{ route('front.home') }}#featured-products" class="mb-menu-link">{{ __('front.nav.offers') }}</a></li>
+                <li class="nav-mb-item"><a href="{{ route('front.offers') }}" class="mb-menu-link">{{ __('front.nav.offers') }}</a></li>
                 <li class="nav-mb-item"><a href="{{ route('front.home') }}#store-locations" class="mb-menu-link">{{ __('front.nav.branches') }}</a></li>
                 <li class="nav-mb-item"><a href="{{ $languageSwitchUrl }}" class="mb-menu-link mobile-language-switch-link"><span class="language-switch-icon" aria-hidden="true">🌐</span><span class="language-switch-label">{{ $languageSwitchLabel }}</span></a></li>
             </ul>

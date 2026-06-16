@@ -59,7 +59,19 @@ class FrontPageController extends Controller
         return $this->renderProductsListing($category, $request, $sort);
     }
 
-    protected function renderProductsListing(?Category $category = null, ?Request $request = null, string $sort = 'featured'): View|JsonResponse
+    public function offers(Request $request): View|JsonResponse
+    {
+        $sort = $this->normalizeProductsSort((string) $request->query('sort', 'featured'));
+
+        return $this->renderProductsListing(null, $request, $sort, true);
+    }
+
+    protected function renderProductsListing(
+        ?Category $category = null,
+        ?Request $request = null,
+        string $sort = 'featured',
+        bool $offersPage = false,
+    ): View|JsonResponse
     {
         $request ??= request();
 
@@ -85,7 +97,7 @@ class FrontPageController extends Controller
         $selectedDropType = $this->requestList($request, 'drop_type', 'drop_type');
         $selectedCollections = $this->requestList($request, 'collections', 'collection');
         $selectedSpecialOffers = $this->requestList($request, 'special_offers', 'special_offer');
-        $specialOfferOnly = in_array('offer', array_map('strtolower', $selectedSpecialOffers), true);
+        $specialOfferOnly = $offersPage || in_array('offer', array_map('strtolower', $selectedSpecialOffers), true);
         [$minPrice, $maxPrice] = $this->requestPriceRange($request);
         $queryWithoutFilters = Arr::except($request->query(), ['page', 'q', 'text', 'search', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'collection', 'collections', 'special_offer', 'special_offers', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
         $resetUrl = $request->url();
@@ -147,7 +159,12 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             ['label' => __('front.nav.home'), 'url' => route('front.home')],
         ];
 
-        if ($primaryCategory instanceof Category) {
+        if ($offersPage) {
+            $breadcrumbItems[] = [
+                'label' => $locale === 'ar' ? 'العروض' : 'Offers',
+                'url' => route('front.offers'),
+            ];
+        } elseif ($primaryCategory instanceof Category) {
             foreach ($categoryTrail as $trailCategory) {
                 $breadcrumbItems[] = [
                     'label' => $locale === 'ar'
@@ -232,18 +249,20 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'special_offer' => $specialOfferOnly,
             'search' => $searchTerm,
         ], $selectedCollections);
-        $filterSpecialOfferOption = $this->buildSpecialOfferOption([
-            'category_ids' => $filters['category_ids'],
-            'min_price' => $minPrice,
-            'max_price' => $maxPrice,
-            'colors' => $selectedColors,
-            'sizes' => $selectedSizes,
-            'body_fit' => $selectedBodyFit,
-            'drop_type' => $selectedDropType,
-            'collections' => $selectedCollections,
-            'special_offer' => false,
-            'search' => $searchTerm,
-        ], $specialOfferOnly, $locale);
+        $filterSpecialOfferOption = $offersPage
+            ? null
+            : $this->buildSpecialOfferOption([
+                'category_ids' => $filters['category_ids'],
+                'min_price' => $minPrice,
+                'max_price' => $maxPrice,
+                'colors' => $selectedColors,
+                'sizes' => $selectedSizes,
+                'body_fit' => $selectedBodyFit,
+                'drop_type' => $selectedDropType,
+                'collections' => $selectedCollections,
+                'special_offer' => false,
+                'search' => $searchTerm,
+            ], $specialOfferOnly, $locale);
         $filterPriceStats = $this->buildPriceStats([
             'category_ids' => $filters['category_ids'],
             'min_price' => null,
@@ -263,12 +282,20 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             $selectedBodyFit,
             $selectedDropType,
             $selectedCollections,
-            $specialOfferOnly,
+            $offersPage ? false : $specialOfferOnly,
             $filterPriceStats,
             $minPrice,
             $maxPrice,
             $locale,
         );
+        $emptyStateMessage = null;
+
+        if ($offersPage) {
+            $emptyStateMessage = $activeFilterChips !== [] || $searchTerm !== ''
+                ? ($locale === 'ar' ? 'لا توجد عروض مطابقة للفلاتر المحددة.' : 'No offers match the selected filters.')
+                : ($locale === 'ar' ? 'لا توجد عروض متاحة حاليًا.' : 'No offers are currently available.');
+        }
+
         $categoryContextChip = $filterScopeCategory instanceof Category
             ? [
                 'label' => $locale === 'ar'
@@ -292,7 +319,13 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             }
         }
 
-        if ($searchTerm !== '') {
+        if ($offersPage) {
+            $pageTitle = $locale === 'ar' ? 'العروض' : 'Offers';
+            $pageTitleBackground = null;
+            $pageSubtitle = $searchTerm !== ''
+                ? (($locale === 'ar' ? 'نتائج البحث ضمن العروض عن: ' : 'Offer results for: ') . $searchTerm)
+                : ($locale === 'ar' ? 'تصفح المنتجات المتوفرة ضمن العروض الحالية' : 'Browse products available in the current offers');
+        } elseif ($searchTerm !== '') {
             $pageTitle = $locale === 'ar' ? 'نتائج البحث' : 'Search Results';
             $pageSubtitle = ($locale === 'ar' ? 'نتائج البحث عن: ' : 'Search results for: ') . $searchTerm;
         } else {
@@ -327,7 +360,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'selected_body_fit' => $selectedBodyFit,
             'selected_drop_type' => $selectedDropType,
             'selected_collections' => $selectedCollections,
-            'selected_special_offers' => $specialOfferOnly ? ['offer'] : [],
+            'selected_special_offers' => $offersPage ? [] : ($specialOfferOnly ? ['offer'] : []),
             'selected_search_term' => $searchTerm,
             'filter_categories' => $filterCategories,
             'filter_color_options' => $filterColorOptions,
@@ -339,7 +372,8 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'filter_price_stats' => $filterPriceStats,
             'active_filter_chips' => $activeFilterChips,
             'category_context_chip' => $categoryContextChip,
-            'filter_reset_url' => $resetUrl,
+            'filter_reset_url' => $offersPage ? route('front.offers') : $resetUrl,
+            'empty_state_message' => $emptyStateMessage,
         ]);
 
         if ($request->ajax() || $request->boolean('filter_ajax')) {
@@ -355,8 +389,9 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
                     'products' => $paginator,
                     'active_filter_chips' => $activeFilterChips,
                     'category_context_chip' => $categoryContextChip,
-                    'filter_reset_url' => $resetUrl,
+                    'filter_reset_url' => $offersPage ? route('front.offers') : $resetUrl,
                     'selected_grid' => $selectedGrid,
+                    'empty_state_message' => $viewData['empty_state_message'],
                 ])->render(),
                 'loadmore_html' => view('frontend.partials.loadmore', [
                     'products' => $paginator,

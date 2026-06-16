@@ -20,7 +20,7 @@
         @empty
             <div class="col-12">
                 <div class="empty-state py-5 text-center">
-                    {{ app()->getLocale() === 'ar' ? 'لا توجد منتجات مطابقة.' : 'No matching products were found.' }}
+                    {{ ($empty_state_message ?? null) ?: (app()->getLocale() === 'ar' ? 'لا توجد منتجات مطابقة.' : 'No matching products were found.') }}
                 </div>
             </div>
         @endforelse
