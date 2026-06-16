@@ -7,6 +7,7 @@ use App\Models\ProductColor;
 use App\Models\ProductVariant;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class FrontCartService
 {
@@ -39,6 +40,109 @@ class FrontCartService
             'currency' => $currency,
             'subtotal_label' => number_format($subtotal, 0) . ' ' . $currency,
         ];
+    }
+
+    public function checkoutState(): array
+    {
+        $storedItems = $this->storedItems();
+
+        if ($storedItems === []) {
+            return $this->state();
+        }
+
+        $productIds = collect($storedItems)
+            ->pluck('product_id')
+            ->filter()
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values();
+
+        $products = Product::query()
+            ->visibleToFrontendVisitor()
+            ->where('is_active', true)
+            ->whereIn('id', $productIds)
+            ->with(['variants.size', 'variants.productColor', 'productColors.filterColor'])
+            ->get()
+            ->keyBy(fn (Product $product): int => (int) $product->getKey());
+
+        $refreshedItems = [];
+
+        foreach ($storedItems as $storedItem) {
+            $product = $products->get((int) ($storedItem['product_id'] ?? 0));
+            $quantity = max(1, min(99, (int) ($storedItem['qty'] ?? 1)));
+
+            if (! $product instanceof Product) {
+                throw ValidationException::withMessages([
+                    'cart' => __('front.checkout.cart_changed'),
+                ]);
+            }
+
+            $requestedColorId = (int) ($storedItem['color_id'] ?? 0);
+
+            if ($requestedColorId > 0) {
+                $requestedColor = $product->productColors
+                    ->first(fn ($color): bool => (int) ($color->id ?? 0) === $requestedColorId);
+
+                if (
+                    ! $requestedColor instanceof ProductColor
+                    || (string) ($requestedColor->status ?? 'active') !== 'active'
+                ) {
+                    throw ValidationException::withMessages([
+                        'cart' => __('front.checkout.cart_changed'),
+                    ]);
+                }
+            }
+
+            $requestedVariantId = (int) ($storedItem['variant_id'] ?? 0);
+
+            if ($requestedVariantId > 0) {
+                $requestedVariant = $product->variants
+                    ->first(fn ($variant): bool => (int) ($variant->id ?? 0) === $requestedVariantId);
+
+                if (
+                    ! $requestedVariant instanceof ProductVariant
+                    || (string) ($requestedVariant->status ?? 'active') !== 'active'
+                    || (
+                        $requestedVariant->relationLoaded('productColor')
+                        && $requestedVariant->productColor
+                        && (string) ($requestedVariant->productColor->status ?? 'active') !== 'active'
+                    )
+                ) {
+                    throw ValidationException::withMessages([
+                        'cart' => __('front.checkout.cart_changed'),
+                    ]);
+                }
+
+                if (
+                    is_numeric($requestedVariant->quantity)
+                    && (int) $requestedVariant->quantity < $quantity
+                ) {
+                    throw ValidationException::withMessages([
+                        'cart' => __('front.checkout.stock_changed', [
+                            'product' => $storedItem['title'] ?? __('front.cart.product'),
+                        ]),
+                    ]);
+                }
+            }
+
+            $rebuiltItem = $this->buildItem($product, $storedItem);
+
+            if (
+                $requestedVariantId > 0
+                && (int) ($rebuiltItem['variant_id'] ?? 0) !== $requestedVariantId
+            ) {
+                throw ValidationException::withMessages([
+                    'cart' => __('front.checkout.cart_changed'),
+                ]);
+            }
+
+            $rebuiltItem['qty'] = $quantity;
+            $refreshedItems[$rebuiltItem['key']] = $rebuiltItem;
+        }
+
+        session()->put(self::SESSION_KEY, $refreshedItems);
+
+        return $this->state();
     }
 
     public function add(Product $product, array $input = []): array

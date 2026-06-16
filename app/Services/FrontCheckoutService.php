@@ -1,0 +1,228 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Customer;
+use App\Models\CustomerAddress;
+use App\Models\Order;
+use App\Models\OrderStatusHistory;
+use App\Models\PaymentMethod;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\ShippingMethod;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+
+class FrontCheckoutService
+{
+    public const SUCCESS_SESSION_KEY = 'front.checkout.last_order_id';
+
+    public function __construct(protected FrontCartService $cart)
+    {
+    }
+
+    public function activeShippingMethods(): EloquentCollection
+    {
+        return ShippingMethod::query()
+            ->where('active', true)
+            ->orderBy('cost')
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function activePaymentMethods(): EloquentCollection
+    {
+        return PaymentMethod::query()
+            ->where('active', true)
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function createOrder(array $data): Order
+    {
+        return DB::transaction(function () use ($data): Order {
+            $cartState = $this->cart->checkoutState();
+            $items = collect($cartState['items'] ?? []);
+
+            if ($items->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'cart' => __('front.checkout.cart_empty'),
+                ]);
+            }
+
+            $shippingMethod = ShippingMethod::query()
+                ->where('active', true)
+                ->find($data['shipping_method_id']);
+
+            if (! $shippingMethod instanceof ShippingMethod) {
+                throw ValidationException::withMessages([
+                    'shipping_method_id' => __('front.checkout.shipping_unavailable'),
+                ]);
+            }
+
+            $paymentMethod = PaymentMethod::query()
+                ->where('active', true)
+                ->where('code', $data['payment_method'])
+                ->first();
+
+            if (! $paymentMethod instanceof PaymentMethod) {
+                throw ValidationException::withMessages([
+                    'payment_method' => __('front.checkout.payment_unavailable'),
+                ]);
+            }
+
+            $customer = $this->resolveCustomer($data);
+            $address = $this->resolveAddress($customer, $data);
+            $subtotal = (int) ($cartState['subtotal'] ?? 0);
+            $shippingCost = (int) round((float) $shippingMethod->cost);
+            $total = $subtotal + $shippingCost;
+
+            $order = Order::create([
+                'customer_id' => $customer->getKey(),
+                'shipping_address_id' => $address->getKey(),
+                'shipping_method_id' => $shippingMethod->getKey(),
+                'customer_name_snapshot' => $customer->name,
+                'customer_mobile_snapshot' => $customer->mobile,
+                'customer_email_snapshot' => $customer->email,
+                'customer_account_no_snapshot' => $customer->account_no,
+                'shipping_label_snapshot' => $address->label,
+                'shipping_contact_name_snapshot' => $address->contact_name,
+                'shipping_mobile_snapshot' => $address->mobile,
+                'shipping_city_snapshot' => $address->city,
+                'shipping_area_snapshot' => $address->area,
+                'shipping_address_line_snapshot' => $address->address_line,
+                'shipping_address_type_snapshot' => $address->address_type,
+                'status' => 'pending',
+                'payment_status' => 'unpaid',
+                'payment_method' => $paymentMethod->code,
+                'is_gift' => false,
+                'total_before_discount' => $subtotal,
+                'discount_value' => 0,
+                'coupon_discount_value' => 0,
+                'shipping_cost' => $shippingCost,
+                'total' => $total,
+                'notes' => $data['notes'] ?? null,
+            ]);
+
+            $productIds = $items->pluck('product_id')->filter()->map(fn ($id): int => (int) $id)->unique()->values();
+            $variantIds = $items->pluck('variant_id')->filter()->map(fn ($id): int => (int) $id)->unique()->values();
+
+            $products = Product::query()
+                ->whereIn('id', $productIds)
+                ->get()
+                ->keyBy(fn (Product $product): int => (int) $product->getKey());
+
+            $variants = ProductVariant::query()
+                ->whereIn('id', $variantIds)
+                ->get()
+                ->keyBy(fn (ProductVariant $variant): int => (int) $variant->getKey());
+
+            foreach ($items as $item) {
+                $product = $products->get((int) ($item['product_id'] ?? 0));
+                $variant = $variants->get((int) ($item['variant_id'] ?? 0));
+                $quantity = max(1, (int) ($item['qty'] ?? 1));
+                $unitPrice = (int) ($item['unit_price'] ?? $item['base_price'] ?? 0);
+
+                $order->items()->create([
+                    'product_id' => $product?->getKey(),
+                    'product_variant_id' => $variant?->getKey(),
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'product_name_snapshot' => $item['title'] ?? $product?->title_ar ?? $product?->title_en,
+                    'product_model_no_snapshot' => $product?->model_no,
+                    'product_sku_snapshot' => $variant?->sku,
+                    'product_barcode_snapshot' => $variant?->barcode,
+                    'color_name_snapshot' => $item['color_name'] ?? null,
+                    'size_name_snapshot' => $item['size'] ?? null,
+                    'line_total' => $unitPrice * $quantity,
+                ]);
+            }
+
+            OrderStatusHistory::create([
+                'order_id' => $order->getKey(),
+                'from_status' => null,
+                'to_status' => 'pending',
+                'from_payment_status' => null,
+                'to_payment_status' => 'unpaid',
+                'note' => __('front.checkout.order_created_history'),
+                'changed_by' => null,
+            ]);
+
+            $this->cart->clear();
+            session()->put(self::SUCCESS_SESSION_KEY, (int) $order->getKey());
+
+            return $order->load(['items', 'shippingMethod', 'customer', 'shippingAddress']);
+        }, 3);
+    }
+
+    protected function resolveCustomer(array $data): Customer
+    {
+        $customer = Customer::query()
+            ->where('mobile', $data['mobile'])
+            ->first();
+
+        $customerData = [
+            'name' => $data['full_name'],
+            'city' => $data['city'],
+            'area' => $data['area'],
+        ];
+
+        if (filled($data['email'] ?? null)) {
+            $customerData['email'] = $data['email'];
+        }
+
+        if ($customer instanceof Customer) {
+            $customer->fill($customerData)->save();
+
+            return $customer->refresh();
+        }
+
+        return Customer::create(array_merge($customerData, [
+            'account_no' => $this->generateCustomerAccountNo(),
+            'mobile' => $data['mobile'],
+            'status' => 'active',
+        ]));
+    }
+
+    protected function resolveAddress(Customer $customer, array $data): CustomerAddress
+    {
+        $address = $customer->addresses()
+            ->where('mobile', $data['mobile'])
+            ->where('city', $data['city'])
+            ->where('area', $data['area'])
+            ->where('address_line', $data['address_line'])
+            ->where('address_type', $data['address_type'])
+            ->first();
+
+        $addressData = [
+            'label' => $data['address_label'] ?: __('front.checkout.address_types.' . $data['address_type']),
+            'contact_name' => $data['full_name'],
+            'mobile' => $data['mobile'],
+            'city' => $data['city'],
+            'area' => $data['area'],
+            'address_line' => $data['address_line'],
+            'address_type' => $data['address_type'],
+        ];
+
+        if ($address instanceof CustomerAddress) {
+            $address->fill($addressData)->save();
+
+            return $address->refresh();
+        }
+
+        return $customer->addresses()->create(array_merge($addressData, [
+            'is_default' => ! $customer->addresses()->exists(),
+        ]));
+    }
+
+    protected function generateCustomerAccountNo(): string
+    {
+        do {
+            $accountNo = 'WEB-' . now()->format('ym') . '-' . strtoupper(Str::random(6));
+        } while (Customer::query()->where('account_no', $accountNo)->exists());
+
+        return $accountNo;
+    }
+}

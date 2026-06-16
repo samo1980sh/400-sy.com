@@ -1,0 +1,534 @@
+@extends('frontend.layouts.app')
+
+@section('title', $page_title ?? __('front.checkout.title'))
+@section('meta_description', $page_subtitle ?? __('front.checkout.subtitle'))
+
+@php
+    $cartState = $cart_state ?? [];
+    $items = collect($cartState['items'] ?? []);
+    $currency = $cartState['currency'] ?? (session('selectedCurrency') ?? 'SYP');
+    $subtotal = (int) ($cartState['subtotal'] ?? 0);
+    $shippingMethods = collect($shipping_methods ?? []);
+    $paymentMethods = collect($payment_methods ?? []);
+    $requestedShippingId = (int) old('shipping_method_id', (int) ($shippingMethods->first()?->getKey() ?? 0));
+    $selectedShippingMethod = $shippingMethods->first(fn ($method): bool => (int) $method->getKey() === $requestedShippingId)
+        ?? $shippingMethods->first();
+    $selectedShippingId = (int) ($selectedShippingMethod?->getKey() ?? 0);
+    $selectedShippingCost = (int) round((float) ($selectedShippingMethod?->cost ?? 0));
+    $requestedPaymentCode = (string) old('payment_method', (string) ($paymentMethods->first()?->code ?? ''));
+    $selectedPaymentMethod = $paymentMethods->first(fn ($method): bool => (string) $method->code === $requestedPaymentCode)
+        ?? $paymentMethods->first();
+    $selectedPaymentCode = (string) ($selectedPaymentMethod?->code ?? '');
+    $initialTotal = $subtotal + $selectedShippingCost;
+@endphp
+
+@push('styles')
+    <style>
+        .front-checkout-page .checkout-card {
+            border: 1px solid var(--line, #e9e9e9);
+            border-radius: 8px;
+            background: #fff;
+            padding: 24px;
+        }
+
+        .front-checkout-page .checkout-section-title {
+            padding-bottom: 14px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--line, #e9e9e9);
+        }
+
+        .front-checkout-page .checkout-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .front-checkout-page .checkout-required::after {
+            content: ' *';
+            color: #dc3545;
+        }
+
+        .front-checkout-page .checkout-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 15px;
+            border: 1px solid var(--line, #e9e9e9);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: border-color .2s ease, background-color .2s ease;
+        }
+
+        .front-checkout-page .checkout-option:has(input:checked) {
+            border-color: var(--main, #000);
+            background: #fafafa;
+        }
+
+        .front-checkout-page .checkout-option input {
+            margin-top: 4px;
+            flex: 0 0 auto;
+        }
+
+        .front-checkout-page .checkout-summary {
+            position: sticky;
+            top: 24px;
+        }
+
+        .front-checkout-page .checkout-item {
+            display: grid;
+            grid-template-columns: 64px minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--line, #e9e9e9);
+        }
+
+        .front-checkout-page .checkout-item:first-child {
+            padding-top: 0;
+        }
+
+        .front-checkout-page .checkout-item-image {
+            width: 64px;
+            aspect-ratio: 3 / 4;
+            overflow: hidden;
+            border-radius: 5px;
+            background: #f7f7f7;
+        }
+
+        .front-checkout-page .checkout-item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .front-checkout-page .checkout-total-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 8px 0;
+        }
+
+        .front-checkout-page .checkout-grand-total {
+            margin-top: 10px;
+            padding-top: 18px;
+            border-top: 1px solid var(--line, #e9e9e9);
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .front-checkout-page .is-submitting {
+            opacity: .65;
+            pointer-events: none;
+        }
+
+        .front-checkout-page .form-control,
+        .front-checkout-page .form-select {
+            min-height: 48px;
+        }
+
+        @media (max-width: 991.98px) {
+            .front-checkout-page .checkout-summary {
+                position: static;
+            }
+        }
+    </style>
+@endpush
+
+@section('content')
+    @include('frontend.partials.announcement-bar', [
+        'tickerItems' => $ticker_items ?? [],
+        'socialLinks' => $social_links ?? [],
+    ])
+
+    @include('frontend.partials.header', [
+        'navCategories' => $nav_categories ?? [],
+        'currencyOptions' => $currency_options ?? [],
+        'siteName' => $site_name ?? __('front.brand'),
+        'cartCount' => $cart_count ?? 0,
+        'wishlistCount' => $wishlist_count ?? 0,
+        'wishlistUrl' => $wishlist_url ?? route('front.wishlist.index'),
+    ])
+
+    <main
+        class="front-checkout-page"
+        data-checkout-page
+        data-checkout-currency="{{ $currency }}"
+        data-checkout-locale="{{ app()->getLocale() }}"
+    >
+        @include('frontend.partials.page-title', [
+            'title' => $page_title ?? __('front.checkout.title'),
+            'subtitle' => $page_subtitle ?? __('front.checkout.subtitle'),
+            'breadcrumbs' => $breadcrumb_items ?? [],
+        ])
+
+        <section class="flat-spacing-2">
+            <div class="container">
+                @if ($errors->any())
+                    <div class="alert alert-danger mb_24" role="alert">
+                        <div class="fw-6 mb_8">{{ __('front.checkout.fix_errors') }}</div>
+                        <ul class="mb-0 ps-4">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @unless ($checkout_available ?? false)
+                    <div class="alert alert-warning mb_24" role="alert">
+                        {{ __('front.checkout.methods_unavailable') }}
+                    </div>
+                @endunless
+
+                <form method="POST" action="{{ route('front.checkout.store') }}" data-checkout-form>
+                    @csrf
+
+                    <div class="row g-4 align-items-start">
+                        <div class="col-lg-7">
+                            <div class="checkout-card mb_24">
+                                <h5 class="checkout-section-title">{{ __('front.checkout.customer_details') }}</h5>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="checkout-full-name" class="checkout-label checkout-required">
+                                            {{ __('front.checkout.full_name') }}
+                                        </label>
+                                        <input
+                                            id="checkout-full-name"
+                                            type="text"
+                                            name="full_name"
+                                            value="{{ old('full_name') }}"
+                                            class="form-control @error('full_name') is-invalid @enderror"
+                                            autocomplete="name"
+                                            required
+                                        >
+                                        @error('full_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="checkout-mobile" class="checkout-label checkout-required">
+                                            {{ __('front.checkout.mobile') }}
+                                        </label>
+                                        <input
+                                            id="checkout-mobile"
+                                            type="tel"
+                                            name="mobile"
+                                            value="{{ old('mobile') }}"
+                                            class="form-control @error('mobile') is-invalid @enderror"
+                                            autocomplete="tel"
+                                            dir="ltr"
+                                            required
+                                        >
+                                        @error('mobile')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label for="checkout-email" class="checkout-label">
+                                            {{ __('front.checkout.email') }}
+                                            <span class="text-muted fw-normal">({{ __('front.checkout.optional') }})</span>
+                                        </label>
+                                        <input
+                                            id="checkout-email"
+                                            type="email"
+                                            name="email"
+                                            value="{{ old('email') }}"
+                                            class="form-control @error('email') is-invalid @enderror"
+                                            autocomplete="email"
+                                            dir="ltr"
+                                        >
+                                        @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="checkout-card mb_24">
+                                <h5 class="checkout-section-title">{{ __('front.checkout.shipping_address') }}</h5>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="checkout-city" class="checkout-label checkout-required">{{ __('front.checkout.city') }}</label>
+                                        <input
+                                            id="checkout-city"
+                                            type="text"
+                                            name="city"
+                                            value="{{ old('city') }}"
+                                            class="form-control @error('city') is-invalid @enderror"
+                                            autocomplete="address-level2"
+                                            required
+                                        >
+                                        @error('city')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="checkout-area" class="checkout-label checkout-required">{{ __('front.checkout.area') }}</label>
+                                        <input
+                                            id="checkout-area"
+                                            type="text"
+                                            name="area"
+                                            value="{{ old('area') }}"
+                                            class="form-control @error('area') is-invalid @enderror"
+                                            autocomplete="address-level3"
+                                            required
+                                        >
+                                        @error('area')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label for="checkout-address" class="checkout-label checkout-required">{{ __('front.checkout.address_line') }}</label>
+                                        <textarea
+                                            id="checkout-address"
+                                            name="address_line"
+                                            rows="3"
+                                            class="form-control @error('address_line') is-invalid @enderror"
+                                            autocomplete="street-address"
+                                            required
+                                        >{{ old('address_line') }}</textarea>
+                                        @error('address_line')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="checkout-address-type" class="checkout-label checkout-required">{{ __('front.checkout.address_type') }}</label>
+                                        <select
+                                            id="checkout-address-type"
+                                            name="address_type"
+                                            class="form-select @error('address_type') is-invalid @enderror"
+                                            required
+                                        >
+                                            @foreach (['home', 'work', 'other'] as $addressType)
+                                                <option value="{{ $addressType }}" @selected(old('address_type', 'home') === $addressType)>
+                                                    {{ __('front.checkout.address_types.' . $addressType) }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @error('address_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="checkout-address-label" class="checkout-label">
+                                            {{ __('front.checkout.address_label') }}
+                                            <span class="text-muted fw-normal">({{ __('front.checkout.optional') }})</span>
+                                        </label>
+                                        <input
+                                            id="checkout-address-label"
+                                            type="text"
+                                            name="address_label"
+                                            value="{{ old('address_label') }}"
+                                            class="form-control @error('address_label') is-invalid @enderror"
+                                            placeholder="{{ __('front.checkout.address_label_placeholder') }}"
+                                        >
+                                        @error('address_label')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="checkout-card mb_24">
+                                <h5 class="checkout-section-title">{{ __('front.checkout.shipping_method') }}</h5>
+
+                                <div class="d-grid gap-3">
+                                    @forelse ($shippingMethods as $method)
+                                        @php
+                                            $methodName = app()->getLocale() === 'ar'
+                                                ? ($method->name_ar ?: $method->name_en ?: $method->code)
+                                                : ($method->name_en ?: $method->name_ar ?: $method->code);
+                                            $methodCost = (int) round((float) $method->cost);
+                                        @endphp
+                                        <label class="checkout-option">
+                                            <input
+                                                type="radio"
+                                                name="shipping_method_id"
+                                                value="{{ $method->getKey() }}"
+                                                data-shipping-method
+                                                data-shipping-cost="{{ $methodCost }}"
+                                                @checked((int) $selectedShippingId === (int) $method->getKey())
+                                                required
+                                            >
+                                            <span class="flex-grow-1">
+                                                <span class="d-flex justify-content-between gap-3 fw-6">
+                                                    <span>{{ $methodName }}</span>
+                                                    <span class="js-currency-price" data-base-price="{{ $methodCost }}" data-base-currency="{{ $currency }}">
+                                                        {{ number_format($methodCost, 0) }} {{ $currency }}
+                                                    </span>
+                                                </span>
+                                                @if (filled($method->delivery_time))
+                                                    <span class="d-block text-muted mt-1">{{ $method->delivery_time }}</span>
+                                                @endif
+                                            </span>
+                                        </label>
+                                    @empty
+                                        <p class="text-muted mb-0">{{ __('front.checkout.no_shipping_methods') }}</p>
+                                    @endforelse
+                                </div>
+                                @error('shipping_method_id')<div class="text-danger mt-2">{{ $message }}</div>@enderror
+                            </div>
+
+                            <div class="checkout-card mb_24">
+                                <h5 class="checkout-section-title">{{ __('front.checkout.payment_method') }}</h5>
+
+                                <div class="d-grid gap-3">
+                                    @forelse ($paymentMethods as $method)
+                                        @php
+                                            $methodName = app()->getLocale() === 'ar'
+                                                ? ($method->name_ar ?: $method->name_en ?: $method->code)
+                                                : ($method->name_en ?: $method->name_ar ?: $method->code);
+                                        @endphp
+                                        <label class="checkout-option">
+                                            <input
+                                                type="radio"
+                                                name="payment_method"
+                                                value="{{ $method->code }}"
+                                                @checked($selectedPaymentCode === (string) $method->code)
+                                                required
+                                            >
+                                            <span>
+                                                <span class="d-block fw-6">{{ $methodName }}</span>
+                                                @if (filled($method->notes))
+                                                    <span class="d-block text-muted mt-1">{{ $method->notes }}</span>
+                                                @endif
+                                            </span>
+                                        </label>
+                                    @empty
+                                        <p class="text-muted mb-0">{{ __('front.checkout.no_payment_methods') }}</p>
+                                    @endforelse
+                                </div>
+                                @error('payment_method')<div class="text-danger mt-2">{{ $message }}</div>@enderror
+                            </div>
+
+                            <div class="checkout-card">
+                                <label for="checkout-notes" class="checkout-label">
+                                    {{ __('front.checkout.notes') }}
+                                    <span class="text-muted fw-normal">({{ __('front.checkout.optional') }})</span>
+                                </label>
+                                <textarea
+                                    id="checkout-notes"
+                                    name="notes"
+                                    rows="4"
+                                    class="form-control @error('notes') is-invalid @enderror"
+                                    placeholder="{{ __('front.checkout.notes_placeholder') }}"
+                                >{{ old('notes') }}</textarea>
+                                @error('notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                        </div>
+
+                        <div class="col-lg-5">
+                            <div class="checkout-card checkout-summary">
+                                <h5 class="checkout-section-title">{{ __('front.checkout.order_summary') }}</h5>
+
+                                <div class="mb_20">
+                                    @foreach ($items as $item)
+                                        @php
+                                            $lineTotal = (int) ($item['line_total'] ?? ((int) ($item['unit_price'] ?? 0) * (int) ($item['qty'] ?? 1)));
+                                        @endphp
+                                        <div class="checkout-item">
+                                            <a href="{{ $item['url'] ?? '#' }}" class="checkout-item-image">
+                                                <img src="{{ $item['image'] ?? '' }}" alt="{{ $item['title'] ?? '' }}" loading="lazy">
+                                            </a>
+                                            <div class="min-w-0">
+                                                <a href="{{ $item['url'] ?? '#' }}" class="link fw-6 d-block">{{ $item['title'] ?? '' }}</a>
+                                                @if (filled($item['meta_variant'] ?? null))
+                                                    <small class="text-muted d-block mt-1">{{ $item['meta_variant'] }}</small>
+                                                @endif
+                                                <small class="text-muted d-block mt-1">{{ __('front.checkout.quantity_short') }}: {{ (int) ($item['qty'] ?? 1) }}</small>
+                                            </div>
+                                            <div class="text-end fw-6 js-currency-price" data-base-price="{{ $lineTotal }}" data-base-currency="{{ $item['base_currency'] ?? $currency }}">
+                                                {{ number_format($lineTotal, 0) }} {{ $item['base_currency'] ?? $currency }}
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                <div class="checkout-total-row">
+                                    <span>{{ __('front.cart.subtotal') }}</span>
+                                    <span class="fw-6 js-currency-price" data-base-price="{{ $subtotal }}" data-base-currency="{{ $currency }}">
+                                        {{ number_format($subtotal, 0) }} {{ $currency }}
+                                    </span>
+                                </div>
+
+                                <div class="checkout-total-row">
+                                    <span>{{ __('front.checkout.shipping_cost') }}</span>
+                                    <span
+                                        class="fw-6 js-currency-price"
+                                        data-checkout-shipping-cost
+                                        data-base-price="{{ $selectedShippingCost }}"
+                                        data-base-currency="{{ $currency }}"
+                                    >
+                                        {{ number_format($selectedShippingCost, 0) }} {{ $currency }}
+                                    </span>
+                                </div>
+
+                                <div class="checkout-total-row checkout-grand-total">
+                                    <span>{{ __('front.checkout.grand_total') }}</span>
+                                    <span
+                                        class="js-currency-price"
+                                        data-checkout-total
+                                        data-checkout-subtotal="{{ $subtotal }}"
+                                        data-base-price="{{ $initialTotal }}"
+                                        data-base-currency="{{ $currency }}"
+                                    >
+                                        {{ number_format($initialTotal, 0) }} {{ $currency }}
+                                    </span>
+                                </div>
+
+                                <div class="form-check mt_24 mb_20">
+                                    <input
+                                        class="form-check-input @error('terms') is-invalid @enderror"
+                                        type="checkbox"
+                                        name="terms"
+                                        value="1"
+                                        id="checkout-terms"
+                                        @checked(old('terms'))
+                                        required
+                                    >
+                                    <label class="form-check-label" for="checkout-terms">
+                                        {{ __('front.cart.agree_prefix') }}
+                                        <a href="{{ route('front.pages.show', 'terms-and-conditions') }}" class="text-decoration-underline">
+                                            {{ __('front.cart.terms_and_conditions') }}
+                                        </a>
+                                    </label>
+                                    @error('terms')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    class="tf-btn btn-fill animate-hover-btn radius-3 w-100 justify-content-center"
+                                    data-checkout-submit
+                                    @disabled(! ($checkout_available ?? false))
+                                >
+                                    <span data-checkout-submit-label>{{ __('front.checkout.place_order') }}</span>
+                                    <span class="d-none" data-checkout-submitting-label>{{ __('front.checkout.submitting') }}</span>
+                                </button>
+
+                                <a href="{{ route('front.cart.view') }}" class="tf-btn btn-outline radius-3 w-100 justify-content-center mt_12">
+                                    {{ __('front.checkout.back_to_cart') }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    @include('frontend.partials.footer', [
+        'contact' => $contact ?? null,
+        'socialLinks' => $social_links ?? [],
+        'footerPages' => $footer_pages ?? [],
+        'collections' => $collections ?? [],
+    ])
+
+    @include('frontend.partials.toolbar-bottom', [
+        'cartCount' => $cart_count ?? 0,
+        'wishlistCount' => $wishlist_count ?? 0,
+        'wishlistUrl' => $wishlist_url ?? route('front.wishlist.index'),
+    ])
+    @include('frontend.partials.mobile-menu', [
+        'navCategories' => $nav_categories ?? [],
+        'quickLinks' => $quick_links ?? [],
+    ])
+    @include('frontend.partials.search-canvas', ['quickLinks' => $quick_links ?? []])
+    @include('frontend.partials.shopping-cart', ['cartState' => $cart_state ?? []])
+    @include('frontend.partials.auth-modals')
+@endsection
+
+@push('scripts')
+    <script src="{{ asset('js/frontend-checkout.js') }}?v={{ filemtime(public_path('js/frontend-checkout.js')) }}"></script>
+@endpush

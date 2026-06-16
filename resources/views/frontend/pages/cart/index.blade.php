@@ -208,8 +208,16 @@
 
         <section class="flat-spacing-2">
             <div class="container">
-                <div class="alert alert-danger d-none mb_20" role="alert" data-cart-page-error>
-                    {{ __('front.cart.update_failed') }}
+                @php
+                    $cartPageError = session('cart_error') ?: $errors->first('cart');
+                @endphp
+
+                <div
+                    class="alert alert-danger {{ filled($cartPageError) ? '' : 'd-none' }} mb_20"
+                    role="alert"
+                    data-cart-page-error
+                >
+                    {{ $cartPageError ?: __('front.cart.update_failed') }}
                 </div>
 
                 @include('frontend.partials.cart-page-content', ['cartState' => $cart_state ?? []])

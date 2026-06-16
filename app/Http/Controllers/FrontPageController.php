@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreFrontOrderRequest;
 use App\Models\Category;
 use App\Models\Color;
 use App\Models\CompanyPage;
 use App\Models\ExchangeRateSetting;
+use App\Models\Order;
+use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\ProductVariant;
 use App\Models\Size;
 use App\Services\FrontCartService;
+use App\Services\FrontCheckoutService;
 use App\Services\FrontHomePageDataService;
 use App\Services\FrontWishlistService;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class FrontPageController extends Controller
@@ -580,15 +585,73 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         ]));
     }
 
-    public function checkout(): View
+    public function checkout(FrontCartService $cart, FrontCheckoutService $checkout): View|RedirectResponse
     {
-        return view('frontend.pages.placeholder', [
-            'title' => __('front.cart.check_out'),
-            'eyebrow' => __('front.cart.title'),
-            'message' => __('front.cart.checkout_placeholder_message'),
-            'details' => [],
-            'back_url' => route('front.cart.view'),
-        ]);
+        try {
+            $cartState = $cart->checkoutState();
+        } catch (ValidationException $exception) {
+            return redirect()
+                ->route('front.cart.view')
+                ->withErrors($exception->errors());
+        }
+
+        if (empty($cartState['items'])) {
+            return redirect()
+                ->route('front.cart.view')
+                ->with('cart_error', __('front.checkout.cart_empty'));
+        }
+
+        $shippingMethods = $checkout->activeShippingMethods();
+        $paymentMethods = $checkout->activePaymentMethods();
+        $shell = $this->homePageData->build();
+
+        return view('frontend.pages.checkout.index', array_merge($shell, [
+            'page_title' => __('front.checkout.title'),
+            'page_subtitle' => __('front.checkout.subtitle'),
+            'breadcrumb_items' => [
+                ['label' => __('front.nav.home'), 'url' => route('front.home')],
+                ['label' => __('front.cart.page_title'), 'url' => route('front.cart.view')],
+                ['label' => __('front.checkout.title'), 'url' => route('front.checkout')],
+            ],
+            'cart_state' => $cartState,
+            'shipping_methods' => $shippingMethods,
+            'payment_methods' => $paymentMethods,
+            'checkout_available' => $shippingMethods->isNotEmpty() && $paymentMethods->isNotEmpty(),
+        ]));
+    }
+
+    public function storeCheckout(
+        StoreFrontOrderRequest $request,
+        FrontCheckoutService $checkout,
+    ): RedirectResponse {
+        $order = $checkout->createOrder($request->validated());
+
+        return redirect()->route('front.checkout.success', $order->order_no);
+    }
+
+    public function checkoutSuccess(Order $order): View
+    {
+        abort_unless(
+            (int) session(FrontCheckoutService::SUCCESS_SESSION_KEY) === (int) $order->getKey(),
+            404,
+        );
+
+        $order->load(['items', 'shippingMethod', 'customer', 'shippingAddress']);
+        $paymentMethod = PaymentMethod::query()
+            ->where('code', $order->payment_method)
+            ->first();
+        $shell = $this->homePageData->build();
+
+        return view('frontend.pages.checkout.success', array_merge($shell, [
+            'page_title' => __('front.checkout.success_title'),
+            'page_subtitle' => __('front.checkout.success_subtitle'),
+            'breadcrumb_items' => [
+                ['label' => __('front.nav.home'), 'url' => route('front.home')],
+                ['label' => __('front.checkout.success_title'), 'url' => route('front.checkout.success', $order->order_no)],
+            ],
+            'order' => $order,
+            'payment_method_record' => $paymentMethod,
+        ]));
     }
 
     public function page(string $slug): View

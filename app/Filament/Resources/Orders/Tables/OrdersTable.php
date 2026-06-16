@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Orders\Tables;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
+use App\Models\PaymentMethod;
 use App\Services\CustomerLoyaltyService;
 use App\Services\OrderCouponService;
 use Filament\Actions\Action;
@@ -34,6 +35,12 @@ class OrdersTable
                     ->label('الزبون')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('customer_mobile_snapshot')
+                    ->label('الموبايل')
+                    ->searchable()
+                    ->copyable()
+                    ->extraAttributes(['dir' => 'ltr'])
+                    ->toggleable(),
                 TextColumn::make('shippingAddress.label')
                     ->label('عنوان الشحن')
                     ->searchable()
@@ -45,22 +52,30 @@ class OrdersTable
                 TextColumn::make('status')
                     ->label('حالة الطلب')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'pending' => 'قيد المراجعة',
-                        'confirmed' => 'مؤكد',
-                        'shipped' => 'مُشحن',
-                        'delivered' => 'مُسلم',
-                        'cancelled' => 'ملغى',
-                        default => (string) $state,
-                    }),
+                    ->color(fn (?string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'confirmed' => 'info',
+                        'shipped' => 'primary',
+                        'delivered' => 'success',
+                        'cancelled' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (?string $state): string => self::statusLabels()[$state] ?? (string) $state),
                 TextColumn::make('payment_status')
                     ->label('حالة الدفع')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'unpaid' => 'غير مدفوع',
-                        'paid' => 'مدفوع',
-                        default => (string) $state,
-                    }),
+                    ->color(fn (?string $state): string => match ($state) {
+                        'paid' => 'success',
+                        'unpaid' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (?string $state): string => self::paymentStatusLabels()[$state] ?? (string) $state),
+                TextColumn::make('payment_method')
+                    ->label('طريقة الدفع')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => self::paymentMethodLabel($state))
+                    ->placeholder('—')
+                    ->toggleable(),
                 TextColumn::make('coupon_code_snapshot')
                     ->label('الكوبون')
                     ->badge()
@@ -110,16 +125,33 @@ class OrdersTable
                 ->label('إظهار / إخفاء الأعمدة')
                 ->icon(Heroicon::OutlinedViewColumns))
             ->recordActions([
+                Action::make('viewOrder')
+                    ->label('التفاصيل')
+                    ->icon(Heroicon::OutlinedEye)
+                    ->color('primary')
+                    ->modalHeading(fn (Order $record): string => 'تفاصيل الطلب ' . $record->order_no)
+                    ->modalWidth('7xl')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('إغلاق')
+                    ->modalContent(fn (Order $record) => view('filament.orders.order-details', [
+                        'order' => $record->load(['customer', 'shippingAddress', 'shippingMethod', 'items']),
+                        'paymentMethodLabel' => self::paymentMethodLabel($record->payment_method),
+                        'statusLabels' => self::statusLabels(),
+                        'paymentStatusLabels' => self::paymentStatusLabels(),
+                    ])),
                 Action::make('viewHistory')
                     ->label('سجل الحالة')
                     ->icon(Heroicon::OutlinedClock)
                     ->color('gray')
-                    ->modalHeading('سجل حالة الطلب')
-                    ->modalWidth('6xl')
+                    ->slideOver()
+                    ->modalHeading(fn (Order $record): string => 'سجل حالة الطلب ' . $record->order_no)
+                    ->modalWidth('4xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('إغلاق')
                     ->modalContent(fn (Order $record) => view('filament.orders.order-status-history', [
-                        'history' => $record->statusHistory()->with('changedBy')->latest()->get(),
+                        'history' => $record->statusHistory()->with('changedBy')->latest('id')->get(),
+                        'statusLabels' => self::statusLabels(),
+                        'paymentStatusLabels' => self::paymentStatusLabels(),
                     ])),
                 Action::make('confirmOrder')
                     ->label('تأكيد')
@@ -240,6 +272,23 @@ class OrdersTable
             'unpaid' => 'غير مدفوع',
             'paid' => 'مدفوع',
         ];
+    }
+
+    protected static function paymentMethodLabel(?string $code): string
+    {
+        if (blank($code)) {
+            return '—';
+        }
+
+        static $labels = null;
+
+        $labels ??= PaymentMethod::query()
+            ->pluck('name_ar', 'code')
+            ->all();
+
+        return $labels[$code] ?? (string) str($code)
+            ->replace('_', ' ')
+            ->headline();
     }
 
     protected static function transitionStatus(Order $order, string $status): void
