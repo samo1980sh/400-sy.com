@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Customer;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -88,8 +89,21 @@ class StoreFrontOrderRequest extends FormRequest
                 $emailCustomer = Customer::query()
                     ->where('email', $email)
                     ->first(['id', 'mobile']);
+                $authenticatedCustomer = Auth::guard('customer')->user();
 
-                if ($emailCustomer instanceof Customer && $emailCustomer->mobile !== $mobile) {
+                if (! $emailCustomer instanceof Customer) {
+                    return;
+                }
+
+                if ($authenticatedCustomer instanceof Customer) {
+                    if ((int) $emailCustomer->getKey() !== (int) $authenticatedCustomer->getKey()) {
+                        $validator->errors()->add('email', __('front.checkout.email_in_use'));
+                    }
+
+                    return;
+                }
+
+                if ($emailCustomer->mobile !== $mobile) {
                     $validator->errors()->add('email', __('front.checkout.email_in_use'));
                 }
             },

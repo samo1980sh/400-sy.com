@@ -4,11 +4,14 @@ namespace App\Filament\Resources\Orders\Tables;
 
 use App\Models\Coupon;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\PaymentMethod;
 use App\Services\CustomerLoyaltyService;
 use App\Services\OrderCouponService;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -17,6 +20,8 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class OrdersTable
@@ -246,7 +251,68 @@ class OrdersTable
                         }
                     }),
             ])
-            ->toolbarActions([]);
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('deleteSelectedOrders')
+                        ->label('حذف الطلبات المحددة')
+                        ->icon(Heroicon::OutlinedTrash)
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('حذف الطلبات المحددة')
+                        ->modalDescription('سيتم حذف الطلبات المحددة مع عناصرها وسجل حالاتها. لن يتم حذف الزبائن المرتبطين بهذه الطلبات.')
+                        ->modalSubmitActionLabel('نعم، احذف الطلبات')
+                        ->action(function (Collection $records): void {
+                            try {
+                                $deletedCount = self::deleteOrdersWithRelations($records);
+
+                                Notification::make()
+                                    ->title('تم حذف الطلبات المحددة بنجاح.')
+                                    ->body('عدد الطلبات المحذوفة: ' . $deletedCount)
+                                    ->success()
+                                    ->send();
+                            } catch (Throwable $exception) {
+                                report($exception);
+
+                                Notification::make()
+                                    ->title('فشل حذف الطلبات المحددة.')
+                                    ->body($exception->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                ]),
+            ]);
+    }
+
+    protected static function deleteOrdersWithRelations(Collection $orders): int
+    {
+        if ($orders->isEmpty()) {
+            return 0;
+        }
+
+        return DB::transaction(function () use ($orders): int {
+            $orders = Order::query()
+                ->whereKey($orders->modelKeys())
+                ->with('couponRedemption')
+                ->get();
+
+            $orderIds = $orders->modelKeys();
+
+            OrderStatusHistory::query()
+                ->whereIn('order_id', $orderIds)
+                ->delete();
+
+            OrderItem::query()
+                ->whereIn('order_id', $orderIds)
+                ->delete();
+
+            foreach ($orders as $order) {
+                $order->couponRedemption?->delete();
+                $order->delete();
+            }
+
+            return count($orderIds);
+        });
     }
 
     /**

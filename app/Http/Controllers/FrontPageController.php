@@ -603,6 +603,10 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
         $shippingMethods = $checkout->activeShippingMethods();
         $paymentMethods = $checkout->activePaymentMethods();
+        $authenticatedCustomer = auth('customer')->user();
+        $savedAddresses = $authenticatedCustomer
+            ? $authenticatedCustomer->addresses()->orderByDesc('is_default')->latest('id')->get()
+            : collect();
         $shell = $this->homePageData->build();
 
         return view('frontend.pages.checkout.index', array_merge($shell, [
@@ -617,6 +621,8 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'shipping_methods' => $shippingMethods,
             'payment_methods' => $paymentMethods,
             'checkout_available' => $shippingMethods->isNotEmpty() && $paymentMethods->isNotEmpty(),
+            'authenticated_customer' => $authenticatedCustomer,
+            'saved_addresses' => $savedAddresses,
         ]));
     }
 

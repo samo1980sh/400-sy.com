@@ -104,6 +104,8 @@ class FrontHomePageDataService
             'wishlist_state' => $wishlistState,
             'wishlist_count' => $wishlistState['count'] ?? 0,
             'wishlist_url' => route('front.wishlist.index'),
+            'customer_authenticated' => auth('customer')->check(),
+            'authenticated_customer' => auth('customer')->user(),
             'site_name' => __('front.brand'),
         ];
     }

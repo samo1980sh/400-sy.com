@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\CurrencyController;
+use App\Http\Controllers\FrontCustomerAccountController;
+use App\Http\Controllers\FrontCustomerAuthController;
 use App\Http\Controllers\FrontPageController;
+use App\Http\Middleware\AuthenticateFrontCustomer;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('front.locale')->group(function (): void {
@@ -9,6 +12,38 @@ Route::middleware('front.locale')->group(function (): void {
     Route::get('/category/{slug}', [FrontPageController::class, 'category'])->name('front.category');
     Route::get('/lang/{locale}', [FrontPageController::class, 'setLocale'])->name('front.locale');
     Route::post('/currency', [CurrencyController::class, 'update'])->name('front.currency');
+
+    Route::post('/account/login', [FrontCustomerAuthController::class, 'login'])
+        ->middleware('throttle:6,1')
+        ->name('front.customer.login');
+    Route::post('/account/register', [FrontCustomerAuthController::class, 'register'])
+        ->middleware('throttle:4,1')
+        ->name('front.customer.register');
+    Route::post('/account/activate', [FrontCustomerAuthController::class, 'activate'])
+        ->middleware('throttle:4,1')
+        ->name('front.customer.activate');
+    Route::post('/account/logout', [FrontCustomerAuthController::class, 'logout'])
+        ->name('front.customer.logout');
+
+    Route::middleware(AuthenticateFrontCustomer::class)
+        ->prefix('account')
+        ->name('front.account.')
+        ->group(function (): void {
+            Route::get('/', [FrontCustomerAccountController::class, 'index'])->name('index');
+            Route::get('/profile', [FrontCustomerAccountController::class, 'profile'])->name('profile');
+            Route::patch('/profile', [FrontCustomerAccountController::class, 'updateProfile'])->name('profile.update');
+            Route::patch('/password', [FrontCustomerAccountController::class, 'updatePassword'])->name('password.update');
+
+            Route::get('/addresses', [FrontCustomerAccountController::class, 'addresses'])->name('addresses');
+            Route::post('/addresses', [FrontCustomerAccountController::class, 'storeAddress'])->name('addresses.store');
+            Route::patch('/addresses/{address}', [FrontCustomerAccountController::class, 'updateAddress'])->name('addresses.update');
+            Route::patch('/addresses/{address}/default', [FrontCustomerAccountController::class, 'setDefaultAddress'])->name('addresses.default');
+            Route::delete('/addresses/{address}', [FrontCustomerAccountController::class, 'destroyAddress'])->name('addresses.destroy');
+
+            Route::get('/orders', [FrontCustomerAccountController::class, 'orders'])->name('orders');
+            Route::get('/orders/{order:order_no}', [FrontCustomerAccountController::class, 'showOrder'])->name('orders.show');
+        });
+
     Route::get('/products', [FrontPageController::class, 'productsIndex'])->name('front.products.index');
     Route::get('/offers', [FrontPageController::class, 'offers'])->name('front.offers');
     Route::get('/wishlist', [FrontPageController::class, 'wishlist'])->name('front.wishlist.index');

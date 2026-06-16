@@ -5,8 +5,9 @@
             <div class="toolbar-label">{{ __('front.toolbar.search') }}</div>
         </a>
     </div>
+    @php($toolbarCustomer = auth('customer')->user())
     <div class="toolbar-item">
-        <a href="#login" data-bs-toggle="modal">
+        <a href="{{ $toolbarCustomer ? route('front.account.index') : '#login' }}" @unless($toolbarCustomer) data-bs-toggle="modal" @endunless>
             <div class="toolbar-icon"><i class="icon-account"></i></div>
             <div class="toolbar-label">{{ __('front.toolbar.account') }}</div>
         </a>

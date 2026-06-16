@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ShippingMethod;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -159,6 +160,24 @@ class FrontCheckoutService
 
     protected function resolveCustomer(array $data): Customer
     {
+        $authenticatedCustomer = Auth::guard('customer')->user();
+
+        if ($authenticatedCustomer instanceof Customer) {
+            $customerData = [
+                'name' => $data['full_name'],
+                'city' => $data['city'],
+                'area' => $data['area'],
+            ];
+
+            if (filled($data['email'] ?? null)) {
+                $customerData['email'] = $data['email'];
+            }
+
+            $authenticatedCustomer->fill($customerData)->save();
+
+            return $authenticatedCustomer->refresh();
+        }
+
         $customer = Customer::query()
             ->where('mobile', $data['mobile'])
             ->first();

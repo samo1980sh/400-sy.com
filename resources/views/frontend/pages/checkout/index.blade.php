@@ -20,6 +20,17 @@
         ?? $paymentMethods->first();
     $selectedPaymentCode = (string) ($selectedPaymentMethod?->code ?? '');
     $initialTotal = $subtotal + $selectedShippingCost;
+    $customer = $authenticated_customer ?? null;
+    $savedAddresses = collect($saved_addresses ?? []);
+    $defaultAddress = $savedAddresses->firstWhere('is_default', true) ?? $savedAddresses->first();
+    $prefillName = old('full_name', $customer?->name ?? $defaultAddress?->contact_name);
+    $prefillMobile = old('mobile', $defaultAddress?->mobile ?? $customer?->mobile);
+    $prefillEmail = old('email', $customer?->email);
+    $prefillCity = old('city', $defaultAddress?->city ?? $customer?->city);
+    $prefillArea = old('area', $defaultAddress?->area ?? $customer?->area);
+    $prefillAddressLine = old('address_line', $defaultAddress?->address_line);
+    $prefillAddressType = old('address_type', $defaultAddress?->address_type ?? 'home');
+    $prefillAddressLabel = old('address_label', $defaultAddress?->label);
 @endphp
 
 @push('styles')
@@ -188,6 +199,13 @@
                             <div class="checkout-card mb_24">
                                 <h5 class="checkout-section-title">{{ __('front.checkout.customer_details') }}</h5>
 
+                                @if ($customer)
+                                    <div class="alert alert-light border mb_20">
+                                        {{ __('front.checkout.signed_in_as') }} <strong>{{ $customer->name }}</strong>
+                                        <span class="ms-2" dir="ltr">{{ $customer->account_no }}</span>
+                                    </div>
+                                @endif
+
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="checkout-full-name" class="checkout-label checkout-required">
@@ -197,7 +215,7 @@
                                             id="checkout-full-name"
                                             type="text"
                                             name="full_name"
-                                            value="{{ old('full_name') }}"
+                                            value="{{ $prefillName }}"
                                             class="form-control @error('full_name') is-invalid @enderror"
                                             autocomplete="name"
                                             required
@@ -213,7 +231,7 @@
                                             id="checkout-mobile"
                                             type="tel"
                                             name="mobile"
-                                            value="{{ old('mobile') }}"
+                                            value="{{ $prefillMobile }}"
                                             class="form-control @error('mobile') is-invalid @enderror"
                                             autocomplete="tel"
                                             dir="ltr"
@@ -231,7 +249,7 @@
                                             id="checkout-email"
                                             type="email"
                                             name="email"
-                                            value="{{ old('email') }}"
+                                            value="{{ $prefillEmail }}"
                                             class="form-control @error('email') is-invalid @enderror"
                                             autocomplete="email"
                                             dir="ltr"
@@ -244,6 +262,30 @@
                             <div class="checkout-card mb_24">
                                 <h5 class="checkout-section-title">{{ __('front.checkout.shipping_address') }}</h5>
 
+                                @if ($customer && $savedAddresses->isNotEmpty())
+                                    <div class="mb_20">
+                                        <label for="checkout-saved-address" class="checkout-label">{{ __('front.checkout.use_saved_address') }}</label>
+                                        <select id="checkout-saved-address" class="form-select" data-checkout-saved-address>
+                                            <option value="">{{ __('front.checkout.enter_new_address') }}</option>
+                                            @foreach ($savedAddresses as $address)
+                                                <option
+                                                    value="{{ $address->getKey() }}"
+                                                    data-contact-name="{{ $address->contact_name }}"
+                                                    data-mobile="{{ $address->mobile }}"
+                                                    data-city="{{ $address->city }}"
+                                                    data-area="{{ $address->area }}"
+                                                    data-address-line="{{ $address->address_line }}"
+                                                    data-address-type="{{ $address->address_type }}"
+                                                    data-address-label="{{ $address->label }}"
+                                                    @selected($defaultAddress && (int) $defaultAddress->getKey() === (int) $address->getKey() && ! old('address_line'))
+                                                >
+                                                    {{ $address->label ?: __('front.checkout.address_types.' . $address->address_type) }} — {{ $address->city }}، {{ $address->area }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
+
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="checkout-city" class="checkout-label checkout-required">{{ __('front.checkout.city') }}</label>
@@ -251,7 +293,7 @@
                                             id="checkout-city"
                                             type="text"
                                             name="city"
-                                            value="{{ old('city') }}"
+                                            value="{{ $prefillCity }}"
                                             class="form-control @error('city') is-invalid @enderror"
                                             autocomplete="address-level2"
                                             required
@@ -265,7 +307,7 @@
                                             id="checkout-area"
                                             type="text"
                                             name="area"
-                                            value="{{ old('area') }}"
+                                            value="{{ $prefillArea }}"
                                             class="form-control @error('area') is-invalid @enderror"
                                             autocomplete="address-level3"
                                             required
@@ -282,7 +324,7 @@
                                             class="form-control @error('address_line') is-invalid @enderror"
                                             autocomplete="street-address"
                                             required
-                                        >{{ old('address_line') }}</textarea>
+                                        >{{ $prefillAddressLine }}</textarea>
                                         @error('address_line')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
 
@@ -295,7 +337,7 @@
                                             required
                                         >
                                             @foreach (['home', 'work', 'other'] as $addressType)
-                                                <option value="{{ $addressType }}" @selected(old('address_type', 'home') === $addressType)>
+                                                <option value="{{ $addressType }}" @selected($prefillAddressType === $addressType)>
                                                     {{ __('front.checkout.address_types.' . $addressType) }}
                                                 </option>
                                             @endforeach
@@ -312,7 +354,7 @@
                                             id="checkout-address-label"
                                             type="text"
                                             name="address_label"
-                                            value="{{ old('address_label') }}"
+                                            value="{{ $prefillAddressLabel }}"
                                             class="form-control @error('address_label') is-invalid @enderror"
                                             placeholder="{{ __('front.checkout.address_label_placeholder') }}"
                                         >
@@ -531,4 +573,45 @@
 
 @push('scripts')
     <script src="{{ asset('js/frontend-checkout.js') }}?v={{ filemtime(public_path('js/frontend-checkout.js')) }}"></script>
+    <script>
+        document.addEventListener('change', function (event) {
+            var select = event.target.closest('[data-checkout-saved-address]');
+            if (!select || !select.selectedOptions.length) {
+                return;
+            }
+
+            var option = select.selectedOptions[0];
+            if (!option.value) {
+                ['checkout-city', 'checkout-area', 'checkout-address', 'checkout-address-label'].forEach(function (id) {
+                    var field = document.getElementById(id);
+                    if (field) {
+                        field.value = '';
+                    }
+                });
+                var addressType = document.getElementById('checkout-address-type');
+                if (addressType) {
+                    addressType.value = 'home';
+                }
+                return;
+            }
+
+            var fields = {
+                'checkout-full-name': option.dataset.contactName || '',
+                'checkout-mobile': option.dataset.mobile || '',
+                'checkout-city': option.dataset.city || '',
+                'checkout-area': option.dataset.area || '',
+                'checkout-address': option.dataset.addressLine || '',
+                'checkout-address-type': option.dataset.addressType || 'home',
+                'checkout-address-label': option.dataset.addressLabel || ''
+            };
+
+            Object.keys(fields).forEach(function (id) {
+                var field = document.getElementById(id);
+                if (field) {
+                    field.value = fields[id];
+                    field.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        });
+    </script>
 @endpush

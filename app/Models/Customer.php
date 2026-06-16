@@ -3,12 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Customer extends Model
+class Customer extends Authenticatable
 {
     use HasFactory;
 
@@ -30,6 +30,10 @@ class Customer extends Model
         'mobile_verified_at',
         'email_verified_at',
         'notes',
+    ];
+
+    protected $hidden = [
+        'password',
     ];
 
     protected function casts(): array
@@ -87,6 +91,14 @@ class Customer extends Model
         return $this->belongsToMany(
             RetailCustomerGroup::class,
             'customer_retail_group_assignments'
+        )->withTimestamps();
+    }
+
+    public function wishlistProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Product::class,
+            'customer_wishlist_items'
         )->withTimestamps();
     }
 
