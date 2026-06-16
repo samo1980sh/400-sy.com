@@ -566,14 +566,18 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
     public function cart(FrontCartService $cart): View
     {
-        return view('frontend.pages.placeholder', [
-            'title' => __('front.cart.view_cart'),
-            'eyebrow' => __('front.cart.title'),
-            'message' => __('front.cart.page_placeholder_message'),
-            'details' => [],
-            'back_url' => route('front.home') . '#featured-products',
-            'cart_state' => $cart->state(),
-        ]);
+        $shell = $this->homePageData->build();
+        $state = $cart->state();
+
+        return view('frontend.pages.cart.index', array_merge($shell, [
+            'page_title' => __('front.cart.page_title'),
+            'page_subtitle' => __('front.cart.page_subtitle'),
+            'breadcrumb_items' => [
+                ['label' => __('front.nav.home'), 'url' => route('front.home')],
+                ['label' => __('front.cart.page_title'), 'url' => route('front.cart.view')],
+            ],
+            'cart_state' => $state,
+        ]));
     }
 
     public function checkout(): View
@@ -699,11 +703,15 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         $html = view('frontend.partials.shopping-cart', [
             'cartState' => $state,
         ])->render();
+        $pageHtml = view('frontend.partials.cart-page-content', [
+            'cartState' => $state,
+        ])->render();
 
         return response()->json([
             'ok' => true,
             'cart_state' => $state,
             'cart_html' => $html,
+            'cart_page_html' => $pageHtml,
         ]);
     }
 

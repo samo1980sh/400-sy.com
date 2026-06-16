@@ -408,6 +408,8 @@ class FrontCartService
         $item['price_label'] = $item['price_label'] ?? $item['unit_price_label'];
         $item['compare_price'] = isset($item['compare_price']) ? (int) $item['compare_price'] : null;
         $item['compare_price_label'] = $item['compare_price_label'] ?? ($item['compare_price'] ? number_format((int) $item['compare_price'], 0) . ' ' . $item['base_currency'] : null);
+        $item['line_total'] = $item['unit_price'] * $item['qty'];
+        $item['line_total_label'] = number_format($item['line_total'], 0) . ' ' . $item['base_currency'];
         $item['color_hex'] = $item['color_hex'] ?? null;
         $item['color_swatch_image'] = $item['color_swatch_image'] ?? null;
         $item['color_swatch_style'] = $item['color_swatch_style'] ?? '';
