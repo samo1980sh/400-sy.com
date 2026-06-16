@@ -22,6 +22,7 @@ class FrontHomePageDataService
     public function __construct(
         protected ProductPresentationService $productPresenter,
         protected FrontCartService $cartService,
+        protected FrontWishlistService $wishlistService,
     ) {
     }
 
@@ -30,6 +31,7 @@ class FrontHomePageDataService
         $locale = app()->getLocale();
         $categoryIds = $category ? $this->collectCategoryBranchIds($category) : [];
         $cartState = $this->cartService->state();
+        $wishlistState = $this->wishlistService->cleanupVisibleIds();
 
         $productsQuery = Product::query()
             ->with([
@@ -65,6 +67,22 @@ class FrontHomePageDataService
             ->limit(4)
             ->get();
 
+        if ($trendingProducts->isEmpty()) {
+            $trendingProducts = (clone $productsQuery)
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->limit(4)
+                ->get();
+        }
+
+        if ($newProducts->isEmpty()) {
+            $newProducts = (clone $productsQuery)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit(4)
+                ->get();
+        }
+
         return [
             'current_category' => $category,
             'locale' => $locale,
@@ -83,6 +101,9 @@ class FrontHomePageDataService
             'currency_options' => $this->buildCurrencyOptions(),
             'cart_state' => $cartState,
             'cart_count' => $cartState['count'] ?? 0,
+            'wishlist_state' => $wishlistState,
+            'wishlist_count' => $wishlistState['count'] ?? 0,
+            'wishlist_url' => route('front.wishlist.index'),
             'site_name' => __('front.brand'),
         ];
     }
@@ -237,7 +258,15 @@ class FrontHomePageDataService
 
     public function presentProduct(Product $product, ?string $locale = null, array $preferredFilterColorIds = [], ?int $colorLimit = 4): array
     {
-        return $this->productPresenter->presentProduct($product, $locale, $preferredFilterColorIds, $colorLimit);
+        $presentation = $this->productPresenter->presentProduct($product, $locale, $preferredFilterColorIds, $colorLimit);
+
+        if (filled($product->slug ?? null)) {
+            $presentation['wishlist_add_url'] = route('front.wishlist.add', $product->slug);
+            $presentation['wishlist_remove_url'] = route('front.wishlist.remove', $product->slug);
+            $presentation['is_in_wishlist'] = $this->wishlistService->has($product);
+        }
+
+        return $presentation;
     }
 
     protected function buildBranches(string $locale): Collection

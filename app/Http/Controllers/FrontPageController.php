@@ -12,6 +12,7 @@ use App\Models\ProductVariant;
 use App\Models\Size;
 use App\Services\FrontCartService;
 use App\Services\FrontHomePageDataService;
+use App\Services\FrontWishlistService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
@@ -529,6 +530,40 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             ->all();
     }
 
+
+    public function wishlist(FrontWishlistService $wishlist): View
+    {
+        $wishlist->cleanupVisibleIds();
+
+        $locale = app()->getLocale();
+        $shell = $this->homePageData->build();
+        $ids = $wishlist->ids();
+        $positionMap = array_flip($ids);
+
+        $products = Product::query()
+            ->with($this->productCardRelations())
+            ->visibleToFrontendVisitor()
+            ->where('is_active', true)
+            ->whereIn('id', $ids)
+            ->get()
+            ->sortBy(fn (Product $product): int => $positionMap[(int) $product->getKey()] ?? PHP_INT_MAX)
+            ->map(fn (Product $product): array => $this->homePageData->presentProduct($product, $locale))
+            ->values();
+
+        $breadcrumbItems = [
+            ['label' => __('front.nav.home'), 'url' => route('front.home')],
+            ['label' => __('front.wishlist.title'), 'url' => route('front.wishlist.index')],
+        ];
+
+        return view('frontend.pages.wishlist.index', array_merge($shell, [
+            'page_title' => __('front.wishlist.title'),
+            'page_subtitle' => __('front.wishlist.subtitle'),
+            'breadcrumb_items' => $breadcrumbItems,
+            'wishlist_products' => $products,
+            'locale' => $locale,
+        ]));
+    }
+
     public function cart(FrontCartService $cart): View
     {
         return view('frontend.pages.placeholder', [
@@ -588,6 +623,35 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
         return response()->json([
             'product' => $this->homePageData->presentProduct($product, app()->getLocale()),
+        ]);
+    }
+
+
+    public function addToWishlist(Product $product, FrontWishlistService $wishlist): JsonResponse
+    {
+        abort_unless($product->isVisibleToFrontendVisitor() && (bool) $product->is_active, 404);
+
+        $state = $wishlist->add($product);
+
+        return $this->wishlistResponse($product, $state, true);
+    }
+
+    public function removeFromWishlist(Product $product, FrontWishlistService $wishlist): JsonResponse
+    {
+        $state = $wishlist->remove($product);
+
+        return $this->wishlistResponse($product, $state, false);
+    }
+
+    protected function wishlistResponse(Product $product, array $state, bool $inWishlist): JsonResponse
+    {
+        return response()->json([
+            'ok' => true,
+            'product_id' => (int) $product->getKey(),
+            'product_slug' => (string) $product->slug,
+            'in_wishlist' => $inWishlist,
+            'wishlist_state' => $state,
+            'wishlist_count' => $state['count'] ?? 0,
         ]);
     }
 

@@ -12,8 +12,8 @@
         </a>
     </div>
     <div class="toolbar-item">
-        <a href="javascript:void(0);">
-            <div class="toolbar-icon"><i class="icon-heart"></i><div class="toolbar-count">0</div></div>
+        <a href="{{ $wishlistUrl ?? ($wishlist_url ?? route('front.wishlist.index')) }}">
+            <div class="toolbar-icon"><i class="icon-heart"></i><div class="toolbar-count" data-wishlist-count>{{ $wishlistCount ?? ($wishlist_count ?? 0) }}</div></div>
             <div class="toolbar-label">{{ __('front.toolbar.wishlist') }}</div>
         </a>
     </div>

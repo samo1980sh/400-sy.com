@@ -22,6 +22,13 @@
     $detailUrl = $product['detail_url'] ?? ($product['url'] ?? '#');
     $loadmoreHidden = $loadmore_hidden ?? true;
     $cardDefaultColorCode = '';
+    $wishlistActive = ! empty($product['is_in_wishlist']);
+    $wishlistAddUrl = $product['wishlist_add_url'] ?? '';
+    $wishlistRemoveUrl = $product['wishlist_remove_url'] ?? '';
+    $productSlug = $product['slug'] ?? '';
+    $wishlistAvailable = filled($productSlug)
+        && filled($wishlistAddUrl)
+        && filled($wishlistRemoveUrl);
 
     foreach (($product['colors'] ?? []) as $cardColor) {
         $candidateColorCode = trim((string) ($cardColor['color_code'] ?? ''));
@@ -60,11 +67,13 @@
                 <span class="icon icon-bag"></span>
                 <span class="tooltip">{{ __('front.products.quick_add') }}</span>
             </a>
-            <a href="javascript:void(0);" class="box-icon bg_white wishlist btn-icon-action">
-                <span class="icon icon-heart"></span>
-                <span class="tooltip">{{ __('front.products.add_to_wishlist') }}</span>
-                <span class="icon icon-delete"></span>
-            </a>
+            @if ($wishlistAvailable)
+                <a href="javascript:void(0);" class="box-icon bg_white wishlist btn-icon-action {{ $wishlistActive ? 'active' : '' }}" data-wishlist-button data-product-slug="{{ $productSlug }}" data-wishlist-add-url="{{ $wishlistAddUrl }}" data-wishlist-remove-url="{{ $wishlistRemoveUrl }}" aria-pressed="{{ $wishlistActive ? 'true' : 'false' }}">
+                    <span class="icon icon-heart"></span>
+                    <span class="tooltip">{{ __('front.products.add_to_wishlist') }}</span>
+                    <span class="icon icon-delete"></span>
+                </a>
+            @endif
             <a href="#quick_view" class="box-icon bg_white quickview tf-btn-loading" data-product-action="quick-view">
                 <span class="icon icon-view"></span>
                 <span class="tooltip">{{ __('front.products.quick_view') }}</span>

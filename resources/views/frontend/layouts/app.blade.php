@@ -63,6 +63,7 @@
     </script>
 
     <script src="{{ asset('js/main.js') }}?v={{ filemtime(public_path('js/main.js')) }}"></script>
+    <script src="{{ asset('js/frontend-wishlist.js') }}?v={{ filemtime(public_path('js/frontend-wishlist.js')) }}"></script>
 
     {{--
         Do not load product-media modules globally.

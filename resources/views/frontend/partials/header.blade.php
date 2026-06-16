@@ -7,6 +7,8 @@
     $navCategories = collect($navCategories ?? []);
     $currencyOptions = collect($currencyOptions ?? []);
     $cartCount = (int) ($cartCount ?? 0);
+    $wishlistCount = (int) ($wishlistCount ?? ($wishlist_count ?? 0));
+    $wishlistUrl = $wishlistUrl ?? ($wishlist_url ?? route('front.wishlist.index'));
     $languageSwitchLocale = $locale === 'ar' ? 'en' : 'ar';
     $languageSwitchLabel = $locale === 'ar' ? __('front.ui.english') : __('front.ui.arabic');
     $languageSwitchUrl = route('front.locale', $languageSwitchLocale);
@@ -70,7 +72,7 @@
                         </li>
                         <li class="nav-search"><a href="#canvasSearch" data-bs-toggle="offcanvas" aria-controls="offcanvasLeft" class="nav-icon-item"><i class="icon icon-search"></i></a></li>
                         <li class="nav-account"><a href="#login" data-bs-toggle="modal" class="nav-icon-item"><i class="icon icon-account"></i></a></li>
-                        <li class="nav-wishlist"><a href="javascript:void(0);" class="nav-icon-item" aria-label="{{ __('front.toolbar.wishlist') }}"><i class="icon icon-heart"></i><span class="count-box">0</span></a></li>
+                        <li class="nav-wishlist"><a href="{{ $wishlistUrl }}" class="nav-icon-item" aria-label="{{ __('front.toolbar.wishlist') }}"><i class="icon icon-heart"></i><span class="count-box" data-wishlist-count>{{ $wishlistCount }}</span></a></li>
                         <li class="nav-cart"><a href="#shoppingCart" data-bs-toggle="modal" class="nav-icon-item"><i class="icon icon-bag"></i><span class="count-box" data-cart-count>{{ $cartCount }}</span></a></li>
                     </ul>
                 </div>

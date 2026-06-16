@@ -83,6 +83,16 @@ return [
         'page_placeholder_message' => 'The cart page is now routed and will be completed with the final cart flow soon.',
         'checkout_placeholder_message' => 'The checkout page is now routed and will be completed with the final checkout flow soon.',
     ],
+    'wishlist' => [
+        'title' => 'Wishlist',
+        'subtitle' => 'Your saved products for later.',
+        'empty_title' => 'Your wishlist is empty',
+        'empty_message' => 'You have not added any products to your wishlist yet.',
+        'continue_shopping' => 'Continue shopping',
+        'remove' => 'Remove from wishlist',
+        'added' => 'Product added to wishlist.',
+        'removed' => 'Product removed from wishlist.',
+    ],
     'countries' => [
         'syria' => 'Syria',
         'egypt' => 'Egypt',

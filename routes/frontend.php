@@ -11,6 +11,9 @@ Route::middleware('front.locale')->group(function (): void {
     Route::post('/currency', [CurrencyController::class, 'update'])->name('front.currency');
     Route::get('/products', [FrontPageController::class, 'productsIndex'])->name('front.products.index');
     Route::get('/offers', [FrontPageController::class, 'offers'])->name('front.offers');
+    Route::get('/wishlist', [FrontPageController::class, 'wishlist'])->name('front.wishlist.index');
+    Route::post('/wishlist/items/{product:slug}', [FrontPageController::class, 'addToWishlist'])->name('front.wishlist.add');
+    Route::delete('/wishlist/items/{product:slug}', [FrontPageController::class, 'removeFromWishlist'])->name('front.wishlist.remove');
     Route::get('/products/{slug}', [FrontPageController::class, 'product'])->name('front.products.show');
     Route::get('/products/{product:slug}/quick-view', [FrontPageController::class, 'quickView'])->name('front.products.quick-view');
     Route::get('/cart', [FrontPageController::class, 'cart'])->name('front.cart.view');

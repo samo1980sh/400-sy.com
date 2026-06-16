@@ -783,6 +783,54 @@
                 .attr('aria-disabled', !available ? 'true' : 'false');
         }
 
+        function syncModalBadge($badge, product) {
+            var previousClass = String($badge.attr('data-badge-class') || '').trim();
+            var badgeClass = String(product.badge_class || '').trim();
+
+            if (previousClass) {
+                $badge.removeClass(previousClass);
+            }
+
+            if (badgeClass) {
+                $badge.addClass(badgeClass);
+            }
+
+            $badge
+                .attr('data-badge-class', badgeClass)
+                .toggleClass('d-none', !product.badge)
+                .text(product.badge || '');
+        }
+
+        function syncQuickViewBadge($modal, product) {
+            syncModalBadge($modal.find('[data-qv-badge]'), product);
+        }
+
+        function syncQuickAddBadge($modal, product) {
+            syncModalBadge($modal.find('[data-qadd-badge]'), product);
+        }
+
+        function syncQuickViewFitDrop($modal, product) {
+            var hasBodyFit = String(product.body_fit || '').trim() !== '';
+            var hasDrop = String(product.drop_type || '').trim() !== '';
+
+            $modal.find('[data-qv-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
+            $modal.find('[data-qv-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
+            $modal.find('[data-qv-body-fit-wrap]').toggleClass('d-none', !hasBodyFit);
+            $modal.find('[data-qv-drop-wrap]').toggleClass('d-none', !hasDrop);
+            $modal.find('[data-qv-fit-drop-wrap]').toggleClass('d-none', !hasBodyFit && !hasDrop);
+        }
+
+        function syncQuickAddFitDrop($modal, product) {
+            var hasBodyFit = String(product.body_fit || '').trim() !== '';
+            var hasDrop = String(product.drop_type || '').trim() !== '';
+
+            $modal.find('[data-qadd-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
+            $modal.find('[data-qadd-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
+            $modal.find('[data-qadd-body-fit-wrap]').toggleClass('d-none', !hasBodyFit);
+            $modal.find('[data-qadd-drop-wrap]').toggleClass('d-none', !hasDrop);
+            $modal.find('[data-qadd-fit-drop-wrap]').toggleClass('d-none', !hasBodyFit && !hasDrop);
+        }
+
         function syncQuickViewSelection($modal) {
             var product = parseProduct($modal.data('product')) || {};
             var selectedColorRef = readSelected($modal, 'color');
@@ -804,12 +852,9 @@
 
             $modal.find('[data-qv-title]').attr('href', detailUrl).text(product.title || '');
             $modal.find('[data-qv-detail]').attr('href', detailUrl);
-            $modal.find('[data-qv-badge]').toggleClass('d-none', !product.badge).text(product.badge || '').attr('data-badge-class', product.badge_class || '');
+            syncQuickViewBadge($modal, product);
             $modal.find('[data-qv-product-code]').text(formatProductCodeWithColor(product.product_code, colorData.color_code) || '—');
-            $modal.find('[data-qv-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
-            $modal.find('[data-qv-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
-            $modal.find('[data-qv-body-fit-wrap]').toggleClass('d-none', !String(product.body_fit || '').trim());
-            $modal.find('[data-qv-drop-wrap]').toggleClass('d-none', !String(product.drop_type || '').trim());
+            syncQuickViewFitDrop($modal, product);
             $modal.find('[data-qv-color-label]').text(colorData.name || selectedColorRef || '');
             $modal.find('[data-qv-description]').html(product.description ? '<p>' + escapeHtml(product.description) + '</p>' : '');
             $modal.find('[data-qv-gallery]').html(renderGalleryMarkup(colorData.gallery || product.gallery || [product.image || '']));
@@ -817,7 +862,6 @@
 
             selectedSize = readSelected($modal, 'size');
             $modal.find('[data-qv-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
-            $modal.find('[data-qv-find-size]').toggleClass('d-none', !product.has_size_chart);
             updateModalCartSubmit($modal, product, available);
 
             syncQuickViewPricing($modal, product, selectedSize);
@@ -845,17 +889,13 @@
             $modal.find('[data-qadd-title-link]').attr('href', detailUrl).text(product.title || '');
             $modal.find('[data-qadd-image]').attr('src', colorData.image || (Array.isArray(colorData.gallery) && colorData.gallery[0]) || product.image || '');
             $modal.find('[data-qadd-price]').text(product.price_label || product.price_current_label || '');
-            $modal.find('[data-qadd-badge]').toggleClass('d-none', !product.badge).text(product.badge || '');
+            syncQuickAddBadge($modal, product);
             $modal.find('[data-qadd-product-code]').text(formatProductCodeWithColor(product.product_code, colorData.color_code) || '—');
-            $modal.find('[data-qadd-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
-            $modal.find('[data-qadd-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
-            $modal.find('[data-qadd-body-fit-wrap]').toggleClass('d-none', !String(product.body_fit || '').trim());
-            $modal.find('[data-qadd-drop-wrap]').toggleClass('d-none', !String(product.drop_type || '').trim());
+            syncQuickAddFitDrop($modal, product);
             $modal.find('[data-qadd-color-label]').text(colorData.name || selectedColorRef || '');
             $modal.find('[data-qadd-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
             $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], selectedColorRef || product.default_color || '', 'color'));
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(sizes, selectedSize, 'size'));
-            $modal.find('[data-qadd-find-size]').toggleClass('d-none', !product.has_size_chart);
 
             selectedSize = readSelected($modal, 'size');
             updateModalCartSubmit($modal, product, available);
@@ -876,17 +916,14 @@
             if (prefix === 'qv') {
                 $modal.find('[data-qv-title]').attr('href', selectedDetailUrl).text(product.title || '');
                 $modal.find('[data-qv-detail]').attr('href', selectedDetailUrl);
-                $modal.find('[data-qv-badge]').toggleClass('d-none', !product.badge).text(product.badge || '').attr('data-badge-class', product.badge_class || '');
+                syncQuickViewBadge($modal, product);
                 $modal.find('[data-qv-product-code]').text(formatProductCodeWithColor(product.product_code, options.selectedColor ? (options.selectedColor.code || options.selectedColor.color_code || '') : '') || '—');
                 $modal.find('[data-qv-price-current]').text(product.price_label || product.price_current_label || '');
                 $modal.find('[data-qv-submit-price]').text(product.price_label || product.price_current_label || '');
                 $modal.find('[data-qv-gallery]').html(renderGalleryMarkup(product.gallery || [product.image || '']));
                 $modal.find('[data-qv-colors]').html(buildOptionMarkup(product.colors || [], options.selectedColor ? (options.selectedColor.id || options.selectedColor.code || options.selectedColor.name || options.selectedColor.className || '') : (product.default_color || ''), 'color'));
                 $modal.find('[data-qv-sizes]').html(buildOptionMarkup(product.size_options || product.sizes || [], product.default_size || '', 'size'));
-                $modal.find('[data-qv-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
-                $modal.find('[data-qv-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
-                $modal.find('[data-qv-body-fit-wrap]').toggleClass('d-none', !String(product.body_fit || '').trim());
-                $modal.find('[data-qv-drop-wrap]').toggleClass('d-none', !String(product.drop_type || '').trim());
+                syncQuickViewFitDrop($modal, product);
                 syncQuickViewSelection($modal);
                 return;
             }
@@ -895,15 +932,11 @@
             $modal.find('[data-qadd-image]').attr('src', product.image || '');
             $modal.find('[data-qadd-price]').text(product.price_label || product.price_current_label || '');
             $modal.find('[data-qadd-price-old]').text(product.compare_price_label || '').toggleClass('d-none', !product.compare_price_label);
-            $modal.find('[data-qadd-badge]').toggleClass('d-none', !product.badge).text(product.badge || '');
+            syncQuickAddBadge($modal, product);
             $modal.find('[data-qadd-product-code]').text(formatProductCodeWithColor(product.product_code, options.selectedColor ? (options.selectedColor.code || options.selectedColor.color_code || '') : '') || '—');
-            $modal.find('[data-qadd-body-fit]').text(formatDetailMetaValue(product.body_fit || '', 'body_fit') || '—');
-            $modal.find('[data-qadd-drop-type]').text(formatDetailMetaValue(product.drop_type || '', 'drop') || '—');
-            $modal.find('[data-qadd-body-fit-wrap]').toggleClass('d-none', !String(product.body_fit || '').trim());
-            $modal.find('[data-qadd-drop-wrap]').toggleClass('d-none', !String(product.drop_type || '').trim());
+            syncQuickAddFitDrop($modal, product);
             $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], options.selectedColor ? (options.selectedColor.id || options.selectedColor.code || options.selectedColor.name || options.selectedColor.className || '') : (product.default_color || ''), 'color'));
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(product.size_options || product.sizes || [], product.default_size || '', 'size'));
-            $modal.find('[data-qadd-find-size]').toggleClass('d-none', !product.has_size_chart);
             syncQuickAddSelection($modal);
         }
 
@@ -1062,14 +1095,6 @@
                 var product = parseProduct($modal.data('product')) || {};
                 syncQuickAddPricing($modal, product, readSelected($modal, 'size'));
             }, 0);
-        });
-
-        $(document).on('click', '#quick_view [data-qv-find-size]', function (event) {
-            event.preventDefault();
-            var $quickView = $('#quick_view');
-            var product = parseProduct($quickView.data('product')) || {};
-            renderSizeChart($('#find_size'), product);
-            $('#find_size').modal('show');
         });
 
         // ---------------------------------------------------------------------

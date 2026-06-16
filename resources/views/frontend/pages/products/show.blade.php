@@ -49,6 +49,10 @@
     }
 
     $whatsappInquiryUrl = 'https://wa.me/' . $whatsappPhone . '?text=' . rawurlencode(implode("\n", $whatsappMessageLines));
+    $wishlistActive = ! empty($product['is_in_wishlist']);
+    $wishlistAddUrl = $product['wishlist_add_url'] ?? '';
+    $wishlistRemoveUrl = $product['wishlist_remove_url'] ?? '';
+    $wishlistProductSlug = $product['slug'] ?? '';
 
 
     $gallery = collect($defaultColor['gallery'] ?? [])
@@ -383,6 +387,8 @@
         'currencyOptions' => $currency_options ?? [],
         'siteName' => $site_name ?? __('front.brand'),
         'cartCount' => $cart_count ?? 0,
+        'wishlistCount' => $wishlist_count ?? 0,
+        'wishlistUrl' => $wishlist_url ?? route('front.wishlist.index'),
     ])
 
     <main>
@@ -599,7 +605,7 @@
                                                 </span>
                                                 <span>{{ $isArabic ? 'استفسار عبر واتساب' : 'Ask via WhatsApp' }}</span>
                                             </a>
-                                            <a href="javascript:void(0);" class="tf-product-btn-wishlist hover-tooltip box-icon bg_white wishlist btn-icon-action">
+                                            <a href="javascript:void(0);" class="tf-product-btn-wishlist hover-tooltip box-icon bg_white wishlist btn-icon-action {{ $wishlistActive ? 'active' : '' }}" data-wishlist-button data-product-slug="{{ $wishlistProductSlug }}" data-wishlist-add-url="{{ $wishlistAddUrl }}" data-wishlist-remove-url="{{ $wishlistRemoveUrl }}" aria-pressed="{{ $wishlistActive ? 'true' : 'false' }}">
                                                 <span class="icon icon-heart"></span>
                                                 <span class="tooltip">{{ __('front.products.add_to_wishlist') }}</span>
                                                 <span class="icon icon-delete"></span>
@@ -630,7 +636,7 @@
     </main>
 
     @include('frontend.partials.footer', ['contact' => $contact ?? null, 'socialLinks' => $social_links ?? [], 'footerPages' => $footer_pages ?? [], 'collections' => $collections ?? []])
-    @include('frontend.partials.toolbar-bottom', ['cartCount' => $cart_count ?? 0])
+    @include('frontend.partials.toolbar-bottom', ['cartCount' => $cart_count ?? 0, 'wishlistCount' => $wishlist_count ?? 0, 'wishlistUrl' => $wishlist_url ?? route('front.wishlist.index')])
     @include('frontend.partials.mobile-menu', ['navCategories' => $nav_categories ?? [], 'quickLinks' => $quick_links ?? []])
     @include('frontend.partials.search-canvas', ['quickLinks' => $quick_links ?? []])
     @include('frontend.partials.shopping-cart', ['cartState' => $cart_state ?? []])

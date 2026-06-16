@@ -166,6 +166,7 @@
         } catch (e) {}
     </script>
     <script src="{{ asset('js/main.js') }}?v={{ filemtime(public_path('js/main.js')) }}"></script>
+    <script src="{{ asset('js/frontend-wishlist.js') }}?v={{ filemtime(public_path('js/frontend-wishlist.js')) }}"></script>
     @include('frontend.partials.product-scripts')
 </body>
 </html>
