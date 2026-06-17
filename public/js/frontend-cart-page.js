@@ -22,6 +22,71 @@
         return Math.max(1, Math.min(99, value));
     }
 
+
+    function checkoutButtonFromEvent(event) {
+        var target = event.target;
+
+        if (!target || !target.closest) {
+            return null;
+        }
+
+        return target.closest('[data-cart-checkout]');
+    }
+
+    function hidePagePreloader() {
+        var selectors = [
+            '#preload',
+            '#preloader',
+            '.preload',
+            '.preloader',
+            '.preload-wrapper',
+            '.preloader-wrapper'
+        ];
+
+        selectors.forEach(function (selector) {
+            $(selector).stop(true, true).fadeOut(0).hide();
+        });
+
+        $('body').removeClass('preload preload-active overflow-hidden');
+    }
+
+    function showTermsError() {
+        var $terms = $('[data-cart-terms]').first();
+        var $error = $('[data-cart-terms-error]').first();
+
+        if ($error.length) {
+            $error.removeClass('d-none');
+        }
+
+        if ($terms.length) {
+            $terms.trigger('focus');
+
+            var termsElement = $terms.get(0);
+
+            if (termsElement && termsElement.scrollIntoView) {
+                termsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }
+
+    document.addEventListener('click', function (event) {
+        var checkoutButton = checkoutButtonFromEvent(event);
+
+        if (!checkoutButton || $('[data-cart-terms]').is(':checked')) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (event.stopImmediatePropagation) {
+            event.stopImmediatePropagation();
+        }
+
+        hidePagePreloader();
+        showTermsError();
+    }, true);
+
     function requestCart(url, method, data) {
         return $.ajax({
             url: url,
@@ -267,8 +332,8 @@
         }
 
         event.preventDefault();
-        $('[data-cart-terms-error]').removeClass('d-none');
-        $('[data-cart-terms]').trigger('focus');
+        hidePagePreloader();
+        showTermsError();
     });
 
     syncCheckoutState();

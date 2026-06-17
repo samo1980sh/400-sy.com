@@ -143,7 +143,7 @@
                         </label>
                     </div>
 
-                    <p class="text-danger d-none mb_12" data-cart-terms-error>
+                    <p class="text-danger d-none mb_12" data-cart-terms-error role="alert">
                         {{ __('front.cart.terms_required') }}
                     </p>
 
