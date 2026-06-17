@@ -128,7 +128,7 @@
                         <a href="#" class="tf-btn btn-fill justify-content-center fw-6 fs-16 flex-grow-1 animate-hover-btn btn-add-to-cart" data-cart-submit data-cart-url="">
                             <span>{{ __('front.products.add_to_cart') }} -&nbsp;</span><span class="tf-qty-price js-currency-price" data-qadd-submit-price data-base-price="850000" data-base-currency="SYP">850,000 SYP</span>
                         </a>
-                        <div class="tf-product-btn-wishlist btn-icon-action" data-wishlist-button role="button" tabindex="0" aria-pressed="false">
+                        <div class="tf-product-btn-wishlist btn-icon-action" data-wishlist-button data-wishlist-add-label="{{ __('front.products.add_to_wishlist') }}" data-wishlist-remove-label="{{ __('front.wishlist.remove') }}" role="button" tabindex="0" aria-pressed="false" aria-label="{{ __('front.products.add_to_wishlist') }}" title="{{ __('front.products.add_to_wishlist') }}">
                             <i class="icon-heart"></i>
                             <i class="icon-delete"></i>
                         </div>

@@ -53,6 +53,9 @@
     $wishlistAddUrl = $product['wishlist_add_url'] ?? '';
     $wishlistRemoveUrl = $product['wishlist_remove_url'] ?? '';
     $wishlistProductSlug = $product['slug'] ?? '';
+    $wishlistLabel = $wishlistActive
+        ? __('front.wishlist.remove')
+        : __('front.products.add_to_wishlist');
 
 
     $gallery = collect($defaultColor['gallery'] ?? [])
@@ -605,9 +608,9 @@
                                                 </span>
                                                 <span>{{ $isArabic ? 'استفسار عبر واتساب' : 'Ask via WhatsApp' }}</span>
                                             </a>
-                                            <a href="javascript:void(0);" class="tf-product-btn-wishlist hover-tooltip box-icon bg_white wishlist btn-icon-action {{ $wishlistActive ? 'active' : '' }}" data-wishlist-button data-product-slug="{{ $wishlistProductSlug }}" data-wishlist-add-url="{{ $wishlistAddUrl }}" data-wishlist-remove-url="{{ $wishlistRemoveUrl }}" aria-pressed="{{ $wishlistActive ? 'true' : 'false' }}">
+                                            <a href="javascript:void(0);" class="tf-product-btn-wishlist hover-tooltip box-icon bg_white wishlist btn-icon-action {{ $wishlistActive ? 'active' : '' }}" data-wishlist-button data-product-slug="{{ $wishlistProductSlug }}" data-wishlist-add-url="{{ $wishlistAddUrl }}" data-wishlist-remove-url="{{ $wishlistRemoveUrl }}" data-wishlist-add-label="{{ __('front.products.add_to_wishlist') }}" data-wishlist-remove-label="{{ __('front.wishlist.remove') }}" aria-pressed="{{ $wishlistActive ? 'true' : 'false' }}" aria-label="{{ $wishlistLabel }}" title="{{ $wishlistLabel }}">
                                                 <span class="icon icon-heart"></span>
-                                                <span class="tooltip">{{ __('front.products.add_to_wishlist') }}</span>
+                                                <span class="tooltip" data-wishlist-label>{{ $wishlistLabel }}</span>
                                                 <span class="icon icon-delete"></span>
                                             </a>
                                         </form>

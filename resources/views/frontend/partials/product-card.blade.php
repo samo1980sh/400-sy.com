@@ -29,6 +29,9 @@
     $wishlistAvailable = filled($productSlug)
         && filled($wishlistAddUrl)
         && filled($wishlistRemoveUrl);
+    $wishlistLabel = $wishlistActive
+        ? __('front.wishlist.remove')
+        : __('front.products.add_to_wishlist');
 
     foreach (($product['colors'] ?? []) as $cardColor) {
         $candidateColorCode = trim((string) ($cardColor['color_code'] ?? ''));
@@ -68,9 +71,9 @@
                 <span class="tooltip">{{ __('front.products.quick_add') }}</span>
             </a>
             @if ($wishlistAvailable)
-                <a href="javascript:void(0);" class="box-icon bg_white wishlist btn-icon-action {{ $wishlistActive ? 'active' : '' }}" data-wishlist-button data-product-slug="{{ $productSlug }}" data-wishlist-add-url="{{ $wishlistAddUrl }}" data-wishlist-remove-url="{{ $wishlistRemoveUrl }}" aria-pressed="{{ $wishlistActive ? 'true' : 'false' }}">
+                <a href="javascript:void(0);" class="box-icon bg_white wishlist btn-icon-action {{ $wishlistActive ? 'active' : '' }}" data-wishlist-button data-product-slug="{{ $productSlug }}" data-wishlist-add-url="{{ $wishlistAddUrl }}" data-wishlist-remove-url="{{ $wishlistRemoveUrl }}" data-wishlist-add-label="{{ __('front.products.add_to_wishlist') }}" data-wishlist-remove-label="{{ __('front.wishlist.remove') }}" aria-pressed="{{ $wishlistActive ? 'true' : 'false' }}" aria-label="{{ $wishlistLabel }}" title="{{ $wishlistLabel }}">
                     <span class="icon icon-heart"></span>
-                    <span class="tooltip">{{ __('front.products.add_to_wishlist') }}</span>
+                    <span class="tooltip" data-wishlist-label>{{ $wishlistLabel }}</span>
                     <span class="icon icon-delete"></span>
                 </a>
             @endif

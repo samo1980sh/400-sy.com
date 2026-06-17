@@ -140,9 +140,9 @@
                                 <a href="#" class="tf-btn btn-fill justify-content-center fw-6 fs-16 flex-grow-1 animate-hover-btn btn-add-to-cart" data-cart-submit data-cart-url="">
                                     <span>{{ __('front.products.add_to_cart') }} -&nbsp;</span><span class="tf-qty-price js-currency-price" data-qv-submit-price data-base-price="850000" data-base-currency="SYP">850,000 SYP</span>
                                 </a>
-                                <a href="javascript:void(0);" class="tf-product-btn-wishlist hover-tooltip box-icon bg_white wishlist btn-icon-action" data-wishlist-button>
+                                <a href="javascript:void(0);" class="tf-product-btn-wishlist hover-tooltip box-icon bg_white wishlist btn-icon-action" data-wishlist-button data-wishlist-add-label="{{ __('front.products.add_to_wishlist') }}" data-wishlist-remove-label="{{ __('front.wishlist.remove') }}" aria-pressed="false" aria-label="{{ __('front.products.add_to_wishlist') }}" title="{{ __('front.products.add_to_wishlist') }}">
                                     <span class="icon icon-heart"></span>
-                                    <span class="tooltip">{{ __('front.products.add_to_wishlist') }}</span>
+                                    <span class="tooltip" data-wishlist-label>{{ __('front.products.add_to_wishlist') }}</span>
                                     <span class="icon icon-delete"></span>
                                 </a>
                             </form>

@@ -47,9 +47,27 @@
         };
     }
 
+    function wishlistLabel(button, active) {
+        var addLabel = button.dataset.wishlistAddLabel || '';
+        var removeLabel = button.dataset.wishlistRemoveLabel || '';
+
+        return active ? (removeLabel || addLabel) : (addLabel || removeLabel);
+    }
+
     function setButtonState(button, active) {
+        var label = wishlistLabel(button, active);
+
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
+
+        if (label) {
+            button.setAttribute('aria-label', label);
+            button.setAttribute('title', label);
+
+            toArray(button.querySelectorAll('[data-wishlist-label], .tooltip')).forEach(function (node) {
+                node.textContent = label;
+            });
+        }
     }
 
     function syncProductButtons(slug, active) {
