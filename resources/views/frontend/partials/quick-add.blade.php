@@ -111,6 +111,8 @@
                             {{ __('front.products.size') }}: <span class="fw-6 variant-picker-label-value" data-qadd-size-label>{{ __('front.products.placeholder_size') }}</span>
                         </div>
                         <div class="variant-picker-values" data-qadd-sizes></div>
+
+                        <div class="text-danger small mt-2 d-none" data-quick-variant-error role="alert"></div>
                     </div>
                 </div>
                 <div class="tf-product-info-quantity mb_15">

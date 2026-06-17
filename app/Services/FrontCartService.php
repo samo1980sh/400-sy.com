@@ -148,8 +148,9 @@ class FrontCartService
     public function add(Product $product, array $input = []): array
     {
         $items = $this->storedItems();
-        $item = $this->buildItem($product, $input);
         $qty = max(1, (int) ($input['quantity'] ?? $input['qty'] ?? 1));
+        $input = $this->normalizeAvailableVariantSelection($product, $input, $qty);
+        $item = $this->buildItem($product, $input);
 
         if (isset($items[$item['key']])) {
             $items[$item['key']]['qty'] = max(1, (int) ($items[$item['key']]['qty'] ?? 1)) + $qty;
@@ -289,6 +290,84 @@ class FrontCartService
             'update_url' => route('front.cart.update', $key),
             'remove_url' => route('front.cart.remove', $key),
         ];
+    }
+
+    protected function normalizeAvailableVariantSelection(Product $product, array $input, int $quantity): array
+    {
+        $product->loadMissing(['variants.size', 'variants.productColor']);
+
+        $variants = $product->getRelation('variants');
+
+        if ($variants->isEmpty()) {
+            return $input;
+        }
+
+        $variantId = (int) ($input['variant_id'] ?? 0);
+        $colorId = (int) ($input['color_id'] ?? 0);
+        $sizeId = (int) ($input['size_id'] ?? 0);
+        $sizeCode = trim((string) ($input['size_code'] ?? ''));
+        $sizeName = trim((string) ($input['size'] ?? ''));
+
+        $variant = null;
+
+        if ($variantId > 0) {
+            $variant = $variants->first(
+                fn ($item): bool => (int) ($item->id ?? 0) === $variantId
+            );
+        } elseif ($sizeId > 0 || $sizeCode !== '' || $sizeName !== '') {
+            $variant = $variants->first(function ($item) use ($colorId, $sizeId, $sizeCode, $sizeName): bool {
+                if ($colorId > 0 && (int) ($item->product_color_id ?? 0) !== $colorId) {
+                    return false;
+                }
+
+                if ($sizeId > 0) {
+                    return (int) ($item->size_id ?? 0) === $sizeId;
+                }
+
+                if (! $item->relationLoaded('size') || ! $item->size) {
+                    return false;
+                }
+
+                if ($sizeCode !== '' && strcasecmp((string) ($item->size->code ?? ''), $sizeCode) === 0) {
+                    return true;
+                }
+
+                if ($sizeName === '') {
+                    return false;
+                }
+
+                $localizedSize = app()->getLocale() === 'ar'
+                    ? ($item->size->name_ar ?: $item->size->name_en ?: $item->size->code)
+                    : ($item->size->name_en ?: $item->size->name_ar ?: $item->size->code);
+
+                return strcasecmp((string) $localizedSize, $sizeName) === 0;
+            });
+        }
+
+        if (
+            ! $variant instanceof ProductVariant
+            || (string) ($variant->status ?? 'active') !== 'active'
+            || ($colorId > 0 && (int) ($variant->product_color_id ?? 0) !== $colorId)
+            || (
+                $variant->relationLoaded('productColor')
+                && $variant->productColor
+                && (string) ($variant->productColor->status ?? 'active') !== 'active'
+            )
+            || (is_numeric($variant->quantity) && (int) $variant->quantity < $quantity)
+        ) {
+            throw ValidationException::withMessages([
+                'variant_id' => [app()->getLocale() === 'ar'
+                    ? 'يرجى اختيار قياس متاح لهذا المنتج.'
+                    : 'Please select an available size for this product.'],
+            ]);
+        }
+
+        $input['variant_id'] = (int) $variant->getKey();
+        $input['size_id'] = (int) ($variant->size_id ?? 0) ?: null;
+        $input['size_code'] = (string) ($variant->size?->code ?? '');
+        $input['color_id'] = (int) ($variant->product_color_id ?? 0) ?: ($input['color_id'] ?? null);
+
+        return $input;
     }
 
     protected function resolveColor(array $colors, array $input): array

@@ -190,15 +190,10 @@
         function pickAvailableSize(items, preferred) {
             var normalized = normalizeOptionList(items);
             var selected = '';
-            var fallback = '';
 
             $.each(normalized, function (index, item) {
                 var value = item.name || item.label || item.size || item.value || '';
                 var soldOut = isOptionSoldOut(item);
-
-                if (!fallback && value) {
-                    fallback = value;
-                }
 
                 if (!soldOut && value && preferred && String(value).toLowerCase() === String(preferred).toLowerCase()) {
                     selected = value;
@@ -210,7 +205,7 @@
                 }
             });
 
-            return selected || fallback;
+            return selected;
         }
 
         function hasAvailableSize(items) {
@@ -271,13 +266,19 @@
 
         function buildOptionMarkup(items, selectedValue, type) {
             var html = '';
+            var normalizedItems = normalizeOptionList(items);
+            var resolvedSelectedValue = type === 'size'
+                ? pickAvailableSize(normalizedItems, selectedValue)
+                : selectedValue;
 
-            $.each(normalizeOptionList(items), function (index, item) {
+            $.each(normalizedItems, function (index, item) {
                 item = item || {};
 
                 var value = item.name || item.label || item.size || item.value || '';
                 var soldOut = type === 'size' ? isOptionSoldOut(item) : false;
-                var checked = !soldOut && isSelectedOption(item, selectedValue) ? 'checked' : (!selectedValue && index === 0 && !soldOut ? 'checked' : '');
+                var checked = !soldOut && isSelectedOption(item, resolvedSelectedValue)
+                    ? 'checked'
+                    : (!resolvedSelectedValue && type !== 'size' && index === 0 ? 'checked' : '');
                 var id = type + '-' + index + '-' + Math.random().toString(36).slice(2, 8);
 
                 if (type === 'size') {
@@ -775,12 +776,33 @@
             }
         }
 
+        function quickVariantMessage() {
+            return document.documentElement.lang === 'ar'
+                ? 'يرجى اختيار قياس متاح لهذا المنتج.'
+                : 'Please select an available size for this product.';
+        }
+
+        function setQuickVariantError($modal, message) {
+            var $error = $modal.find('[data-quick-variant-error]');
+
+            if (!$error.length) {
+                return;
+            }
+
+            $error
+                .toggleClass('d-none', !message)
+                .text(message || '');
+        }
+
         function updateModalCartSubmit($modal, product, available) {
             $modal.find('[data-cart-submit]')
                 .attr('data-cart-url', product.cart_add_url || '')
+                .attr('data-cart-available', available ? 'true' : 'false')
                 .prop('disabled', !available)
                 .toggleClass('disabled', !available)
                 .attr('aria-disabled', !available ? 'true' : 'false');
+
+            setQuickVariantError($modal, available ? '' : quickVariantMessage());
         }
 
         function syncModalBadge($badge, product) {
@@ -842,8 +864,8 @@
                     : (Array.isArray(colorData.sizes) && colorData.sizes.length
                         ? colorData.sizes
                         : (Array.isArray(product.sizes) ? product.sizes : [])));
-            var selectedSize = readSelected($modal, 'size');
-            var available = hasAvailableSize(sizes);
+            var selectedSize = pickAvailableSize(sizes, readSelected($modal, 'size') || product.default_size || '');
+            var available = selectedSize !== '';
             var detailUrl = detailUrlWithColor(product, {
                 id: colorData.id || '',
                 code: colorData.color_code || '',
@@ -861,7 +883,8 @@
             $modal.find('[data-qv-sizes]').html(buildOptionMarkup(sizes, selectedSize, 'size'));
 
             selectedSize = readSelected($modal, 'size');
-            $modal.find('[data-qv-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
+            available = selectedSize !== '';
+            $modal.find('[data-qv-size-label]').text(selectedSize || quickVariantMessage());
             updateModalCartSubmit($modal, product, available);
 
             syncQuickViewPricing($modal, product, selectedSize);
@@ -878,8 +901,8 @@
                     : (Array.isArray(colorData.sizes) && colorData.sizes.length
                         ? colorData.sizes
                         : (Array.isArray(product.sizes) ? product.sizes : [])));
-            var selectedSize = readSelected($modal, 'size');
-            var available = hasAvailableSize(sizes);
+            var selectedSize = pickAvailableSize(sizes, readSelected($modal, 'size') || product.default_size || '');
+            var available = selectedSize !== '';
             var detailUrl = detailUrlWithColor(product, {
                 id: colorData.id || '',
                 code: colorData.color_code || '',
@@ -893,11 +916,12 @@
             $modal.find('[data-qadd-product-code]').text(formatProductCodeWithColor(product.product_code, colorData.color_code) || '—');
             syncQuickAddFitDrop($modal, product);
             $modal.find('[data-qadd-color-label]').text(colorData.name || selectedColorRef || '');
-            $modal.find('[data-qadd-size-label]').text(selectedSize || product.default_size || (sizes[0] && (sizes[0].name || sizes[0].label || sizes[0].size || sizes[0].value || sizes[0])) || '');
             $modal.find('[data-qadd-colors]').html(buildOptionMarkup(product.colors || [], selectedColorRef || product.default_color || '', 'color'));
             $modal.find('[data-qadd-sizes]').html(buildOptionMarkup(sizes, selectedSize, 'size'));
 
             selectedSize = readSelected($modal, 'size');
+            available = selectedSize !== '';
+            $modal.find('[data-qadd-size-label]').text(selectedSize || quickVariantMessage());
             updateModalCartSubmit($modal, product, available);
 
             syncQuickAddPricing($modal, product, selectedSize);
@@ -944,14 +968,21 @@
             var $modal = $button.closest('.modal');
             var product = parseProduct($modal.data('product')) || {};
             var cartUrl = $button.attr('data-cart-url') || product.cart_add_url || '';
-            var prefix = $modal.attr('id') === 'quick_add' ? 'qadd' : 'qv';
             var $selectedColor = $modal.find('input[name="color"]:checked');
             var $selectedSize = $modal.find('input[name="size"]:checked');
             var quantity = parseInt($modal.find('input[name="number"]').val(), 10) || 1;
+            var canSubmit = $button.attr('data-cart-available') === 'true'
+                && $button.attr('aria-disabled') !== 'true'
+                && !$button.hasClass('disabled')
+                && $selectedSize.length > 0
+                && !$selectedSize.prop('disabled');
 
-            if (!cartUrl) {
+            if (!cartUrl || !canSubmit) {
+                setQuickVariantError($modal, quickVariantMessage());
                 return;
             }
+
+            setQuickVariantError($modal, '');
 
             requestCart(cartUrl, 'POST', {
                 quantity: quantity > 0 ? quantity : 1,
@@ -964,9 +995,22 @@
                 color_id: $selectedColor.data('colorId') || '',
                 color_code: $selectedColor.data('colorCode') || ''
             }).done(function (response) {
+                setQuickVariantError($modal, '');
                 syncCartState(response);
                 $modal.modal('hide');
                 $('#shoppingCart').modal('show');
+            }).fail(function (xhr) {
+                var response = xhr && xhr.responseJSON ? xhr.responseJSON : {};
+                var errors = response.errors || {};
+                var message = response.message || '';
+
+                if (errors.cart && errors.cart.length) {
+                    message = errors.cart[0];
+                } else if (errors.variant_id && errors.variant_id.length) {
+                    message = errors.variant_id[0];
+                }
+
+                setQuickVariantError($modal, message || quickVariantMessage());
             });
         }
 
@@ -1054,11 +1098,15 @@
         });
 
         $(document).on('change', '#quick_view input[name="color"]', function () {
-            syncQuickViewSelection($(this).closest('#quick_view'));
+            var $modal = $(this).closest('#quick_view');
+            setQuickVariantError($modal, '');
+            syncQuickViewSelection($modal);
         });
 
         $(document).on('change', '#quick_view input[name="size"]', function () {
-            syncQuickViewSelection($(this).closest('#quick_view'));
+            var $modal = $(this).closest('#quick_view');
+            setQuickVariantError($modal, '');
+            syncQuickViewSelection($modal);
         });
 
         $(document).on('change input', '#quick_view input[name="number"]', function () {
@@ -1076,11 +1124,15 @@
         });
 
         $(document).on('change', '#quick_add input[name="color"]', function () {
-            syncQuickAddSelection($(this).closest('#quick_add'));
+            var $modal = $(this).closest('#quick_add');
+            setQuickVariantError($modal, '');
+            syncQuickAddSelection($modal);
         });
 
         $(document).on('change', '#quick_add input[name="size"]', function () {
-            syncQuickAddSelection($(this).closest('#quick_add'));
+            var $modal = $(this).closest('#quick_add');
+            setQuickVariantError($modal, '');
+            syncQuickAddSelection($modal);
         });
 
         $(document).on('change input', '#quick_add input[name="number"]', function () {
