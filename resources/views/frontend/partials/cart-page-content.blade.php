@@ -143,18 +143,19 @@
                         </label>
                     </div>
 
-                    <p class="text-danger d-none mb_12" data-cart-terms-error role="alert">
+                    <p class="text-danger d-none mb_12" data-cart-terms-error>
                         {{ __('front.cart.terms_required') }}
                     </p>
 
-                    <a
-                        href="{{ route('front.checkout') }}"
+                    <button
+                        type="button"
                         class="tf-btn btn-fill animate-hover-btn radius-3 w-100 justify-content-center is-disabled"
                         data-cart-checkout
+                        data-cart-checkout-url="{{ route('front.checkout') }}"
                         aria-disabled="true"
                     >
                         <span>{{ __('front.cart.check_out') }}</span>
-                    </a>
+                    </button>
 
                     <a href="{{ route('front.products.index') }}" class="tf-btn btn-outline radius-3 w-100 justify-content-center mt_12">
                         {{ __('front.cart.continue_shopping') }}

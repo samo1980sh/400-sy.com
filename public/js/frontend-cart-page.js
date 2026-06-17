@@ -22,71 +22,6 @@
         return Math.max(1, Math.min(99, value));
     }
 
-
-    function checkoutButtonFromEvent(event) {
-        var target = event.target;
-
-        if (!target || !target.closest) {
-            return null;
-        }
-
-        return target.closest('[data-cart-checkout]');
-    }
-
-    function hidePagePreloader() {
-        var selectors = [
-            '#preload',
-            '#preloader',
-            '.preload',
-            '.preloader',
-            '.preload-wrapper',
-            '.preloader-wrapper'
-        ];
-
-        selectors.forEach(function (selector) {
-            $(selector).stop(true, true).fadeOut(0).hide();
-        });
-
-        $('body').removeClass('preload preload-active overflow-hidden');
-    }
-
-    function showTermsError() {
-        var $terms = $('[data-cart-terms]').first();
-        var $error = $('[data-cart-terms-error]').first();
-
-        if ($error.length) {
-            $error.removeClass('d-none');
-        }
-
-        if ($terms.length) {
-            $terms.trigger('focus');
-
-            var termsElement = $terms.get(0);
-
-            if (termsElement && termsElement.scrollIntoView) {
-                termsElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-    }
-
-    document.addEventListener('click', function (event) {
-        var checkoutButton = checkoutButtonFromEvent(event);
-
-        if (!checkoutButton || $('[data-cart-terms]').is(':checked')) {
-            return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (event.stopImmediatePropagation) {
-            event.stopImmediatePropagation();
-        }
-
-        hidePagePreloader();
-        showTermsError();
-    }, true);
-
     function requestCart(url, method, data) {
         return $.ajax({
             url: url,
@@ -131,6 +66,31 @@
     function currentTermsState() {
         return $('[data-cart-terms]').is(':checked');
     }
+
+    function showTermsValidation() {
+        var $terms = $('[data-cart-terms]').first();
+        var $error = $('[data-cart-terms-error]').first();
+        var focusTarget = $error.length ? $error.get(0) : $terms.get(0);
+
+        $error.removeClass('d-none');
+
+        // Keep the customer on the cart page when validation blocks checkout.
+        // This also clears the global page-transition loader defensively.
+        $('.preload').stop(true, true).hide();
+
+        if ($terms.length) {
+            try {
+                $terms.get(0).focus({ preventScroll: true });
+            } catch (error) {
+                $terms.trigger('focus');
+            }
+        }
+
+        if (focusTarget && typeof focusTarget.scrollIntoView === 'function') {
+            focusTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
 
     function syncCheckoutState() {
         var $terms = $('[data-cart-terms]').first();
@@ -327,13 +287,26 @@
     $(document).on('change', '[data-cart-terms]', syncCheckoutState);
 
     $(document).on('click', '[data-cart-checkout]', function (event) {
-        if ($('[data-cart-terms]').is(':checked')) {
-            return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        if (!currentTermsState()) {
+            showTermsValidation();
+            return false;
         }
 
-        event.preventDefault();
-        hidePagePreloader();
-        showTermsError();
+        var $checkout = $(this);
+        var checkoutUrl = String($checkout.attr('data-cart-checkout-url') || '');
+
+        if (!checkoutUrl) {
+            return false;
+        }
+
+        $checkout.attr('aria-busy', 'true').addClass('is-loading');
+        $('.preload').stop(true, true).fadeIn(120);
+        window.location.assign(checkoutUrl);
+
+        return false;
     });
 
     syncCheckoutState();
