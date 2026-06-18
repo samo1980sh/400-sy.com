@@ -80,10 +80,16 @@
                 @include('frontend.partials.product-grid', [
                     'products' => $products,
                     'active_filter_chips' => $active_filter_chips ?? [],
+                    'search_filter_chip' => $search_filter_chip ?? null,
                     'category_context_chip' => $category_context_chip ?? null,
                     'filter_reset_url' => $filter_reset_url ?? request()->url(),
                     'selected_grid' => $selected_grid ?? 'grid-4',
+                    'empty_state_title' => $empty_state_title ?? null,
                     'empty_state_message' => $empty_state_message ?? null,
+                    'empty_state_reset_url' => $empty_state_reset_url ?? null,
+                    'empty_state_reset_label' => $empty_state_reset_label ?? null,
+                    'empty_state_all_url' => $empty_state_all_url ?? null,
+                    'empty_state_all_label' => $empty_state_all_label ?? null,
                 ])
 
                 @include('frontend.partials.loadmore', [

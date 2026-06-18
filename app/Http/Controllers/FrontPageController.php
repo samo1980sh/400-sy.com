@@ -113,7 +113,13 @@ class FrontPageController extends Controller
         $selectedSpecialOffers = $this->requestList($request, 'special_offers', 'special_offer');
         $specialOfferOnly = $offersPage || in_array('offer', array_map('strtolower', $selectedSpecialOffers), true);
         [$minPrice, $maxPrice] = $this->requestPriceRange($request);
-        $queryWithoutFilters = Arr::except($request->query(), ['page', 'q', 'text', 'search', 'min_price', 'max_price', 'price', 'color', 'colors', 'size', 'sizes', 'body_fit', 'drop_type', 'collection', 'collections', 'special_offer', 'special_offers', 'category', 'categories', 'filter_ajax', 'load_more', 'sort']);
+        $searchClearQuery = Arr::except($request->query(), ['page', 'q', 'text', 'search', 'filter_ajax', 'load_more']);
+        $searchClearUrl = $request->url();
+
+        if ($searchClearQuery !== []) {
+            $searchClearUrl .= '?' . http_build_query($searchClearQuery);
+        }
+
         $resetUrl = $request->url();
         $primaryCategory = $baseCategory instanceof Category
             ? $baseCategory
@@ -302,10 +308,28 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             $maxPrice,
             $locale,
         );
+        $searchFilterChip = $searchTerm !== ''
+            ? [
+                'label' => __('front.search.active_query', ['term' => $searchTerm]),
+                'url' => $searchClearUrl,
+            ]
+            : null;
+        $emptyStateTitle = null;
         $emptyStateMessage = null;
+        $emptyStateResetUrl = null;
+        $emptyStateResetLabel = null;
+        $emptyStateAllUrl = $offersPage ? route('front.offers') : route('front.products.index');
+        $emptyStateAllLabel = $offersPage
+            ? __('front.search.view_all_offers')
+            : __('front.search.view_all_products');
 
-        if ($offersPage) {
-            $emptyStateMessage = $activeFilterChips !== [] || $searchTerm !== ''
+        if ($searchTerm !== '') {
+            $emptyStateTitle = __('front.search.no_results_title');
+            $emptyStateMessage = __('front.search.no_results_message', ['term' => $searchTerm]);
+            $emptyStateResetUrl = $searchClearUrl;
+            $emptyStateResetLabel = __('front.search.clear_search');
+        } elseif ($offersPage) {
+            $emptyStateMessage = $activeFilterChips !== []
                 ? ($locale === 'ar' ? 'لا توجد عروض مطابقة للفلاتر المحددة.' : 'No offers match the selected filters.')
                 : ($locale === 'ar' ? 'لا توجد عروض متاحة حاليًا.' : 'No offers are currently available.');
         }
@@ -385,9 +409,15 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'filter_special_offer_option' => $filterSpecialOfferOption,
             'filter_price_stats' => $filterPriceStats,
             'active_filter_chips' => $activeFilterChips,
+            'search_filter_chip' => $searchFilterChip,
             'category_context_chip' => $categoryContextChip,
             'filter_reset_url' => $offersPage ? route('front.offers') : $resetUrl,
+            'empty_state_title' => $emptyStateTitle,
             'empty_state_message' => $emptyStateMessage,
+            'empty_state_reset_url' => $emptyStateResetUrl,
+            'empty_state_reset_label' => $emptyStateResetLabel,
+            'empty_state_all_url' => $emptyStateAllUrl,
+            'empty_state_all_label' => $emptyStateAllLabel,
         ]);
 
         if ($request->ajax() || $request->boolean('filter_ajax')) {
@@ -402,10 +432,16 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
                 'products_html' => view('frontend.partials.product-grid', [
                     'products' => $paginator,
                     'active_filter_chips' => $activeFilterChips,
+                    'search_filter_chip' => $searchFilterChip,
                     'category_context_chip' => $categoryContextChip,
                     'filter_reset_url' => $offersPage ? route('front.offers') : $resetUrl,
                     'selected_grid' => $selectedGrid,
+                    'empty_state_title' => $viewData['empty_state_title'],
                     'empty_state_message' => $viewData['empty_state_message'],
+                    'empty_state_reset_url' => $viewData['empty_state_reset_url'],
+                    'empty_state_reset_label' => $viewData['empty_state_reset_label'],
+                    'empty_state_all_url' => $viewData['empty_state_all_url'],
+                    'empty_state_all_label' => $viewData['empty_state_all_label'],
                 ])->render(),
                 'loadmore_html' => view('frontend.partials.loadmore', [
                     'products' => $paginator,

@@ -14,7 +14,7 @@
             <div class="tf-search-sticky">
                 <form class="tf-mini-search-frm" method="GET" action="{{ route('front.products.index') }}">
                     <fieldset class="text">
-                        <input type="text" placeholder="{{ __('front.search.input') }}" class="" name="q" tabindex="0" value="{{ request('q', request('text', request('search', ''))) }}" aria-required="true" required autocomplete="off" dir="auto">
+                        <input type="search" placeholder="{{ __('front.search.input') }}" class="" name="q" tabindex="0" value="{{ request('q', request('text', request('search', ''))) }}" aria-label="{{ __('front.search.title') }}" aria-required="true" required maxlength="120" autocomplete="off" enterkeyhint="search" dir="auto">
                     </fieldset>
                     <button class="" type="submit" aria-label="{{ __('front.search.title') }}"><i class="icon-search"></i></button>
                 </form>

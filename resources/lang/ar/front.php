@@ -37,6 +37,12 @@ return [
         'quick_links' => 'روابط سريعة',
         'input' => 'ابحث',
         'quick_link' => 'رابط سريع',
+        'active_query' => 'بحث: :term',
+        'no_results_title' => 'لم نعثر على نتائج',
+        'no_results_message' => 'لم نعثر على منتجات تطابق عبارة البحث «:term». جرّب عبارة أخرى أو ألغِ البحث مع الإبقاء على الفلاتر الحالية.',
+        'clear_search' => 'إلغاء البحث',
+        'view_all_products' => 'عرض جميع المنتجات',
+        'view_all_offers' => 'عرض جميع العروض',
     ],
     'toolbar' => [
         'search' => 'بحث',

@@ -37,6 +37,12 @@ return [
         'quick_links' => 'Quick links',
         'input' => 'Search',
         'quick_link' => 'Quick link',
+        'active_query' => 'Search: :term',
+        'no_results_title' => 'No results found',
+        'no_results_message' => 'We could not find products matching “:term”. Try another phrase or clear the search while keeping the current filters.',
+        'clear_search' => 'Clear search',
+        'view_all_products' => 'View all products',
+        'view_all_offers' => 'View all offers',
     ],
     'toolbar' => [
         'search' => 'Search',
