@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Color;
 use App\Models\CompanyPage;
 use App\Models\ExchangeRateSetting;
+use App\Models\InternalPageHeader;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Product;
@@ -24,6 +25,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -665,29 +667,66 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         $page = CompanyPage::query()
             ->where('slug', $slug)
             ->where('status', 'active')
+            ->firstOrFail();
+
+        $locale = app()->getLocale();
+        $title = $locale === 'ar'
+            ? ($page->title_ar ?: $page->title_en ?: $slug)
+            : ($page->title_en ?: $page->title_ar ?: $slug);
+        $content = $locale === 'ar'
+            ? ($page->content_ar ?: $page->content_en ?: '')
+            : ($page->content_en ?: $page->content_ar ?: '');
+        $shell = $this->homePageData->build();
+        $pageHeader = InternalPageHeader::query()
+            ->where('section_key', $this->companyPageHeaderSection($slug))
+            ->where('status', 'active')
             ->first();
+        $pageTitleBackground = $this->internalPageHeaderImageUrl($pageHeader?->image);
 
-        if ($page instanceof CompanyPage) {
-            $title = app()->getLocale() === 'ar'
-                ? ($page->title_ar ?: $page->title_en ?: $slug)
-                : ($page->title_en ?: $page->title_ar ?: $slug);
+        return view('frontend.pages.placeholder', array_merge($shell, [
+            'page_title' => $title,
+            'page_subtitle' => '',
+            'page_title_background' => $pageTitleBackground,
+            'breadcrumb_items' => [
+                ['label' => __('front.nav.home'), 'url' => route('front.home')],
+                ['label' => $title, 'url' => route('front.pages.show', $page->slug)],
+            ],
+            'company_page' => $page,
+            'company_page_content' => $content,
+        ]));
+    }
 
-            return view('frontend.pages.placeholder', [
-                'title' => $title,
-                'eyebrow' => __('front.nav.about'),
-                'message' => __('front.products.page_placeholder_message'),
-                'details' => [],
-                'back_url' => route('front.home'),
-            ]);
+    protected function companyPageHeaderSection(string $slug): string
+    {
+        $normalizedSlug = Str::lower(trim($slug));
+
+        return match (true) {
+            Str::contains($normalizedSlug, ['contact']) => 'contact',
+            Str::contains($normalizedSlug, ['branch', 'store']) => 'branches',
+            Str::contains($normalizedSlug, ['news', 'event']) => 'news',
+            Str::contains($normalizedSlug, ['product']) => 'products',
+            Str::contains($normalizedSlug, ['category', 'collection']) => 'categories',
+            default => 'about',
+        };
+    }
+
+    protected function internalPageHeaderImageUrl(?string $image): ?string
+    {
+        $image = trim((string) $image);
+
+        if ($image === '') {
+            return null;
         }
 
-        return view('frontend.pages.placeholder', [
-            'title' => Str::headline(str_replace('-', ' ', $slug)),
-            'eyebrow' => __('front.nav.about'),
-            'message' => __('front.products.page_placeholder_message'),
-            'details' => [],
-            'back_url' => route('front.home'),
-        ]);
+        if (Str::startsWith($image, ['http://', 'https://', '//'])) {
+            return $image;
+        }
+
+        if (Str::startsWith($image, ['/storage/', 'storage/'])) {
+            return asset(ltrim($image, '/'));
+        }
+
+        return Storage::disk('public')->url($image);
     }
 
     public function quickView(Product $product): JsonResponse

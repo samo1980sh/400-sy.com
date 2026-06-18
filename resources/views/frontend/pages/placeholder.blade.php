@@ -1,64 +1,76 @@
 @extends('frontend.layouts.app')
 
-@section('title', $title ?? __('front.brand'))
+@php
+    $pageTitle = $page_title ?? __('front.brand');
+    $pageContent = trim((string) ($company_page_content ?? ''));
+    $metaDescription = trim(strip_tags($pageContent));
+@endphp
+
+@section('title', $pageTitle)
+@section('meta_description', $metaDescription !== '' ? \Illuminate\Support\Str::limit($metaDescription, 160) : $pageTitle)
 
 @section('content')
-    @php
-        $details = collect($details ?? []);
-        $cartState = $cart_state ?? null;
-        $items = collect($cartState['items'] ?? []);
-    @endphp
+    @include('frontend.partials.announcement-bar', [
+        'tickerItems' => $ticker_items ?? [],
+        'socialLinks' => $social_links ?? [],
+    ])
 
-    <main class="py-5">
+    @include('frontend.partials.header', [
+        'navCategories' => $nav_categories ?? [],
+        'currencyOptions' => $currency_options ?? [],
+        'cartCount' => $cart_count ?? 0,
+        'wishlistCount' => $wishlist_count ?? 0,
+        'wishlistUrl' => $wishlist_url ?? route('front.wishlist.index'),
+        'siteName' => $site_name ?? __('front.brand'),
+    ])
+
+    @include('frontend.partials.page-title', [
+        'title' => $pageTitle,
+        'subtitle' => $page_subtitle ?? '',
+        'breadcrumbs' => $breadcrumb_items ?? [],
+        'background' => $page_title_background ?? null,
+    ])
+
+    <section class="flat-spacing-10">
         <div class="container">
             <div class="row justify-content-center">
-                <div class="col-12 col-xl-10">
-                    <div class="card border-0 shadow-sm rounded-4 p-4 p-lg-5">
-                        <div class="mb-3 text-uppercase fw-semibold small text-muted">{{ $eyebrow ?? __('front.brand') }}</div>
-                        <h1 class="mb-3">{{ $title ?? __('front.brand') }}</h1>
-                        <p class="mb-4 text-muted">{{ $message ?? __('front.products.page_placeholder_message') }}</p>
-
-                        @if ($details->isNotEmpty())
-                            <div class="row g-3 mb-4">
-                                @foreach ($details as $detail)
-                                    <div class="col-12 col-md-4">
-                                        <div class="border rounded-3 p-3 h-100 bg-light">
-                                            <div class="small text-uppercase text-muted mb-1">{{ $detail['label'] ?? '' }}</div>
-                                            <div class="fw-semibold">{{ $detail['value'] ?? '-' }}</div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
+                <div class="col-12 col-lg-10">
+                    <div class="tf-page-privacy-policy">
+                        @if ($pageContent !== '')
+                            {!! $pageContent !!}
                         @endif
-
-                        @if ($items->isNotEmpty())
-                            <div class="border rounded-3 p-3 mb-4">
-                                <div class="fw-semibold mb-3">{{ __('front.cart.title') }}</div>
-                                <div class="d-grid gap-3">
-                                    @foreach ($items as $item)
-                                        <div class="d-flex justify-content-between align-items-center gap-3">
-                                            <div>
-                                                <div class="fw-semibold">{{ $item['title'] ?? '' }}</div>
-                                                <div class="small text-muted">{{ $item['meta_variant'] ?? '' }}</div>
-                                            </div>
-                                            <div class="text-end">
-                                                <div class="fw-semibold">{{ $item['price_label'] ?? '' }}</div>
-                                                <div class="small text-muted">x{{ $item['qty'] ?? 1 }}</div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-3">
-                                    <span class="fw-semibold">{{ __('front.cart.subtotal') }}</span>
-                                    <span class="fw-semibold">{{ $cartState['subtotal_label'] ?? '0 SYP' }}</span>
-                                </div>
-                            </div>
-                        @endif
-
-                        <a href="{{ $back_url ?? route('front.home') }}" class="btn btn-dark px-4">{{ __('front.nav.home') }}</a>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
+    </section>
+
+    @include('frontend.partials.footer', [
+        'contact' => $contact ?? null,
+        'socialLinks' => $social_links ?? [],
+        'footerPages' => $footer_pages ?? [],
+        'collections' => $collections ?? [],
+    ])
+
+    @include('frontend.partials.toolbar-bottom', [
+        'cartCount' => $cart_count ?? 0,
+        'wishlistCount' => $wishlist_count ?? 0,
+        'wishlistUrl' => $wishlist_url ?? route('front.wishlist.index'),
+    ])
+
+    @include('frontend.partials.mobile-menu', [
+        'navCategories' => $nav_categories ?? [],
+        'quickLinks' => $quick_links ?? [],
+    ])
+
+    @include('frontend.partials.search-canvas', ['quickLinks' => $quick_links ?? []])
+    @include('frontend.partials.shopping-cart', ['cartState' => $cart_state ?? []])
+    @include('frontend.partials.auth-modals')
+    @include('frontend.partials.quick-add')
+    @include('frontend.partials.quick-view')
+    @include('frontend.partials.find-size')
 @endsection
+
+@push('scripts')
+    @include('frontend.partials.product-scripts')
+@endpush
