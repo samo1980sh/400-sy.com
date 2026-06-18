@@ -6,6 +6,7 @@ use App\Http\Requests\StoreFrontOrderRequest;
 use App\Models\Category;
 use App\Models\Color;
 use App\Models\CompanyPage;
+use App\Models\CustomerServiceSetting;
 use App\Models\ExchangeRateSetting;
 use App\Models\InternalPageHeader;
 use App\Models\Order;
@@ -664,18 +665,59 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
     public function page(string $slug): View
     {
+        $customerServiceSettingKey = match ($slug) {
+            'terms-and-conditions' => 'terms',
+            'exchange-and-return-policy', 'exchange-policy' => 'exchange_policy',
+            default => null,
+        };
+
+        if ($customerServiceSettingKey !== null) {
+            $page = CustomerServiceSetting::query()
+                ->where('setting_key', $customerServiceSettingKey)
+                ->where('is_active', true)
+                ->firstOrFail();
+
+            return $this->renderContentPage(
+                slug: $slug,
+                titleAr: $page->title_ar,
+                titleEn: $page->title_en,
+                contentAr: $page->content_ar,
+                contentEn: $page->content_en,
+                record: $page,
+            );
+        }
+
         $page = CompanyPage::query()
             ->where('slug', $slug)
             ->where('status', 'active')
             ->firstOrFail();
 
+        return $this->renderContentPage(
+            slug: $page->slug,
+            titleAr: $page->title_ar,
+            titleEn: $page->title_en,
+            contentAr: $page->content_ar,
+            contentEn: $page->content_en,
+            record: $page,
+        );
+    }
+
+    protected function renderContentPage(
+        string $slug,
+        ?string $titleAr,
+        ?string $titleEn,
+        ?string $contentAr,
+        ?string $contentEn,
+        CustomerServiceSetting|CompanyPage $record,
+    ): View
+    {
         $locale = app()->getLocale();
         $title = $locale === 'ar'
-            ? ($page->title_ar ?: $page->title_en ?: $slug)
-            : ($page->title_en ?: $page->title_ar ?: $slug);
+            ? ($titleAr ?: $titleEn ?: $slug)
+            : ($titleEn ?: $titleAr ?: $slug);
         $content = $locale === 'ar'
-            ? ($page->content_ar ?: $page->content_en ?: '')
-            : ($page->content_en ?: $page->content_ar ?: '');
+            ? ($contentAr ?: $contentEn ?: '')
+            : ($contentEn ?: $contentAr ?: '');
         $shell = $this->homePageData->build();
         $pageHeader = InternalPageHeader::query()
             ->where('section_key', $this->companyPageHeaderSection($slug))
@@ -689,9 +731,9 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'page_title_background' => $pageTitleBackground,
             'breadcrumb_items' => [
                 ['label' => __('front.nav.home'), 'url' => route('front.home')],
-                ['label' => $title, 'url' => route('front.pages.show', $page->slug)],
+                ['label' => $title, 'url' => route('front.pages.show', $slug)],
             ],
-            'company_page' => $page,
+            'company_page' => $record,
             'company_page_content' => $content,
         ]));
     }
