@@ -24,9 +24,17 @@ class ContactInfoSettingsTable
                     ->label('اسم الشركة بالانكليزية')
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('phone')
-                    ->label('الهاتف'),
+                    ->label('الهاتف')
+                    ->extraAttributes([
+                        'dir' => 'ltr',
+                        'style' => 'direction: ltr; unicode-bidi: isolate; text-align: left;',
+                    ]),
                 TextColumn::make('mobile')
                     ->label('الموبايل')
+                    ->extraAttributes([
+                        'dir' => 'ltr',
+                        'style' => 'direction: ltr; unicode-bidi: isolate; text-align: left;',
+                    ])
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('email')
                     ->label('البريد الإلكتروني')

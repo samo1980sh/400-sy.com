@@ -115,4 +115,22 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Contact Form Recipient
+    |--------------------------------------------------------------------------
+    |
+    | Contact form messages are delivered directly through SMTP to this
+    | address. Keep it separate from the public contact information shown
+    | on the website, and configure it only through environment variables.
+    |
+    */
+
+    'contact' => [
+        'to' => [
+            'address' => env('MAIL_CONTACT_TO', env('MAIL_FROM_ADDRESS')),
+            'name' => env('MAIL_CONTACT_NAME', env('APP_NAME', 'Laravel')),
+        ],
+    ],
+
 ];

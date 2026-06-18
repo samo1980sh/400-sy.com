@@ -55,6 +55,9 @@ Route::middleware('front.locale')->group(function (): void {
     Route::get('/checkout', [FrontPageController::class, 'checkout'])->name('front.checkout');
     Route::post('/checkout', [FrontPageController::class, 'storeCheckout'])->name('front.checkout.store');
     Route::get('/checkout/success/{order:order_no}', [FrontPageController::class, 'checkoutSuccess'])->name('front.checkout.success');
+    Route::post('/pages/contact-us', [FrontPageController::class, 'sendContactMessage'])
+        ->middleware('throttle:3,10')
+        ->name('front.contact.send');
     Route::get('/pages/{slug}', [FrontPageController::class, 'page'])->name('front.pages.show');
     Route::post('/cart/items/{product:slug}', [FrontPageController::class, 'addToCart'])->name('front.cart.add');
     Route::patch('/cart/items/{key}', [FrontPageController::class, 'updateCartItem'])->name('front.cart.update');

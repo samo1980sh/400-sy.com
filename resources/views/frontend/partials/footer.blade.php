@@ -5,18 +5,19 @@
 
     $contactName = $contact
         ? (app()->getLocale() === 'ar'
-            ? ($contact->company_name_ar ?? $contact->company_name_en ?? __('front.brand'))
-            : ($contact->company_name_en ?? $contact->company_name_ar ?? __('front.brand')))
+            ? ($contact->company_name_ar ?: $contact->company_name_en ?: __('front.brand'))
+            : ($contact->company_name_en ?: $contact->company_name_ar ?: __('front.brand')))
         : __('front.brand');
 
     $address = $contact
         ? (app()->getLocale() === 'ar'
-            ? ($contact->address_ar ?? $contact->address_en ?? __('front.footer.address'))
-            : ($contact->address_en ?? $contact->address_ar ?? __('front.footer.address')))
-        : __('front.footer.address');
+            ? ($contact->address_ar ?: $contact->address_en ?: '')
+            : ($contact->address_en ?: $contact->address_ar ?: ''))
+        : '';
 
-    $phone = $contact->phone ?? $contact->mobile ?? '+963 11 691 2400';
-    $email = $contact->email ?? 'info.sy@400-online.com';
+    $phone = trim((string) ($contact?->phone ?: $contact?->mobile ?: ''));
+    $email = trim((string) ($contact?->email ?? ''));
+    $hasContactDetails = $address !== '' || $phone !== '' || $email !== '';
 
     $importantFooterLinks = collect([
         [
@@ -31,6 +32,10 @@
             'title' => app()->getLocale() === 'ar' ? 'الأسئلة الشائعة' : 'Frequently Asked Questions',
             'url' => route('front.pages.show', 'faq'),
         ],
+        [
+            'title' => __('front.nav.contact'),
+            'url' => route('front.pages.show', 'contact-us'),
+        ],
     ]);
 
     $existingFooterUrls = $footerPages
@@ -41,7 +46,6 @@
     $importantFooterLinks = $importantFooterLinks
         ->reject(fn (array $link) => $existingFooterUrls->contains(rtrim((string) $link['url'], '/')))
         ->values();
-
 @endphp
 
 <footer id="footer" class="footer background-black md-pb-70">
@@ -56,11 +60,19 @@
                                     <img src="{{ asset('images/logo/logo2.png') }}" alt="{{ $contactName }}">
                                 </a>
                             </div>
-                            <ul>
-                                <li><p>{{ __('front.footer.address_label') }} {{ $address }}</p></li>
-                                <li><p>{{ __('front.footer.email_label') }} <a href="mailto:{{ $email }}">{{ $email }}</a></p></li>
-                                <li><p>{{ __('front.footer.phone_label') }} <a href="tel:{{ $phone }}" dir="ltr"><span dir="ltr">{{ $phone }}</span></a></p></li>
-                            </ul>
+                            @if ($hasContactDetails)
+                                <ul>
+                                    @if ($address !== '')
+                                        <li><p class="text-break">{{ __('front.footer.address_label') }} {{ $address }}</p></li>
+                                    @endif
+                                    @if ($email !== '')
+                                        <li><p>{{ __('front.footer.email_label') }} <a href="mailto:{{ $email }}" class="text-break d-inline-block" dir="ltr">{{ $email }}</a></p></li>
+                                    @endif
+                                    @if ($phone !== '')
+                                        <li><p>{{ __('front.footer.phone_label') }} <a href="tel:{{ $phone }}" dir="ltr"><span dir="ltr">{{ $phone }}</span></a></p></li>
+                                    @endif
+                                </ul>
+                            @endif
                         </div>
                     </div>
                     <div class="col-xl-2 col-md-6 col-12 footer-col-block">

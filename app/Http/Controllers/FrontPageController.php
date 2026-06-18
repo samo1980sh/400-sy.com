@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SendContactMessageRequest;
 use App\Http\Requests\StoreFrontOrderRequest;
 use App\Models\Category;
 use App\Models\Color;
+use App\Mail\ContactMessageMail;
 use App\Models\CompanyPage;
 use App\Models\CustomerServiceFaq;
 use App\Models\CustomerServiceSetting;
@@ -27,9 +29,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 use Illuminate\View\View;
 
 class FrontPageController extends Controller
@@ -666,6 +670,10 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
     public function page(string $slug): View
     {
+        if ($slug === 'contact-us') {
+            return $this->renderContactPage($slug);
+        }
+
         if ($slug === 'faq') {
             return $this->renderFaqPage($slug);
         }
@@ -705,6 +713,69 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             contentEn: $page->content_en,
             record: $page,
         );
+    }
+
+    protected function renderContactPage(string $slug): View
+    {
+        $locale = app()->getLocale();
+        $title = __('front.contact.title');
+        $shell = $this->homePageData->build();
+        $pageHeader = InternalPageHeader::query()
+            ->where('section_key', $this->companyPageHeaderSection($slug))
+            ->where('status', 'active')
+            ->first();
+
+        return view('frontend.pages.contact', array_merge($shell, [
+            'page_title' => $title,
+            'page_subtitle' => __('front.contact.subtitle'),
+            'page_title_background' => $this->internalPageHeaderImageUrl($pageHeader?->image),
+            'page_meta_description' => __('front.contact.meta_description'),
+            'breadcrumb_items' => [
+                ['label' => __('front.nav.home'), 'url' => route('front.home')],
+                ['label' => $title, 'url' => route('front.pages.show', $slug)],
+            ],
+            'contact_locale' => $locale,
+        ]));
+    }
+
+    public function sendContactMessage(SendContactMessageRequest $request): RedirectResponse|JsonResponse
+    {
+        $payload = $request->validated();
+        $recipient = trim((string) config('mail.contact.to.address'));
+        $recipientName = trim((string) config('mail.contact.to.name'));
+
+        if (! filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            $message = __('front.contact.configuration_error');
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 503)
+                : back()->with('contact_error', $message);
+        }
+
+        try {
+            Mail::mailer('smtp')
+                ->to($recipient, $recipientName !== '' ? $recipientName : null)
+                ->send(new ContactMessageMail(
+                    messageData: Arr::only($payload, ['name', 'email', 'phone', 'subject', 'message']),
+                    mailSubject: __('front.contact.mail_subject', ['subject' => $payload['subject']]),
+                ));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $message = __('front.contact.send_error');
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 502)
+                : back()->with('contact_error', $message);
+        }
+
+        $message = __('front.contact.success');
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message])
+            : redirect()
+                ->route('front.pages.show', 'contact-us')
+                ->with('contact_success', $message);
     }
 
     protected function renderFaqPage(string $slug): View
