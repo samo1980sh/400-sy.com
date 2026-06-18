@@ -66,6 +66,11 @@ class Customer extends Authenticatable
         return $this->hasMany(GiftCard::class);
     }
 
+    public function giftCardRequests(): HasMany
+    {
+        return $this->hasMany(GiftCardRequest::class);
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);

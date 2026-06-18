@@ -12,13 +12,17 @@ class GiftCard extends Model
     use HasFactory;
 
     protected $fillable = [
+        'gift_card_request_id',
         'customer_id',
         'code',
         'recipient_name',
+        'recipient_mobile',
         'display_name',
         'sender_name',
         'amount',
         'balance',
+        'currency',
+        'redemption_branch_id',
         'status',
         'issued_at',
         'expires_at',
@@ -38,9 +42,19 @@ class GiftCard extends Model
         ];
     }
 
+    public function request(): BelongsTo
+    {
+        return $this->belongsTo(GiftCardRequest::class, 'gift_card_request_id');
+    }
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function redemptionBranch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'redemption_branch_id');
     }
 
     public function redemptions(): HasMany
@@ -55,9 +69,11 @@ class GiftCard extends Model
                 $giftCard->code = 'GC-' . strtoupper(str()->random(8));
             }
 
-            if (blank($giftCard->balance)) {
+            if ($giftCard->balance === null || $giftCard->balance === '') {
                 $giftCard->balance = $giftCard->amount ?? 0;
             }
+
+            $giftCard->currency = strtoupper((string) ($giftCard->currency ?: 'SYP'));
         });
     }
 }
