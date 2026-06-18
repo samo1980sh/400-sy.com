@@ -53,6 +53,9 @@ Route::middleware('front.locale')->group(function (): void {
     Route::get('/products/{product:slug}/quick-view', [FrontPageController::class, 'quickView'])->name('front.products.quick-view');
     Route::get('/cart', [FrontPageController::class, 'cart'])->name('front.cart.view');
     Route::get('/checkout', [FrontPageController::class, 'checkout'])->name('front.checkout');
+    Route::post('/checkout/coupon/preview', [FrontPageController::class, 'previewCheckoutCoupon'])
+        ->middleware('throttle:10,1')
+        ->name('front.checkout.coupon.preview');
     Route::post('/checkout', [FrontPageController::class, 'storeCheckout'])->name('front.checkout.store');
     Route::get('/checkout/success/{order:order_no}', [FrontPageController::class, 'checkoutSuccess'])->name('front.checkout.success');
     Route::post('/pages/contact-us', [FrontPageController::class, 'sendContactMessage'])

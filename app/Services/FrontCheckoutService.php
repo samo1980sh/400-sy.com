@@ -15,13 +15,16 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class FrontCheckoutService
 {
     public const SUCCESS_SESSION_KEY = 'front.checkout.last_order_id';
 
-    public function __construct(protected FrontCartService $cart)
-    {
+    public function __construct(
+        protected FrontCartService $cart,
+        protected OrderCouponService $coupons,
+    ) {
     }
 
     public function activeShippingMethods(): EloquentCollection
@@ -46,6 +49,13 @@ class FrontCheckoutService
         $order = DB::transaction(function () use ($data): Order {
             $cartState = $this->cart->checkoutState();
             $items = collect($cartState['items'] ?? []);
+            $couponCode = trim((string) ($data['coupon_code'] ?? ''));
+
+            if ($couponCode !== '' && ! (Auth::guard('customer')->user() instanceof Customer)) {
+                throw ValidationException::withMessages([
+                    'coupon_code' => __('front.checkout.coupon_customer_required'),
+                ]);
+            }
 
             if ($items->isEmpty()) {
                 throw ValidationException::withMessages([
@@ -150,6 +160,20 @@ class FrontCheckoutService
                 'note' => __('front.checkout.order_created_history'),
                 'changed_by' => null,
             ]);
+
+            if ($couponCode !== '') {
+                try {
+                    $this->coupons->applyCoupon(
+                        order: $order,
+                        couponCode: $couponCode,
+                        notes: __('front.checkout.coupon_checkout_note'),
+                    );
+                } catch (RuntimeException $exception) {
+                    throw ValidationException::withMessages([
+                        'coupon_code' => $exception->getMessage(),
+                    ]);
+                }
+            }
 
             return $order;
         }, 3);

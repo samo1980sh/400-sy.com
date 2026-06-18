@@ -7,39 +7,54 @@ namespace App\Services;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use App\Models\CouponSetting;
+use App\Models\Customer;
 use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class OrderCouponService
 {
+    /**
+     * @return array{code:string, discount_amount:float, discount_type:string, discount_value:float}
+     */
+    public function previewForCustomer(Customer $customer, float $subtotal, string $couponCode): array
+    {
+        $this->ensureCouponSystemEnabled();
+
+        $coupon = $this->findCoupon($couponCode);
+        $this->validateCouponForCustomer($coupon, (int) $customer->getKey());
+
+        return [
+            'code' => $coupon->code,
+            'discount_amount' => $this->calculateDiscountFromSubtotal($subtotal, $coupon),
+            'discount_type' => $coupon->discount_type,
+            'discount_value' => (float) $coupon->discount_value,
+        ];
+    }
+
     public function applyCoupon(Order $order, string $couponCode, ?string $notes = null): CouponRedemption
     {
-        $order->loadMissing('customer', 'couponRedemption');
+        return DB::transaction(function () use ($order, $couponCode, $notes): CouponRedemption {
+            $order->loadMissing('customer', 'couponRedemption');
 
-        $setting = CouponSetting::singleton();
+            $this->ensureCouponSystemEnabled();
 
-        if (! $setting->enabled) {
-            throw new RuntimeException('نظام الكوبونات غير مفعل.');
-        }
+            if (blank($order->customer_id) || ! $order->customer) {
+                throw new RuntimeException(__('front.checkout.coupon_customer_required'));
+            }
 
-        if (blank($order->customer_id) || ! $order->customer) {
-            throw new RuntimeException('الطلب غير مرتبط بزبون صالح.');
-        }
+            $coupon = $this->findCoupon($couponCode, lockForUpdate: true);
+            $this->validateCouponForCustomer(
+                coupon: $coupon,
+                customerId: (int) $order->customer_id,
+                excludedOrderId: (int) $order->getKey(),
+            );
 
-        $coupon = Coupon::query()
-            ->whereRaw('UPPER(code) = ?', [mb_strtoupper(trim($couponCode))])
-            ->first();
+            $discountAmount = $this->calculateDiscountFromSubtotal(
+                (float) $order->total_before_discount,
+                $coupon,
+            );
 
-        if (! $coupon) {
-            throw new RuntimeException('الكوبون غير موجود.');
-        }
-
-        $this->validateCoupon($coupon, $order);
-
-        $discountAmount = $this->calculateDiscountAmount($order, $coupon);
-
-        return DB::transaction(function () use ($order, $coupon, $discountAmount, $notes): CouponRedemption {
             $redemption = CouponRedemption::query()->updateOrCreate(
                 ['order_id' => $order->id],
                 [
@@ -75,35 +90,67 @@ class OrderCouponService
         });
     }
 
-    protected function validateCoupon(Coupon $coupon, Order $order): void
+    protected function ensureCouponSystemEnabled(): void
     {
-        if ($coupon->status !== 'active') {
-            throw new RuntimeException('الكوبون غير فعال.');
-        }
-
-        if (filled($coupon->starts_at) && now()->lt($coupon->starts_at)) {
-            throw new RuntimeException('الكوبون لم يبدأ بعد.');
-        }
-
-        if (filled($coupon->ends_at) && now()->gt($coupon->ends_at)) {
-            throw new RuntimeException('الكوبون منتهي الصلاحية.');
-        }
-
-        $usedCount = CouponRedemption::query()
-            ->where('coupon_id', $coupon->id)
-            ->where('customer_id', $order->customer_id)
-            ->where('status', 'redeemed')
-            ->where('order_id', '!=', $order->id)
-            ->count();
-
-        if ($usedCount >= (int) $coupon->usage_limit_per_customer) {
-            throw new RuntimeException('تم استهلاك الحد المسموح لهذا الكوبون من قبل هذا الزبون.');
+        if (! CouponSetting::singleton()->enabled) {
+            throw new RuntimeException(__('front.checkout.coupon_system_disabled'));
         }
     }
 
-    protected function calculateDiscountAmount(Order $order, Coupon $coupon): float
+    protected function findCoupon(string $couponCode, bool $lockForUpdate = false): Coupon
     {
-        $subtotal = max(0, (float) $order->total_before_discount);
+        $normalizedCode = mb_strtoupper(trim($couponCode));
+
+        $query = Coupon::query()
+            ->whereRaw('UPPER(code) = ?', [$normalizedCode]);
+
+        if ($lockForUpdate) {
+            $query->lockForUpdate();
+        }
+
+        $coupon = $query->first();
+
+        if (! $coupon instanceof Coupon) {
+            throw new RuntimeException(__('front.checkout.coupon_not_found'));
+        }
+
+        return $coupon;
+    }
+
+    protected function validateCouponForCustomer(
+        Coupon $coupon,
+        int $customerId,
+        ?int $excludedOrderId = null,
+    ): void {
+        if ($coupon->status !== 'active') {
+            throw new RuntimeException(__('front.checkout.coupon_inactive'));
+        }
+
+        if (filled($coupon->starts_at) && now()->lt($coupon->starts_at)) {
+            throw new RuntimeException(__('front.checkout.coupon_not_started'));
+        }
+
+        if (filled($coupon->ends_at) && now()->gt($coupon->ends_at)) {
+            throw new RuntimeException(__('front.checkout.coupon_expired'));
+        }
+
+        $usedCountQuery = CouponRedemption::query()
+            ->where('coupon_id', $coupon->id)
+            ->where('customer_id', $customerId)
+            ->where('status', 'redeemed');
+
+        if ($excludedOrderId !== null && $excludedOrderId > 0) {
+            $usedCountQuery->where('order_id', '!=', $excludedOrderId);
+        }
+
+        if ($usedCountQuery->count() >= (int) $coupon->usage_limit_per_customer) {
+            throw new RuntimeException(__('front.checkout.coupon_usage_limit_reached'));
+        }
+    }
+
+    protected function calculateDiscountFromSubtotal(float $subtotal, Coupon $coupon): float
+    {
+        $subtotal = max(0, $subtotal);
 
         $discount = match ($coupon->discount_type) {
             'fixed' => (float) $coupon->discount_value,

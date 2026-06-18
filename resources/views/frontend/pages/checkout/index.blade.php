@@ -21,6 +21,7 @@
     $selectedPaymentCode = (string) ($selectedPaymentMethod?->code ?? '');
     $initialTotal = $subtotal + $selectedShippingCost;
     $customer = $authenticated_customer ?? null;
+    $couponSystemEnabled = (bool) ($coupon_system_enabled ?? false);
     $savedAddresses = collect($saved_addresses ?? []);
     $defaultAddress = $savedAddresses->firstWhere('is_default', true) ?? $savedAddresses->first();
     $prefillName = old('full_name', $customer?->name ?? $defaultAddress?->contact_name);
@@ -137,6 +138,23 @@
             min-height: 48px;
         }
 
+        .front-checkout-page .checkout-coupon-actions {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+        }
+
+        .front-checkout-page .checkout-coupon-actions .tf-btn {
+            min-width: 112px;
+            min-height: 48px;
+        }
+
+        @media (max-width: 575.98px) {
+            .front-checkout-page .checkout-coupon-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 991.98px) {
             .front-checkout-page .checkout-summary {
                 position: static;
@@ -165,6 +183,8 @@
         data-checkout-page
         data-checkout-currency="{{ $currency }}"
         data-checkout-locale="{{ app()->getLocale() }}"
+        data-checkout-coupon-preview-url="{{ route('front.checkout.coupon.preview') }}"
+        data-checkout-coupon-error-message="{{ __('front.checkout.coupon_preview_error') }}"
     >
         @include('frontend.partials.page-title', [
             'title' => $page_title ?? __('front.checkout.title'),
@@ -478,6 +498,52 @@
                                     @endforeach
                                 </div>
 
+                                @if ($couponSystemEnabled)
+                                    <div class="border rounded-3 p-3 mb_20">
+                                        <div class="fw-6 mb-2">{{ __('front.checkout.coupon_title') }}</div>
+
+                                        @if ($customer)
+                                            <div class="checkout-coupon-actions">
+                                                <input
+                                                    type="text"
+                                                    name="coupon_code"
+                                                    value="{{ old('coupon_code') }}"
+                                                    class="form-control @error('coupon_code') is-invalid @enderror"
+                                                    placeholder="{{ __('front.checkout.coupon_placeholder') }}"
+                                                    autocomplete="off"
+                                                    dir="ltr"
+                                                    data-checkout-coupon-input
+                                                    data-required-message="{{ __('front.checkout.coupon_required') }}"
+                                                >
+                                                <button
+                                                    type="button"
+                                                    class="tf-btn btn-outline animate-hover-btn radius-3 justify-content-center"
+                                                    data-checkout-coupon-apply
+                                                >
+                                                    <span data-checkout-coupon-apply-label>{{ __('front.checkout.apply_coupon') }}</span>
+                                                    <span class="d-none" data-checkout-coupon-applying-label>{{ __('front.checkout.applying_coupon') }}</span>
+                                                </button>
+                                            </div>
+                                            @error('coupon_code')<div class="text-danger small mt-2">{{ $message }}</div>@enderror
+                                            <div class="small mt-2" role="status" aria-live="polite" data-checkout-coupon-feedback></div>
+                                            <button
+                                                type="button"
+                                                class="btn-link link small mt-2 d-none"
+                                                data-checkout-coupon-remove
+                                            >
+                                                {{ __('front.checkout.remove_coupon') }}
+                                            </button>
+                                        @else
+                                            <p class="text-muted mb-0">
+                                                {{ __('front.checkout.coupon_login_required') }}
+                                                <a href="#login" data-bs-toggle="modal" class="link text-decoration-underline">
+                                                    {{ __('front.auth.log_in') }}
+                                                </a>
+                                            </p>
+                                        @endif
+                                    </div>
+                                @endif
+
                                 <div class="checkout-total-row">
                                     <span>{{ __('front.cart.subtotal') }}</span>
                                     <span class="fw-6 js-currency-price" data-base-price="{{ $subtotal }}" data-base-currency="{{ $currency }}">
@@ -495,6 +561,11 @@
                                     >
                                         {{ number_format($selectedShippingCost, 0) }} {{ $currency }}
                                     </span>
+                                </div>
+
+                                <div class="checkout-total-row text-success d-none" data-checkout-coupon-row>
+                                    <span>{{ __('front.checkout.coupon_discount') }}</span>
+                                    <span class="fw-6" data-checkout-coupon-discount>- {{ number_format(0, 0) }} {{ $currency }}</span>
                                 </div>
 
                                 <div class="checkout-total-row checkout-grand-total">

@@ -45,6 +45,9 @@ class StoreFrontOrderRequest extends FormRequest
             'notes' => filled($this->input('notes'))
                 ? trim((string) $this->input('notes'))
                 : null,
+            'coupon_code' => filled($this->input('coupon_code'))
+                ? mb_strtoupper(trim((string) $this->input('coupon_code')))
+                : null,
         ]);
     }
 
@@ -71,6 +74,7 @@ class StoreFrontOrderRequest extends FormRequest
                 Rule::exists('payment_methods', 'code')->where(fn ($query) => $query->where('active', true)),
             ],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'coupon_code' => ['nullable', 'string', 'max:100'],
             'terms' => ['accepted'],
         ];
     }
@@ -79,6 +83,10 @@ class StoreFrontOrderRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
+                if (filled($this->input('coupon_code')) && ! Auth::guard('customer')->check()) {
+                    $validator->errors()->add('coupon_code', __('front.checkout.coupon_customer_required'));
+                }
+
                 $email = $this->input('email');
                 $mobile = $this->input('mobile');
 
@@ -124,6 +132,7 @@ class StoreFrontOrderRequest extends FormRequest
             'shipping_method_id' => __('front.checkout.shipping_method'),
             'payment_method' => __('front.checkout.payment_method'),
             'notes' => __('front.checkout.notes'),
+            'coupon_code' => __('front.checkout.coupon_code'),
             'terms' => __('front.checkout.terms'),
         ];
     }

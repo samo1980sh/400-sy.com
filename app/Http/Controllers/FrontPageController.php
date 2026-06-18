@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PreviewFrontCouponRequest;
 use App\Http\Requests\SendContactMessageRequest;
 use App\Http\Requests\StoreFrontOrderRequest;
 use App\Models\Category;
 use App\Models\Color;
 use App\Mail\ContactMessageMail;
 use App\Models\CompanyPage;
+use App\Models\CouponSetting;
+use App\Models\Customer;
 use App\Models\CustomerServiceFaq;
 use App\Models\CustomerServiceSetting;
 use App\Models\ExchangeRateSetting;
@@ -22,6 +25,7 @@ use App\Services\FrontCartService;
 use App\Services\FrontCheckoutService;
 use App\Services\FrontHomePageDataService;
 use App\Services\FrontWishlistService;
+use App\Services\OrderCouponService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +37,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use Throwable;
 use Illuminate\View\View;
 
@@ -667,7 +672,54 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'checkout_available' => $shippingMethods->isNotEmpty() && $paymentMethods->isNotEmpty(),
             'authenticated_customer' => $authenticatedCustomer,
             'saved_addresses' => $savedAddresses,
+            'coupon_system_enabled' => (bool) (CouponSetting::query()->value('enabled') ?? false),
         ]));
+    }
+
+    public function previewCheckoutCoupon(
+        PreviewFrontCouponRequest $request,
+        FrontCartService $cart,
+        OrderCouponService $coupons,
+    ): JsonResponse {
+        $customer = auth('customer')->user();
+
+        if (! ($customer instanceof Customer)) {
+            return response()->json([
+                'ok' => false,
+                'message' => __('front.checkout.coupon_customer_required'),
+            ], 403);
+        }
+
+        try {
+            $cartState = $cart->checkoutState();
+            $preview = $coupons->previewForCustomer(
+                customer: $customer,
+                subtotal: (float) ($cartState['subtotal'] ?? 0),
+                couponCode: (string) $request->validated('coupon_code'),
+            );
+        } catch (ValidationException $exception) {
+            $errors = $exception->errors();
+            $message = collect($errors)->flatten()->first()
+                ?: __('front.checkout.coupon_preview_error');
+
+            return response()->json([
+                'ok' => false,
+                'message' => $message,
+                'errors' => $errors,
+            ], 422);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'ok' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => __('front.checkout.coupon_applied'),
+            'code' => $preview['code'],
+            'discount_amount' => $preview['discount_amount'],
+        ]);
     }
 
     public function storeCheckout(

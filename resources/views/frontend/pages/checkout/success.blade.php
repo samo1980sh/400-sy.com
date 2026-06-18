@@ -624,6 +624,22 @@
                                         </span>
                                     </div>
 
+                                    @if ((float) $order->coupon_discount_value > 0)
+                                        <div class="total-row">
+                                            <span>
+                                                {{ __('front.checkout.coupon_discount') }}
+                                                @if (filled($order->coupon_code_snapshot))
+                                                    <span dir="ltr">({{ $order->coupon_code_snapshot }})</span>
+                                                @endif
+                                            </span>
+                                            <span class="js-currency-price text-success"
+                                                  data-base-price="{{ (float) $order->coupon_discount_value }}"
+                                                  data-base-currency="{{ $currency }}">
+                                                - {{ number_format((float) $order->coupon_discount_value, 0) }} {{ $currency }}
+                                            </span>
+                                        </div>
+                                    @endif
+
                                     <div class="total-row grand-total">
                                         <span>{{ __('front.checkout.grand_total') }}</span>
                                         <span class="js-currency-price"
