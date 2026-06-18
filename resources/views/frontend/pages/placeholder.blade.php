@@ -3,7 +3,9 @@
 @php
     $pageTitle = $page_title ?? __('front.brand');
     $pageContent = trim((string) ($company_page_content ?? ''));
-    $metaDescription = trim(strip_tags($pageContent));
+    $faqItems = collect($faq_items ?? []);
+    $isFaqPage = array_key_exists('faq_items', get_defined_vars());
+    $metaDescription = trim(strip_tags((string) ($page_meta_description ?? $pageContent)));
 @endphp
 
 @section('title', $pageTitle)
@@ -36,7 +38,50 @@
             <div class="row justify-content-center">
                 <div class="col-12 col-lg-10">
                     <div class="tf-page-privacy-policy">
-                        @if ($pageContent !== '')
+                        @if ($isFaqPage)
+                            @if ($faqItems->isNotEmpty())
+                                <div class="accordion" id="faqAccordion">
+                                    @foreach ($faqItems as $index => $faq)
+                                        @php
+                                            $faqId = 'faq-item-' . ($faq['id'] ?? $index);
+                                            $headingId = $faqId . '-heading';
+                                            $collapseId = $faqId . '-collapse';
+                                            $isOpen = $index === 0;
+                                        @endphp
+
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="{{ $headingId }}">
+                                                <button
+                                                    class="accordion-button {{ $isOpen ? '' : 'collapsed' }}"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#{{ $collapseId }}"
+                                                    aria-expanded="{{ $isOpen ? 'true' : 'false' }}"
+                                                    aria-controls="{{ $collapseId }}"
+                                                >
+                                                    {{ $faq['question'] ?? '' }}
+                                                </button>
+                                            </h2>
+
+                                            <div
+                                                id="{{ $collapseId }}"
+                                                class="accordion-collapse collapse {{ $isOpen ? 'show' : '' }}"
+                                                aria-labelledby="{{ $headingId }}"
+                                                data-bs-parent="#faqAccordion"
+                                            >
+                                                <div class="accordion-body">
+                                                    {!! $faq['answer'] ?? '' !!}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-center py-5">
+                                    <p class="mb-0 text-muted">{{ $faq_empty_message ?? '' }}</p>
+                                </div>
+                            @endif
+                        @elseif ($pageContent !== '')
                             {!! $pageContent !!}
                         @endif
                     </div>

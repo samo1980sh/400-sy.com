@@ -18,6 +18,30 @@
     $phone = $contact->phone ?? $contact->mobile ?? '+963 11 691 2400';
     $email = $contact->email ?? 'info.sy@400-online.com';
 
+    $importantFooterLinks = collect([
+        [
+            'title' => __('front.cart.terms_and_conditions'),
+            'url' => route('front.pages.show', 'terms-and-conditions'),
+        ],
+        [
+            'title' => app()->getLocale() === 'ar' ? 'سياسة الاستبدال والإرجاع' : 'Exchange and Return Policy',
+            'url' => route('front.pages.show', 'exchange-and-return-policy'),
+        ],
+        [
+            'title' => app()->getLocale() === 'ar' ? 'الأسئلة الشائعة' : 'Frequently Asked Questions',
+            'url' => route('front.pages.show', 'faq'),
+        ],
+    ]);
+
+    $existingFooterUrls = $footerPages
+        ->pluck('url')
+        ->filter()
+        ->map(fn ($url) => rtrim((string) $url, '/'));
+
+    $importantFooterLinks = $importantFooterLinks
+        ->reject(fn (array $link) => $existingFooterUrls->contains(rtrim((string) $link['url'], '/')))
+        ->values();
+
 @endphp
 
 <footer id="footer" class="footer background-black md-pb-70">
@@ -62,6 +86,9 @@
                         <ul class="footer-menu-list tf-collapse-content">
                             @foreach ($footerPages as $page)
                                 <li><a href="{{ $page['url'] ?? '#' }}" class="footer-menu_item">{{ $page['title'] ?? '' }}</a></li>
+                            @endforeach
+                            @foreach ($importantFooterLinks as $link)
+                                <li><a href="{{ $link['url'] }}" class="footer-menu_item">{{ $link['title'] }}</a></li>
                             @endforeach
                         </ul>
                     </div>

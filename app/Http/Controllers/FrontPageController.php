@@ -6,6 +6,7 @@ use App\Http\Requests\StoreFrontOrderRequest;
 use App\Models\Category;
 use App\Models\Color;
 use App\Models\CompanyPage;
+use App\Models\CustomerServiceFaq;
 use App\Models\CustomerServiceSetting;
 use App\Models\ExchangeRateSetting;
 use App\Models\InternalPageHeader;
@@ -665,6 +666,10 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
     public function page(string $slug): View
     {
+        if ($slug === 'faq') {
+            return $this->renderFaqPage($slug);
+        }
+
         $customerServiceSettingKey = match ($slug) {
             'terms-and-conditions' => 'terms',
             'exchange-and-return-policy', 'exchange-policy' => 'exchange_policy',
@@ -700,6 +705,58 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             contentEn: $page->content_en,
             record: $page,
         );
+    }
+
+    protected function renderFaqPage(string $slug): View
+    {
+        $locale = app()->getLocale();
+        $title = $locale === 'ar' ? 'الأسئلة الشائعة' : 'Frequently Asked Questions';
+        $faqItems = CustomerServiceFaq::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(function (CustomerServiceFaq $faq) use ($locale): array {
+                $question = $locale === 'ar'
+                    ? ($faq->question_ar ?: $faq->question_en ?: '')
+                    : ($faq->question_en ?: $faq->question_ar ?: '');
+                $answer = $locale === 'ar'
+                    ? ($faq->answer_ar ?: $faq->answer_en ?: '')
+                    : ($faq->answer_en ?: $faq->answer_ar ?: '');
+
+                return [
+                    'id' => (int) $faq->getKey(),
+                    'question' => trim((string) $question),
+                    'answer' => trim((string) $answer),
+                ];
+            })
+            ->filter(fn (array $faq): bool => $faq['question'] !== '')
+            ->values();
+        $shell = $this->homePageData->build();
+        $pageHeader = InternalPageHeader::query()
+            ->where('section_key', $this->companyPageHeaderSection($slug))
+            ->where('status', 'active')
+            ->first();
+        $pageTitleBackground = $this->internalPageHeaderImageUrl($pageHeader?->image);
+        $metaDescription = $faqItems
+            ->pluck('answer')
+            ->map(fn (string $answer): string => trim(strip_tags($answer)))
+            ->first(fn (string $answer): bool => $answer !== '') ?: $title;
+
+        return view('frontend.pages.placeholder', array_merge($shell, [
+            'page_title' => $title,
+            'page_subtitle' => '',
+            'page_title_background' => $pageTitleBackground,
+            'page_meta_description' => $metaDescription,
+            'breadcrumb_items' => [
+                ['label' => __('front.nav.home'), 'url' => route('front.home')],
+                ['label' => $title, 'url' => route('front.pages.show', $slug)],
+            ],
+            'faq_items' => $faqItems,
+            'faq_empty_message' => $locale === 'ar'
+                ? 'لا توجد أسئلة شائعة متاحة حاليًا.'
+                : 'No frequently asked questions are available yet.',
+        ]));
     }
 
     protected function renderContentPage(
