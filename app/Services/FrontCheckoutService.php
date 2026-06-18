@@ -43,7 +43,7 @@ class FrontCheckoutService
 
     public function createOrder(array $data): Order
     {
-        return DB::transaction(function () use ($data): Order {
+        $order = DB::transaction(function () use ($data): Order {
             $cartState = $this->cart->checkoutState();
             $items = collect($cartState['items'] ?? []);
 
@@ -81,20 +81,20 @@ class FrontCheckoutService
             $total = $subtotal + $shippingCost;
 
             $order = Order::create([
-                'customer_id' => $customer->getKey(),
-                'shipping_address_id' => $address->getKey(),
+                'customer_id' => $customer?->getKey(),
+                'shipping_address_id' => $address?->getKey(),
                 'shipping_method_id' => $shippingMethod->getKey(),
-                'customer_name_snapshot' => $customer->name,
-                'customer_mobile_snapshot' => $customer->mobile,
-                'customer_email_snapshot' => $customer->email,
-                'customer_account_no_snapshot' => $customer->account_no,
-                'shipping_label_snapshot' => $address->label,
-                'shipping_contact_name_snapshot' => $address->contact_name,
-                'shipping_mobile_snapshot' => $address->mobile,
-                'shipping_city_snapshot' => $address->city,
-                'shipping_area_snapshot' => $address->area,
-                'shipping_address_line_snapshot' => $address->address_line,
-                'shipping_address_type_snapshot' => $address->address_type,
+                'customer_name_snapshot' => $customer?->name ?? $data['full_name'],
+                'customer_mobile_snapshot' => $customer?->mobile ?? $data['mobile'],
+                'customer_email_snapshot' => $customer?->email ?? ($data['email'] ?? null),
+                'customer_account_no_snapshot' => $customer?->account_no,
+                'shipping_label_snapshot' => $address?->label ?? ($data['address_label'] ?: __('front.checkout.address_types.' . $data['address_type'])),
+                'shipping_contact_name_snapshot' => $address?->contact_name ?? $data['full_name'],
+                'shipping_mobile_snapshot' => $address?->mobile ?? $data['mobile'],
+                'shipping_city_snapshot' => $address?->city ?? $data['city'],
+                'shipping_area_snapshot' => $address?->area ?? $data['area'],
+                'shipping_address_line_snapshot' => $address?->address_line ?? $data['address_line'],
+                'shipping_address_type_snapshot' => $address?->address_type ?? $data['address_type'],
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
                 'payment_method' => $paymentMethod->code,
@@ -151,14 +151,16 @@ class FrontCheckoutService
                 'changed_by' => null,
             ]);
 
-            $this->cart->clear();
-            session()->put(self::SUCCESS_SESSION_KEY, (int) $order->getKey());
-
-            return $order->load(['items', 'shippingMethod', 'customer', 'shippingAddress']);
+            return $order;
         }, 3);
+
+        $this->cart->clear();
+        session()->put(self::SUCCESS_SESSION_KEY, (int) $order->getKey());
+
+        return $order->load(['items', 'shippingMethod', 'customer', 'shippingAddress']);
     }
 
-    protected function resolveCustomer(array $data): Customer
+    protected function resolveCustomer(array $data): ?Customer
     {
         $authenticatedCustomer = Auth::guard('customer')->user();
 
@@ -193,9 +195,7 @@ class FrontCheckoutService
         }
 
         if ($customer instanceof Customer) {
-            $customer->fill($customerData)->save();
-
-            return $customer->refresh();
+            return null;
         }
 
         return Customer::create(array_merge($customerData, [
@@ -205,8 +205,12 @@ class FrontCheckoutService
         ]));
     }
 
-    protected function resolveAddress(Customer $customer, array $data): CustomerAddress
+    protected function resolveAddress(?Customer $customer, array $data): ?CustomerAddress
     {
+        if (! $customer instanceof Customer) {
+            return null;
+        }
+
         $address = $customer->addresses()
             ->where('mobile', $data['mobile'])
             ->where('city', $data['city'])
