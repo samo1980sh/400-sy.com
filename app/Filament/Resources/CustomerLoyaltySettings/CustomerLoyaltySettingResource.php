@@ -18,9 +18,9 @@ class CustomerLoyaltySettingResource extends \App\Filament\Resources\RbacResourc
     protected static ?string $permissionPrefix = 'customer-loyalty-settings';
     protected static ?string $modelLabel = 'إعداد الولاء';
     protected static ?string $pluralModelLabel = 'إعدادات الولاء';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
     protected static ?string $navigationLabel = 'إعدادات الولاء';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 

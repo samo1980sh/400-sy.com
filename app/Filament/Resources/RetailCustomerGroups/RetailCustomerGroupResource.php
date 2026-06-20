@@ -18,7 +18,7 @@ class RetailCustomerGroupResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'customer-groups.retail';
     protected static ?string $modelLabel = 'فئة مفرق';
     protected static ?string $pluralModelLabel = 'فئات المفرق';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'الزبائن والحسابات';
     protected static ?string $navigationLabel = 'فئات المفرق';
     protected static ?int $navigationSort = 1;
 

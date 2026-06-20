@@ -18,7 +18,7 @@ class UserResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'rbac.users';
     protected static ?string $modelLabel = 'مستخدم';
     protected static ?string $pluralModelLabel = 'المستخدمون';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الصلاحيات';
+    protected static string|UnitEnum|null $navigationGroup = 'المستخدمون والصلاحيات';
     protected static ?string $navigationLabel = 'المستخدمون';
     protected static ?int $navigationSort = 3;
 

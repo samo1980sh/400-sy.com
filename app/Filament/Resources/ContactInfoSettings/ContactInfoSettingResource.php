@@ -18,9 +18,9 @@ class ContactInfoSettingResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'contact-info-settings';
     protected static ?string $modelLabel = 'معلومات الاتصال العامة';
     protected static ?string $pluralModelLabel = 'معلومات الاتصال العامة';
-    protected static string|UnitEnum|null $navigationGroup = 'معلومات الاتصال';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'معلومات اتصال عامة';
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 7;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPhone;
 
     public static function form(Schema $schema): Schema

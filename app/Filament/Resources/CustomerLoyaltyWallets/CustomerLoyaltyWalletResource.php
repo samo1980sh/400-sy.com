@@ -18,9 +18,9 @@ class CustomerLoyaltyWalletResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'customer-loyalty-wallets';
     protected static ?string $modelLabel = 'محفظة نقاط';
     protected static ?string $pluralModelLabel = 'محافظ النقاط';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
-    protected static ?string $navigationLabel = 'الولاءات والنقاط';
-    protected static ?int $navigationSort = 4;
+    protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
+    protected static ?string $navigationLabel = 'محافظ الولاء';
+    protected static ?int $navigationSort = 2;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 

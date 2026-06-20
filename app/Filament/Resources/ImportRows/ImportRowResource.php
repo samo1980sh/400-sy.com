@@ -21,8 +21,9 @@ class ImportRowResource extends \App\Filament\Resources\RbacResource
     protected static ?string $modelLabel = 'سطر استيراد';
     protected static ?string $pluralModelLabel = 'أسطر الاستيراد';
     protected static bool $shouldRegisterNavigation = false;
-    protected static string|UnitEnum|null $navigationGroup = 'تهيئة قسم المنتجات';
+    protected static string|UnitEnum|null $navigationGroup = 'المنتجات والمتجر';
     protected static ?string $navigationLabel = 'أسطر الاستيراد';
+    protected static ?int $navigationSort = 9;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 

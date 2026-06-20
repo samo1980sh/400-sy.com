@@ -16,9 +16,9 @@ class GiftCardRedemptionResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'gift-card-redemptions';
     protected static ?string $modelLabel = 'استخدام بطاقة هدية';
     protected static ?string $pluralModelLabel = 'سجل بطاقات الهدايا';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'الهدايا والكوبونات';
     protected static ?string $navigationLabel = 'سجل بطاقات الهدايا';
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 6;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;
 

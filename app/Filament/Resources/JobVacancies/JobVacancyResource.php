@@ -21,9 +21,9 @@ class JobVacancyResource extends RbacResource
     protected static ?string $permissionPrefix = 'job-vacancies';
     protected static ?string $modelLabel = 'وظيفة';
     protected static ?string $pluralModelLabel = 'التوظيف';
-    protected static string|UnitEnum|null $navigationGroup = 'التوظيف';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'التوظيف';
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 11;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBriefcase;
 
     public static function form(Schema $schema): Schema

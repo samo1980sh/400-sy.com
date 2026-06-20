@@ -18,7 +18,7 @@ class PaymentMethodResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'payment-methods';
     protected static ?string $modelLabel = 'طريقة دفع';
     protected static ?string $pluralModelLabel = 'طرق الدفع';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الطلبات';
+    protected static string|UnitEnum|null $navigationGroup = 'إدارة الطلبات والمبيعات';
     protected static ?string $navigationLabel = 'طرق الدفع';
     protected static ?int $navigationSort = 3;
 

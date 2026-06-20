@@ -26,9 +26,9 @@ class ProductResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'products';
     protected static ?string $modelLabel = 'منتج';
     protected static ?string $pluralModelLabel = 'المنتجات';
-    protected static string|UnitEnum|null $navigationGroup = 'تهيئة قسم المنتجات';
+    protected static string|UnitEnum|null $navigationGroup = 'المنتجات والمتجر';
     protected static ?string $navigationLabel = 'المنتجات';
-    protected static ?int $navigationSort = 999;
+    protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
 

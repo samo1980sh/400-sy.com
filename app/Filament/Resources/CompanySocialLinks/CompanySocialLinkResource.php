@@ -18,7 +18,7 @@ class CompanySocialLinkResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'company-social-links';
     protected static ?string $modelLabel = 'رابط اجتماعي';
     protected static ?string $pluralModelLabel = 'روابط التواصل الاجتماعي';
-    protected static string|UnitEnum|null $navigationGroup = 'معلومات الشركة';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'روابط التواصل الاجتماعي';
     protected static ?int $navigationSort = 5;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

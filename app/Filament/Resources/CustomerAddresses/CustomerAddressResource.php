@@ -18,7 +18,7 @@ class CustomerAddressResource extends \App\Filament\Resources\RbacResource
     protected static bool $shouldRegisterNavigation = false;
     protected static ?string $modelLabel = 'عنوان زبون';
     protected static ?string $pluralModelLabel = 'عناوين الزبائن';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'الزبائن والحسابات';
     protected static ?string $navigationLabel = 'عناوين الزبائن';
     protected static ?int $navigationSort = 3;
     protected static string|BackedEnum|null $navigationIcon = null;

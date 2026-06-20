@@ -20,9 +20,9 @@ class SizeResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'sizes';
     protected static ?string $modelLabel = 'قياس';
     protected static ?string $pluralModelLabel = 'القياسات';
-    protected static string|UnitEnum|null $navigationGroup = 'تهيئة قسم المنتجات';
+    protected static string|UnitEnum|null $navigationGroup = 'المنتجات والمتجر';
     protected static ?string $navigationLabel = 'القياسات';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 4;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;
 

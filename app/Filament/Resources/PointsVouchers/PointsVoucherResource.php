@@ -18,9 +18,9 @@ class PointsVoucherResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'points-vouchers';
     protected static ?string $modelLabel = 'قسيمة نقاط';
     protected static ?string $pluralModelLabel = 'قسائم النقاط';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
     protected static ?string $navigationLabel = 'قسائم النقاط';
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 4;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTicket;
 

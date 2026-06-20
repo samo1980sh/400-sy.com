@@ -16,7 +16,7 @@ class TraderOrderResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'trader-orders';
     protected static ?string $modelLabel = 'طلب تاجر';
     protected static ?string $pluralModelLabel = 'طلبات التجار';
-    protected static string|UnitEnum|null $navigationGroup = 'تجار الجملة';
+    protected static string|UnitEnum|null $navigationGroup = 'التجار والجملة';
     protected static ?string $navigationLabel = 'طلبات التجار';
     protected static ?int $navigationSort = 4;
 

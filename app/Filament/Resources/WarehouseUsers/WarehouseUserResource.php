@@ -19,7 +19,7 @@ class WarehouseUserResource extends \App\Filament\Resources\RbacResource
     protected static ?string $modelLabel = 'مستخدم مستودع';
     protected static ?string $pluralModelLabel = 'مستخدمو المستودع';
     protected static string|UnitEnum|null $navigationGroup = 'المستودعات';
-    protected static ?string $navigationLabel = 'المستخدمون';
+    protected static ?string $navigationLabel = 'مستخدمو المستودعات';
     protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;

@@ -18,9 +18,9 @@ class CustomerServiceSettingResource extends \App\Filament\Resources\RbacResourc
     protected static ?string $permissionPrefix = 'customer-service-settings';
     protected static ?string $modelLabel = 'صفحة إعداد';
     protected static ?string $pluralModelLabel = 'إعدادات خدمة الزبائن';
-    protected static string|UnitEnum|null $navigationGroup = 'خدمة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'إعدادات خدمة الزبائن';
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 9;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
     public static function form(Schema $schema): Schema

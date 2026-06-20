@@ -18,7 +18,7 @@ class WholesaleCustomerGroupResource extends \App\Filament\Resources\RbacResourc
     protected static ?string $permissionPrefix = 'customer-groups.wholesale';
     protected static ?string $modelLabel = 'فئة تاجر';
     protected static ?string $pluralModelLabel = 'فئات التاجر';
-    protected static string|UnitEnum|null $navigationGroup = 'تجار الجملة';
+    protected static string|UnitEnum|null $navigationGroup = 'التجار والجملة';
     protected static ?string $navigationLabel = 'فئات التاجر';
     protected static ?int $navigationSort = 1;
 

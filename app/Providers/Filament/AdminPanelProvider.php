@@ -36,19 +36,17 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             ->navigationGroups([
-                NavigationGroup::make('تهيئة قسم المنتجات')->collapsed(),
+                NavigationGroup::make('إدارة الطلبات والمبيعات')->collapsed(),
+                NavigationGroup::make('المنتجات والمتجر')->collapsed(),
+                NavigationGroup::make('الزبائن والحسابات')->collapsed(),
+                NavigationGroup::make('الولاء والنقاط و QR')->collapsed(),
+                NavigationGroup::make('الهدايا والكوبونات')->collapsed(),
+                NavigationGroup::make('التجار والجملة')->collapsed(),
                 NavigationGroup::make('الأفرع والصالات')->collapsed(),
-                NavigationGroup::make('إدارة الزبائن')->collapsed(),
-                NavigationGroup::make('معلومات الشركة')->collapsed(),
-                NavigationGroup::make('خدمة الزبائن')->collapsed(),
-                NavigationGroup::make('التوظيف')->collapsed(),
-                NavigationGroup::make('تجار الجملة')->collapsed(),
                 NavigationGroup::make('المستودعات')->collapsed(),
-                NavigationGroup::make('إدارة الطلبات')->collapsed(),
-                NavigationGroup::make('كوبونات الخصم')->collapsed(),
-                NavigationGroup::make('معلومات الاتصال')->collapsed(),
+                NavigationGroup::make('محتوى الموقع والواجهة')->collapsed(),
                 NavigationGroup::make('الإعدادات العامة')->collapsed(),
-                NavigationGroup::make('إدارة الصلاحيات')->collapsed(),
+                NavigationGroup::make('المستخدمون والصلاحيات')->collapsed(),
             ])
             ->collapsibleNavigationGroups()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')

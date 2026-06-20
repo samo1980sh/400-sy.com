@@ -18,7 +18,7 @@ class InternalPageHeaderResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'internal-page-headers';
     protected static ?string $modelLabel = 'هيدر داخلي';
     protected static ?string $pluralModelLabel = 'هيدرات الصفحات الداخلية';
-    protected static string|UnitEnum|null $navigationGroup = 'معلومات الشركة';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'هيدرات الصفحات الداخلية';
     protected static ?int $navigationSort = 6;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

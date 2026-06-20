@@ -18,7 +18,7 @@ class PermissionResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'rbac.permissions';
     protected static ?string $modelLabel = 'صلاحية';
     protected static ?string $pluralModelLabel = 'الصلاحيات';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الصلاحيات';
+    protected static string|UnitEnum|null $navigationGroup = 'المستخدمون والصلاحيات';
     protected static ?string $navigationLabel = 'الصلاحيات';
     protected static ?int $navigationSort = 2;
 

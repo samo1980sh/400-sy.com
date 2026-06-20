@@ -18,7 +18,7 @@ class CompanyNewsItemResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'company-news-items';
     protected static ?string $modelLabel = 'خبر / حدث';
     protected static ?string $pluralModelLabel = 'الأخبار والأحداث';
-    protected static string|UnitEnum|null $navigationGroup = 'معلومات الشركة';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'الأخبار والأحداث';
     protected static ?int $navigationSort = 2;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

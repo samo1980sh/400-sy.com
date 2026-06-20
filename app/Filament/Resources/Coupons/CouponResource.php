@@ -18,7 +18,7 @@ class CouponResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'coupons';
     protected static ?string $modelLabel = 'كوبون';
     protected static ?string $pluralModelLabel = 'الكوبونات';
-    protected static string|UnitEnum|null $navigationGroup = 'كوبونات الخصم';
+    protected static string|UnitEnum|null $navigationGroup = 'الهدايا والكوبونات';
     protected static ?string $navigationLabel = 'الكوبونات';
     protected static ?int $navigationSort = 2;
 

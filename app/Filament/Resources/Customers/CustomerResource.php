@@ -18,7 +18,7 @@ class CustomerResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'customers';
     protected static ?string $modelLabel = 'زبون';
     protected static ?string $pluralModelLabel = 'الزبائن';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'الزبائن والحسابات';
     protected static ?string $navigationLabel = 'الزبائن';
     protected static ?int $navigationSort = 2;
 

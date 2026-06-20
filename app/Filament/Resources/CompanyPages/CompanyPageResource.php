@@ -18,7 +18,7 @@ class CompanyPageResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'company-pages';
     protected static ?string $modelLabel = 'صفحة';
     protected static ?string $pluralModelLabel = 'حول الشركة';
-    protected static string|UnitEnum|null $navigationGroup = 'معلومات الشركة';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'حول الشركة';
     protected static ?int $navigationSort = 1;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

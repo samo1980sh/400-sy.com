@@ -16,7 +16,7 @@ class CouponRedemptionResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'coupon-redemptions';
     protected static ?string $modelLabel = 'سجل كوبون';
     protected static ?string $pluralModelLabel = 'سجل الكوبونات';
-    protected static string|UnitEnum|null $navigationGroup = 'كوبونات الخصم';
+    protected static string|UnitEnum|null $navigationGroup = 'الهدايا والكوبونات';
     protected static ?string $navigationLabel = 'سجل الكوبونات';
     protected static ?int $navigationSort = 3;
 

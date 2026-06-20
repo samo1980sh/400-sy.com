@@ -20,9 +20,9 @@ class ColorResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'colors';
     protected static ?string $modelLabel = 'لون';
     protected static ?string $pluralModelLabel = 'الألوان';
-    protected static string|UnitEnum|null $navigationGroup = 'تهيئة قسم المنتجات';
+    protected static string|UnitEnum|null $navigationGroup = 'المنتجات والمتجر';
     protected static ?string $navigationLabel = 'الألوان';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSwatch;
 

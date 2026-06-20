@@ -18,7 +18,7 @@ class ShippingMethodResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'shipping-methods';
     protected static ?string $modelLabel = 'طريقة شحن';
     protected static ?string $pluralModelLabel = 'طرق الشحن';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الطلبات';
+    protected static string|UnitEnum|null $navigationGroup = 'إدارة الطلبات والمبيعات';
     protected static ?string $navigationLabel = 'طرق الشحن';
     protected static ?int $navigationSort = 2;
 

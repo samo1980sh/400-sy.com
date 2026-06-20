@@ -21,8 +21,9 @@ class ImportBatchResource extends \App\Filament\Resources\RbacResource
     protected static ?string $modelLabel = 'حزمة استيراد';
     protected static ?string $pluralModelLabel = 'سجل الاستيراد';
     protected static bool $shouldRegisterNavigation = false;
-    protected static string|UnitEnum|null $navigationGroup = 'تهيئة قسم المنتجات';
+    protected static string|UnitEnum|null $navigationGroup = 'المنتجات والمتجر';
     protected static ?string $navigationLabel = 'سجل الاستيراد';
+    protected static ?int $navigationSort = 8;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArchiveBoxArrowDown;
 

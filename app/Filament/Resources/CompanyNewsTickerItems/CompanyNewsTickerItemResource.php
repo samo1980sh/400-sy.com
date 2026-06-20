@@ -18,7 +18,7 @@ class CompanyNewsTickerItemResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'company-news-ticker-items';
     protected static ?string $modelLabel = 'شريط إخباري';
     protected static ?string $pluralModelLabel = 'الشريط الإخباري المتحرك';
-    protected static string|UnitEnum|null $navigationGroup = 'معلومات الشركة';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'الشريط الإخباري المتحرك';
     protected static ?int $navigationSort = 4;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

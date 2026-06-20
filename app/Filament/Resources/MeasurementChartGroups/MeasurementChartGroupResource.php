@@ -19,9 +19,9 @@ class MeasurementChartGroupResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'measurement-chart-groups';
     protected static ?string $modelLabel = 'مجموعة قياس';
     protected static ?string $pluralModelLabel = 'مجموعات القياس';
-    protected static string|UnitEnum|null $navigationGroup = 'تهيئة قسم المنتجات';
+    protected static string|UnitEnum|null $navigationGroup = 'المنتجات والمتجر';
     protected static ?string $navigationLabel = 'مجموعات القياس';
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 5;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleGroup;
 
     public static function form(Schema $schema): Schema

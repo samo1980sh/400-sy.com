@@ -18,9 +18,9 @@ class AgencyRequestPageResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'agency-request-pages';
     protected static ?string $modelLabel = 'طلب وكالة';
     protected static ?string $pluralModelLabel = 'طلب وكالة';
-    protected static string|UnitEnum|null $navigationGroup = 'معلومات الاتصال';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'طلب وكالة';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 8;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
 
     public static function form(Schema $schema): Schema

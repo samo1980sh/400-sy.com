@@ -18,7 +18,7 @@ class CompanyHeaderImageResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'company-header-images';
     protected static ?string $modelLabel = 'سلايدر';
     protected static ?string $pluralModelLabel = 'سلايدر الصفحة الرئيسية';
-    protected static string|UnitEnum|null $navigationGroup = 'معلومات الشركة';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'سلايدر الصفحة الرئيسية';
     protected static ?int $navigationSort = 3;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

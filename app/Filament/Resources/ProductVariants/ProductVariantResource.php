@@ -19,7 +19,7 @@ class ProductVariantResource extends \App\Filament\Resources\RbacResource
     protected static ?string $modelLabel = 'توافر قياس';
     protected static ?string $pluralModelLabel = 'توافر القياسات';
     protected static bool $shouldRegisterNavigation = true;
-    protected static string|UnitEnum|null $navigationGroup = 'تهيئة قسم المنتجات';
+    protected static string|UnitEnum|null $navigationGroup = 'المنتجات والمتجر';
     protected static ?string $navigationLabel = 'توافر القياسات';
     protected static ?int $navigationSort = 7;
 

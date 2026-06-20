@@ -20,9 +20,9 @@ class CategoryResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'categories';
     protected static ?string $modelLabel = 'تصنيف';
     protected static ?string $pluralModelLabel = 'التصنيفات';
-    protected static string|UnitEnum|null $navigationGroup = 'تهيئة قسم المنتجات';
+    protected static string|UnitEnum|null $navigationGroup = 'المنتجات والمتجر';
     protected static ?string $navigationLabel = 'التصنيفات';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleGroup;
 

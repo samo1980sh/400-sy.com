@@ -19,7 +19,7 @@ class ProductWholesaleAvailabilityResource extends \App\Filament\Resources\RbacR
     protected static ?string $modelLabel = 'توافر تاجر';
     protected static ?string $pluralModelLabel = 'توافر التاجر';
     protected static bool $shouldRegisterNavigation = true;
-    protected static string|UnitEnum|null $navigationGroup = 'تجار الجملة';
+    protected static string|UnitEnum|null $navigationGroup = 'التجار والجملة';
     protected static ?string $navigationLabel = 'توافر التاجر';
     protected static ?int $navigationSort = 3;
 

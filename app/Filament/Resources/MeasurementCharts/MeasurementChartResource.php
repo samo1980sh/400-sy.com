@@ -18,9 +18,9 @@ class MeasurementChartResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'measurement-charts';
     protected static ?string $modelLabel = 'صف قياس';
     protected static ?string $pluralModelLabel = 'صفوف القياس';
-    protected static string|UnitEnum|null $navigationGroup = 'تهيئة قسم المنتجات';
+    protected static string|UnitEnum|null $navigationGroup = 'المنتجات والمتجر';
     protected static ?string $navigationLabel = 'صفوف القياس';
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 6;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTableCells;
 

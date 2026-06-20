@@ -18,9 +18,9 @@ class CustomerLoyaltyTransactionResource extends \App\Filament\Resources\RbacRes
     protected static ?string $permissionPrefix = 'customer-loyalty-transactions';
     protected static ?string $modelLabel = 'حركة نقطة';
     protected static ?string $pluralModelLabel = 'حركات النقاط';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
     protected static ?string $navigationLabel = 'سجل النقاط';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowTrendingUp;
 

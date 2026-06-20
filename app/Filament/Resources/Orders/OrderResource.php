@@ -16,7 +16,7 @@ class OrderResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'orders';
     protected static ?string $modelLabel = 'طلب';
     protected static ?string $pluralModelLabel = 'الطلبات';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الطلبات';
+    protected static string|UnitEnum|null $navigationGroup = 'إدارة الطلبات والمبيعات';
     protected static ?string $navigationLabel = 'الطلبات';
     protected static ?int $navigationSort = 1;
 

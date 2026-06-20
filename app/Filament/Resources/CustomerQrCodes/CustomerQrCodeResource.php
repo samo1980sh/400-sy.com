@@ -18,9 +18,9 @@ class CustomerQrCodeResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'customer-qr-codes';
     protected static ?string $modelLabel = 'QR للزبون';
     protected static ?string $pluralModelLabel = 'رموز QR';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
-    protected static ?string $navigationLabel = 'QR Code';
-    protected static ?int $navigationSort = 10;
+    protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
+    protected static ?string $navigationLabel = 'رموز QR';
+    protected static ?int $navigationSort = 6;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQrCode;
 

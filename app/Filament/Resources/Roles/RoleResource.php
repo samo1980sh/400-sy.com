@@ -18,7 +18,7 @@ class RoleResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'rbac.roles';
     protected static ?string $modelLabel = 'دور';
     protected static ?string $pluralModelLabel = 'الأدوار';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الصلاحيات';
+    protected static string|UnitEnum|null $navigationGroup = 'المستخدمون والصلاحيات';
     protected static ?string $navigationLabel = 'الأدوار';
     protected static ?int $navigationSort = 1;
 

@@ -18,7 +18,7 @@ class TraderResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'traders';
     protected static ?string $modelLabel = 'تاجر';
     protected static ?string $pluralModelLabel = 'التجار';
-    protected static string|UnitEnum|null $navigationGroup = 'تجار الجملة';
+    protected static string|UnitEnum|null $navigationGroup = 'التجار والجملة';
     protected static ?string $navigationLabel = 'التجار';
     protected static ?int $navigationSort = 2;
 

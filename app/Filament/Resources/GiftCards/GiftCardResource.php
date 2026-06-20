@@ -16,9 +16,9 @@ class GiftCardResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'gift-cards';
     protected static ?string $modelLabel = 'طلب بطاقة هدية';
     protected static ?string $pluralModelLabel = 'طلبات بطاقات الهدايا';
-    protected static string|UnitEnum|null $navigationGroup = 'إدارة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'الهدايا والكوبونات';
     protected static ?string $navigationLabel = 'طلبات بطاقات الهدايا';
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 4;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGift;
 

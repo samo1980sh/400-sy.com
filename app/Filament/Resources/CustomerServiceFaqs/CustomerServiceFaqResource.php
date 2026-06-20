@@ -18,9 +18,9 @@ class CustomerServiceFaqResource extends \App\Filament\Resources\RbacResource
     protected static ?string $permissionPrefix = 'customer-service-faqs';
     protected static ?string $modelLabel = 'سؤال شائع';
     protected static ?string $pluralModelLabel = 'الأسئلة الشائعة';
-    protected static string|UnitEnum|null $navigationGroup = 'خدمة الزبائن';
+    protected static string|UnitEnum|null $navigationGroup = 'محتوى الموقع والواجهة';
     protected static ?string $navigationLabel = 'الأسئلة الشائعة';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 10;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQuestionMarkCircle;
 
     public static function form(Schema $schema): Schema

@@ -19,7 +19,7 @@ class WarehouseHallResource extends \App\Filament\Resources\RbacResource
     protected static ?string $modelLabel = 'صالة';
     protected static ?string $pluralModelLabel = 'الصالات';
     protected static string|UnitEnum|null $navigationGroup = 'المستودعات';
-    protected static ?string $navigationLabel = 'الصالات';
+    protected static ?string $navigationLabel = 'صالات المستودعات';
     protected static ?int $navigationSort = 2;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingStorefront;
