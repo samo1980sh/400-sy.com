@@ -97,6 +97,39 @@
             border-bottom: 1px solid #f1f1f1;
         }
         .front-gift-card-page .gift-card-summary-list li:last-child { border-bottom: 0; }
+        .front-gift-card-page .gift-card-instructions-btn {
+            min-height: 48px;
+            margin-top: 18px;
+        }
+        .gift-card-instructions-modal {
+            direction: rtl;
+            text-align: right;
+        }
+        .gift-card-instructions-modal .modal-content {
+            border: 0;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .gift-card-instructions-modal .modal-header {
+            border-bottom: 1px solid #eeeeee;
+        }
+        .gift-card-instructions-modal .instruction-block {
+            border: 1px solid #eeeeee;
+            border-radius: 12px;
+            padding: 16px;
+            background: #ffffff;
+            margin-bottom: 12px;
+        }
+        .gift-card-instructions-modal .instruction-block h6 {
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        .gift-card-instructions-modal .instruction-block ul {
+            margin: 0;
+            padding-inline-start: 18px;
+            color: #555555;
+            line-height: 1.9;
+        }
     </style>
 @endpush
 
@@ -308,6 +341,13 @@
                                         <li>سيتم احتساب رسوم التوصيل تلقائيًا عند اختيار التوصيل.</li>
                                     </ul>
 
+                                    <button type="button"
+                                        class="tf-btn btn-outline animate-hover-btn radius-3 w-100 justify-content-center gift-card-instructions-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#giftCardInstructionsModal">
+                                        Gift Card Instructions
+                                    </button>
+
                                     <div class="form-check mt_24 mb_20">
                                         <input class="form-check-input @error('terms') is-invalid @enderror" type="checkbox" name="terms" value="1" id="gift-card-terms" @checked(old('terms')) required>
                                         <label class="form-check-label" for="gift-card-terms">أوافق على تعليمات وشروط بطاقة الهدية</label>
@@ -326,6 +366,54 @@
         </section>
     </main>
 
+    <div class="modal fade gift-card-instructions-modal" id="giftCardInstructionsModal" tabindex="-1" aria-labelledby="giftCardInstructionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="giftCardInstructionsModalLabel">Gift Card Instructions</h5>
+                    <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="instruction-block">
+                        <h6>طريقة استخدام البطاقة</h6>
+                        <ul>
+                            <li>بعد إرسال الطلب، يتم تحويله إلى لوحة الإدارة للمراجعة وتأكيد البيانات.</li>
+                            <li>تصبح البطاقة فعالة فقط بعد اعتماد الطلب، تثبيت الدفع، وإصدار البطاقة من الإدارة.</li>
+                            <li>يمكن استخدام البطاقة من خلال الكود الصادر عنها وضمن فرع الصرف المحدد في الطلب.</li>
+                        </ul>
+                    </div>
+
+                    <div class="instruction-block">
+                        <h6>شروط الصرف</h6>
+                        <ul>
+                            <li>لا يتم صرف قيمة البطاقة نقدًا، وتستخدم للشراء فقط حسب سياسة الشركة.</li>
+                            <li>يجب مطابقة بيانات البطاقة مع الطلب عند استخدامها داخل الفرع.</li>
+                            <li>في حال وجود رصيد متبقٍ، يبقى مرتبطًا بنفس البطاقة حسب حالة البطاقة وشروط الإدارة.</li>
+                        </ul>
+                    </div>
+
+                    <div class="instruction-block">
+                        <h6>مدة الصلاحية</h6>
+                        <ul>
+                            <li>تظهر مدة الصلاحية، إن وجدت، بعد إصدار البطاقة من لوحة الإدارة.</li>
+                            <li>قد تختلف مدة الصلاحية حسب سياسة الإدارة أو نوع البطاقة أو الحملة المرتبطة بها.</li>
+                        </ul>
+                    </div>
+
+                    <div class="instruction-block mb-0">
+                        <h6>ملاحظات مهمة</h6>
+                        <ul>
+                            <li>اختيار التوصيل يضيف رسوم التوصيل إلى إجمالي الطلب تلقائيًا.</li>
+                            <li>يمكن متابعة حالة الطلب والبطاقات الصادرة لاحقًا من صفحة طلبات بطاقات الهدايا داخل الحساب.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-start">
+                    <button type="button" class="tf-btn btn-fill animate-hover-btn radius-3" data-bs-dismiss="modal">فهمت</button>
+                </div>
+            </div>
+        </div>
+    </div>
     @include('frontend.partials.footer', [
         'contact' => $contact ?? null,
         'socialLinks' => $social_links ?? [],
