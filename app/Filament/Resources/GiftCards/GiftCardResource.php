@@ -44,7 +44,7 @@ class GiftCardResource extends \App\Filament\Resources\RbacResource
 
     public static function canDeleteAny(): bool
     {
-        return false;
+        return true;
     }
 
     public static function getPages(): array

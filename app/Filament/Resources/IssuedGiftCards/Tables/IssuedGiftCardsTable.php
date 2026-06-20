@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\IssuedGiftCards\Tables;
 
 use App\Models\GiftCard;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -119,6 +121,12 @@ class IssuedGiftCardsTable
                                 ->send();
                         }
                     }),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->label('حذف المحدد'),
+                ]),
             ]);
     }
 
