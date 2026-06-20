@@ -80,10 +80,71 @@ class FrontGiftCardRequestController extends Controller
         ]);
 
         return redirect()
-            ->route('front.gift-cards.create')
-            ->with('gift_card_success', 'تم إرسال طلب بطاقة الهدية بنجاح. رقم الطلب: ' . $giftCardRequest->request_no);
+            ->route('front.account.gift-card-requests.show', ['giftCardRequest' => $giftCardRequest->request_no])
+            ->with('account_success', 'تم إرسال طلب بطاقة الهدية بنجاح، وسيتم مراجعته من قبل الإدارة.');
     }
 
+    public function accountIndex(): View
+    {
+        $customer = $this->customer();
+
+        $requests = GiftCardRequest::query()
+            ->where('customer_id', $customer->getKey())
+            ->withCount('giftCards')
+            ->latest('created_at')
+            ->paginate(10);
+
+        return view('frontend.pages.account.gift-card-requests.index', $this->accountData([
+            'page_title' => 'طلبات بطاقات الهدايا',
+            'page_subtitle' => 'تابع طلبات بطاقات الهدايا الخاصة بك.',
+            'customer' => $customer,
+            'requests' => $requests,
+        ]));
+    }
+
+    public function accountShow(GiftCardRequest $giftCardRequest): View
+    {
+        $customer = $this->customer();
+
+        abort_unless((int) $giftCardRequest->customer_id === (int) $customer->getKey(), 404);
+
+        $giftCardRequest->load([
+            'pickupBranch',
+            'shippingMethod',
+            'paymentMethod',
+            'redemptionBranch',
+            'giftCards',
+        ]);
+
+        return view('frontend.pages.account.gift-card-requests.show', $this->accountData([
+            'page_title' => 'تفاصيل طلب بطاقة الهدية',
+            'page_subtitle' => $giftCardRequest->request_no,
+            'customer' => $customer,
+            'gift_card_request' => $giftCardRequest,
+        ]));
+    }
+
+    protected function customer(): Customer
+    {
+        $customer = Auth::guard('customer')->user();
+
+        abort_unless($customer instanceof Customer, 403);
+
+        return $customer;
+    }
+
+    protected function accountData(array $data): array
+    {
+        $pageTitle = $data['page_title'] ?? 'حسابي';
+
+        return array_merge($this->homePageData->build(), [
+            'breadcrumb_items' => [
+                ['label' => __('front.nav.home'), 'url' => route('front.home')],
+                ['label' => 'حسابي', 'url' => route('front.account.index')],
+                ['label' => $pageTitle, 'url' => request()->url()],
+            ],
+        ], $data);
+    }
     protected function pageData(array $data): array
     {
         return array_merge($this->homePageData->build(), [
