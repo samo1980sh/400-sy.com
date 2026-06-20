@@ -7,11 +7,19 @@ use App\Http\Requests\UpdateFrontCustomerPasswordRequest;
 use App\Http\Requests\UpdateFrontCustomerProfileRequest;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
+use App\Models\CustomerLoyaltyTransaction;
+use App\Models\CustomerLoyaltyWallet;
 use App\Models\Order;
+use App\Models\PointVoucherRedemption;
+use App\Models\PointsVoucher;
 use App\Models\PaymentMethod;
 use App\Services\FrontHomePageDataService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class FrontCustomerAccountController extends Controller
@@ -163,6 +171,176 @@ class FrontCustomerAccountController extends Controller
         ]));
     }
 
+
+    public function pointsVouchers(): View
+    {
+        $customer = $this->customer();
+        $customer->loadMissing(['loyaltyWallet', 'retailGroups']);
+
+        $wallet = $customer->loyaltyWallet ?: CustomerLoyaltyWallet::firstOrCreate(
+            ['customer_id' => $customer->id],
+            [
+                'points_balance' => 0,
+                'points_earned_total' => 0,
+                'points_spent_total' => 0,
+                'status' => 'active',
+            ]
+        );
+
+        $groupIds = $customer->retailGroups
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        $vouchers = PointsVoucher::query()
+            ->where('status', 'active')
+            ->where(function ($query) use ($groupIds): void {
+                $query->whereNull('retail_customer_group_id');
+
+                if ($groupIds !== []) {
+                    $query->orWhereIn('retail_customer_group_id', $groupIds);
+                }
+            })
+            ->with('customerGroup')
+            ->orderBy('points_required')
+            ->orderBy('voucher_value')
+            ->get();
+
+        $redemptions = $customer->pointVoucherRedemptions()
+            ->with('voucher')
+            ->latest('created_at')
+            ->paginate(10);
+
+        return view('frontend.pages.account.points-vouchers.index', $this->viewData([
+            'page_title' => 'صرف النقاط',
+            'page_subtitle' => 'اختر القسيمة المناسبة حسب رصيد نقاطك وفئتك.',
+            'customer' => $customer,
+            'wallet' => $wallet,
+            'vouchers' => $vouchers,
+            'redemptions' => $redemptions,
+            'branches' => $this->frontBranches(),
+        ]));
+    }
+
+    public function redeemPointsVoucher(Request $request, PointsVoucher $pointsVoucher): RedirectResponse
+    {
+        $customer = $this->customer();
+        $customer->loadMissing('retailGroups');
+
+        $validated = $request->validate([
+            'usage_method' => ['required', Rule::in(['online', 'in_store'])],
+            'branch' => ['nullable', 'string', 'max:255'],
+        ], [
+            'usage_method.required' => 'يرجى اختيار طريقة الصرف.',
+            'usage_method.in' => 'طريقة الصرف المحددة غير صحيحة.',
+            'branch.max' => 'اسم الفرع طويل جداً.',
+        ]);
+
+        if (($validated['usage_method'] ?? null) === 'in_store' && blank($validated['branch'] ?? null)) {
+            return back()
+                ->withInput()
+                ->withErrors(['branch' => 'يرجى اختيار الفرع عند الصرف داخل الصالات.']);
+        }
+
+        if (($validated['usage_method'] ?? null) === 'online') {
+            $validated['branch'] = null;
+        }
+
+        if ($pointsVoucher->status !== 'active') {
+            return back()->withErrors(['points_voucher' => 'هذه القسيمة غير متاحة حالياً.']);
+        }
+
+        $groupIds = $customer->retailGroups
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        if (
+            filled($pointsVoucher->retail_customer_group_id)
+            && ! in_array((int) $pointsVoucher->retail_customer_group_id, $groupIds, true)
+        ) {
+            abort(404);
+        }
+
+        try {
+            $redemption = DB::transaction(function () use ($customer, $pointsVoucher, $validated): PointVoucherRedemption {
+                $wallet = CustomerLoyaltyWallet::query()
+                    ->where('customer_id', $customer->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $wallet) {
+                    $wallet = CustomerLoyaltyWallet::create([
+                        'customer_id' => $customer->id,
+                        'points_balance' => 0,
+                        'points_earned_total' => 0,
+                        'points_spent_total' => 0,
+                        'status' => 'active',
+                    ]);
+                }
+
+                if ($wallet->status !== 'active') {
+                    throw new \RuntimeException('محفظة النقاط غير فعالة حالياً.');
+                }
+
+                $pointsRequired = (float) $pointsVoucher->points_required;
+                $balanceBefore = (float) $wallet->points_balance;
+
+                if ($balanceBefore < $pointsRequired) {
+                    throw new \RuntimeException('رصيد النقاط غير كافٍ لصرف هذه القسيمة.');
+                }
+
+                $balanceAfter = $balanceBefore - $pointsRequired;
+                $validDays = (int) ($pointsVoucher->valid_days ?: 30);
+
+                $redemption = PointVoucherRedemption::create([
+                    'customer_id' => $customer->id,
+                    'points_voucher_id' => $pointsVoucher->id,
+                    'customer_name' => $customer->name,
+                    'account_no' => $customer->account_no,
+                    'mobile' => $customer->mobile,
+                    'voucher_value' => $pointsVoucher->voucher_value,
+                    'points_spent' => $pointsVoucher->points_required,
+                    'usage_method' => $validated['usage_method'],
+                    'branch' => $validated['usage_method'] === 'in_store' ? ($validated['branch'] ?? null) : null,
+                    'status' => 'available',
+                    'issued_at' => now(),
+                    'expires_at' => now()->addDays(max($validDays, 1)),
+                    'notes' => $validated['usage_method'] === 'online'
+                        ? 'تم إصدار كود قسيمة للاستخدام عبر الموقع.'
+                        : 'تم إصدار قسيمة للصرف داخل الصالات.',
+                ]);
+
+                $wallet->forceFill([
+                    'points_balance' => $balanceAfter,
+                    'points_spent_total' => (float) $wallet->points_spent_total + $pointsRequired,
+                ])->save();
+
+                CustomerLoyaltyTransaction::create([
+                    'customer_id' => $customer->id,
+                    'customer_loyalty_wallet_id' => $wallet->id,
+                    'type' => 'spend',
+                    'points' => $pointsRequired,
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $balanceAfter,
+                    'source_type' => 'point_voucher_redemption',
+                    'source_id' => $redemption->id,
+                    'reference_no' => $redemption->order_no,
+                    'occurred_at' => now(),
+                    'notes' => 'صرف نقاط مقابل قسيمة ' . $redemption->order_no,
+                ]);
+
+                return $redemption;
+            });
+        } catch (\RuntimeException $exception) {
+            return back()->withErrors(['points_voucher' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('front.account.points-vouchers.index')
+            ->with('account_success', 'تم إصدار القسيمة بنجاح. الكود: ' . $redemption->order_no);
+    }
+
     protected function customer(): Customer
     {
         $customer = Auth::guard('customer')->user();
@@ -176,6 +354,27 @@ class FrontCustomerAccountController extends Controller
         abort_unless((int) $address->customer_id === (int) $this->customer()->getKey(), 404);
 
         return $address;
+    }
+
+
+    protected function frontBranches(): array
+    {
+        if (! Schema::hasTable('branches')) {
+            return [];
+        }
+
+        return DB::table('branches')
+            ->orderBy('id')
+            ->get()
+            ->mapWithKeys(function ($branch): array {
+                $name = $branch->name_ar
+                    ?? $branch->name
+                    ?? $branch->name_en
+                    ?? ('فرع #' . $branch->id);
+
+                return [(string) $name => (string) $name];
+            })
+            ->all();
     }
 
     protected function viewData(array $data): array

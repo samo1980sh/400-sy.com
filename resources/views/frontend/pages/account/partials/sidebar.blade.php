@@ -25,7 +25,10 @@
         <a href="{{ route('front.account.gift-card-requests.index') }}" class="{{ request()->routeIs('front.account.gift-card-requests*') ? 'active' : '' }}">
             <i class="icon icon-gift"></i> طلبات بطاقات الهدايا
         </a>
-<a href="{{ route('front.wishlist.index') }}">
+        <a href="{{ route('front.account.points-vouchers.index') }}" class="{{ request()->routeIs('front.account.points-vouchers*') ? 'active' : '' }}">
+            <i class="icon icon-gift"></i> صرف النقاط
+        </a>
+        <a href="{{ route('front.wishlist.index') }}">
             <i class="icon icon-heart"></i> {{ __('front.toolbar.wishlist') }}
         </a>
         <form method="POST" action="{{ route('front.customer.logout') }}">

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\FrontCustomerAccountController;
@@ -45,6 +45,8 @@ Route::middleware('front.locale')->group(function (): void {
             Route::get('/orders/{order:order_no}', [FrontCustomerAccountController::class, 'showOrder'])->name('orders.show');
             Route::get('/gift-card-requests', [FrontGiftCardRequestController::class, 'accountIndex'])->name('gift-card-requests.index');
             Route::get('/gift-card-requests/{giftCardRequest:request_no}', [FrontGiftCardRequestController::class, 'accountShow'])->name('gift-card-requests.show');
+            Route::get('/points-vouchers', [FrontCustomerAccountController::class, 'pointsVouchers'])->name('points-vouchers.index');
+            Route::post('/points-vouchers/{pointsVoucher}/redeem', [FrontCustomerAccountController::class, 'redeemPointsVoucher'])->name('points-vouchers.redeem');
         });
 
     Route::get('/products', [FrontPageController::class, 'productsIndex'])->name('front.products.index');
