@@ -26,6 +26,7 @@ use App\Services\FrontCheckoutService;
 use App\Services\FrontHomePageDataService;
 use App\Services\FrontWishlistService;
 use App\Services\OrderCouponService;
+use App\Services\OrderPointVoucherService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
@@ -680,6 +681,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         PreviewFrontCouponRequest $request,
         FrontCartService $cart,
         OrderCouponService $coupons,
+        OrderPointVoucherService $pointVouchers,
     ): JsonResponse {
         $customer = auth('customer')->user();
 
@@ -692,11 +694,20 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
         try {
             $cartState = $cart->checkoutState();
-            $preview = $coupons->previewForCustomer(
-                customer: $customer,
-                subtotal: (float) ($cartState['subtotal'] ?? 0),
-                couponCode: (string) $request->validated('coupon_code'),
-            );
+            $discountCode = (string) $request->validated('coupon_code');
+            $subtotal = (float) ($cartState['subtotal'] ?? 0);
+
+            $preview = $pointVouchers->looksLikePointVoucherCode($discountCode)
+                ? $pointVouchers->previewForCustomer(
+                    customer: $customer,
+                    subtotal: $subtotal,
+                    redemptionCode: $discountCode,
+                )
+                : $coupons->previewForCustomer(
+                    customer: $customer,
+                    subtotal: $subtotal,
+                    couponCode: $discountCode,
+                );
         } catch (ValidationException $exception) {
             $errors = $exception->errors();
             $message = collect($errors)->flatten()->first()
@@ -716,7 +727,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
         return response()->json([
             'ok' => true,
-            'message' => __('front.checkout.coupon_applied'),
+            'message' => $preview['message'] ?? __('front.checkout.coupon_applied'),
             'code' => $preview['code'],
             'discount_amount' => $preview['discount_amount'],
         ]);

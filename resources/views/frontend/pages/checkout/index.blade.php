@@ -498,11 +498,12 @@
                                     @endforeach
                                 </div>
 
-                                @if ($couponSystemEnabled)
+                                @if ($couponSystemEnabled || $customer)
                                     <div class="border rounded-3 p-3 mb_20">
                                         <div class="fw-6 mb-2">{{ __('front.checkout.coupon_title') }}</div>
 
                                         @if ($customer)
+                                            <p class="text-muted small mb-2">{{ __('front.checkout.discount_code_hint') }}</p>
                                             <div class="checkout-coupon-actions">
                                                 <input
                                                     type="text"

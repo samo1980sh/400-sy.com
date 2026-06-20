@@ -12,6 +12,7 @@ class PointVoucherRedemption extends Model
 
     protected $fillable = [
         'customer_id',
+        'order_id',
         'points_voucher_id',
         'order_no',
         'customer_name',
@@ -23,6 +24,7 @@ class PointVoucherRedemption extends Model
         'branch',
         'status',
         'issued_at',
+        'applied_at',
         'expires_at',
         'notes',
     ];
@@ -33,6 +35,7 @@ class PointVoucherRedemption extends Model
             'voucher_value' => 'decimal:2',
             'points_spent' => 'decimal:2',
             'issued_at' => 'datetime',
+            'applied_at' => 'datetime',
             'expires_at' => 'datetime',
         ];
     }
@@ -40,6 +43,11 @@ class PointVoucherRedemption extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
     public function voucher(): BelongsTo

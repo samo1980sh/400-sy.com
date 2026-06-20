@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
 use App\Models\Order;
+use App\Models\PointVoucherRedemption;
 use App\Models\OrderStatusHistory;
 use App\Models\PaymentMethod;
 use App\Models\Product;
@@ -24,6 +25,7 @@ class FrontCheckoutService
     public function __construct(
         protected FrontCartService $cart,
         protected OrderCouponService $coupons,
+        protected OrderPointVoucherService $pointVouchers,
     ) {
     }
 
@@ -163,11 +165,19 @@ class FrontCheckoutService
 
             if ($couponCode !== '') {
                 try {
-                    $this->coupons->applyCoupon(
-                        order: $order,
-                        couponCode: $couponCode,
-                        notes: __('front.checkout.coupon_checkout_note'),
-                    );
+                    if ($this->pointVouchers->looksLikePointVoucherCode($couponCode)) {
+                        $this->pointVouchers->applyToOrder(
+                            order: $order,
+                            redemptionCode: $couponCode,
+                            notes: __('front.checkout.point_voucher_checkout_note'),
+                        );
+                    } else {
+                        $this->coupons->applyCoupon(
+                            order: $order,
+                            couponCode: $couponCode,
+                            notes: __('front.checkout.coupon_checkout_note'),
+                        );
+                    }
                 } catch (RuntimeException $exception) {
                     throw ValidationException::withMessages([
                         'coupon_code' => $exception->getMessage(),

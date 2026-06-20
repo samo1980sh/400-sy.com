@@ -640,6 +640,22 @@
                                         </div>
                                     @endif
 
+                                    @if ((float) ($order->point_voucher_discount_value ?? 0) > 0)
+                                        <div class="total-row">
+                                            <span>
+                                                {{ __('front.checkout.point_voucher_discount') }}
+                                                @if (filled($order->point_voucher_code_snapshot ?? null))
+                                                    <span dir="ltr">({{ $order->point_voucher_code_snapshot }})</span>
+                                                @endif
+                                            </span>
+                                            <span class="js-currency-price text-success"
+                                                  data-base-price="{{ (float) $order->point_voucher_discount_value }}"
+                                                  data-base-currency="{{ $currency }}">
+                                                - {{ number_format((float) $order->point_voucher_discount_value, 0) }} {{ $currency }}
+                                            </span>
+                                        </div>
+                                    @endif
+
                                     <div class="total-row grand-total">
                                         <span>{{ __('front.checkout.grand_total') }}</span>
                                         <span class="js-currency-price"

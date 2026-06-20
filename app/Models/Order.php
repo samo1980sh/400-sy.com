@@ -22,6 +22,7 @@ class Order extends Model
         'customer_email_snapshot',
         'customer_account_no_snapshot',
         'coupon_code_snapshot',
+        'point_voucher_code_snapshot',
         'shipping_label_snapshot',
         'shipping_contact_name_snapshot',
         'shipping_mobile_snapshot',
@@ -38,6 +39,7 @@ class Order extends Model
         'total_before_discount',
         'discount_value',
         'coupon_discount_value',
+        'point_voucher_discount_value',
         'shipping_cost',
         'total',
         'confirmed_at',
@@ -53,6 +55,7 @@ class Order extends Model
         'total_before_discount' => 'decimal:2',
         'discount_value' => 'decimal:2',
         'coupon_discount_value' => 'decimal:2',
+        'point_voucher_discount_value' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
         'total' => 'decimal:2',
         'confirmed_at' => 'datetime',
@@ -67,6 +70,37 @@ class Order extends Model
         static::creating(function (Order $order): void {
             if (blank($order->order_no)) {
                 $order->order_no = 'ORD-' . now()->format('Ymd') . '-' . strtoupper(str()->random(6));
+            }
+        });
+
+        static::updated(function (Order $order): void {
+            if (! $order->wasChanged('status')) {
+                return;
+            }
+
+            $redemption = $order->pointVoucherRedemption()->first();
+
+            if (! $redemption instanceof PointVoucherRedemption) {
+                return;
+            }
+
+            if (in_array($order->status, ['confirmed', 'shipped', 'delivered'], true)) {
+                if ($redemption->status !== 'redeemed') {
+                    $redemption->forceFill([
+                        'status' => 'redeemed',
+                        'applied_at' => $redemption->applied_at ?: now(),
+                    ])->save();
+                }
+
+                return;
+            }
+
+            if ($order->status === 'cancelled' && $redemption->status === 'reserved') {
+                $redemption->forceFill([
+                    'order_id' => null,
+                    'status' => 'available',
+                    'applied_at' => null,
+                ])->save();
             }
         });
     }
@@ -89,6 +123,11 @@ class Order extends Model
     public function couponRedemption(): HasOne
     {
         return $this->hasOne(CouponRedemption::class);
+    }
+
+    public function pointVoucherRedemption(): HasOne
+    {
+        return $this->hasOne(PointVoucherRedemption::class);
     }
 
     public function items(): HasMany

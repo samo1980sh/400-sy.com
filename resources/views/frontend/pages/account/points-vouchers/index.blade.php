@@ -8,6 +8,7 @@
         $statusLabels = [
             'pending' => 'معلقة',
             'available' => 'متاحة',
+            'reserved' => 'محجوزة لطلب',
             'redeemed' => 'مصروفة',
             'expired' => 'منتهية',
             'cancelled' => 'ملغاة',
