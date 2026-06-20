@@ -42,6 +42,7 @@ Route::middleware('front.locale')->group(function (): void {
             Route::delete('/addresses/{address}', [FrontCustomerAccountController::class, 'destroyAddress'])->name('addresses.destroy');
 
             Route::get('/orders', [FrontCustomerAccountController::class, 'orders'])->name('orders');
+            Route::get('/qr-code', [FrontCustomerAccountController::class, 'qrCode'])->name('qr-code');
             Route::get('/orders/{order:order_no}', [FrontCustomerAccountController::class, 'showOrder'])->name('orders.show');
             Route::get('/gift-card-requests', [FrontGiftCardRequestController::class, 'accountIndex'])->name('gift-card-requests.index');
             Route::get('/gift-card-requests/{giftCardRequest:request_no}', [FrontGiftCardRequestController::class, 'accountShow'])->name('gift-card-requests.show');

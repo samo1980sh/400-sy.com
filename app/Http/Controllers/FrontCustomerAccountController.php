@@ -9,11 +9,13 @@ use App\Models\Customer;
 use App\Models\CustomerAddress;
 use App\Models\CustomerLoyaltyTransaction;
 use App\Models\CustomerLoyaltyWallet;
+use App\Models\CustomerQrCode;
 use App\Models\Order;
 use App\Models\PointVoucherRedemption;
 use App\Models\PointsVoucher;
 use App\Models\PaymentMethod;
 use App\Services\FrontHomePageDataService;
+use App\Support\SimpleQrSvg;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +47,51 @@ class FrontCustomerAccountController extends Controller
             'pending_orders_count' => $customer->orders()->whereIn('status', ['pending', 'confirmed', 'shipped'])->count(),
             'latest_orders' => $latestOrders,
             'default_address' => $customer->addresses()->where('is_default', true)->first(),
+        ]));
+    }
+
+    public function qrCode(): View
+    {
+        $customer = $this->customer();
+        $customer->loadMissing(['loyaltyWallet', 'qrCode']);
+
+        $wallet = $customer->loyaltyWallet ?: CustomerLoyaltyWallet::firstOrCreate(
+            ['customer_id' => $customer->id],
+            [
+                'points_balance' => 0,
+                'points_earned_total' => 0,
+                'points_spent_total' => 0,
+                'status' => 'active',
+            ]
+        );
+
+        $qrCode = $customer->qrCode ?: CustomerQrCode::firstOrCreate(
+            ['customer_id' => $customer->id],
+            [
+                'token' => null,
+                'status' => 'active',
+                'generated_at' => now(),
+                'scan_count' => 0,
+            ]
+        );
+
+        $qrSvg = null;
+
+        if ($qrCode->isActive()) {
+            try {
+                $qrSvg = SimpleQrSvg::svg((string) $qrCode->token, 14, 6);
+            } catch (\Throwable) {
+                $qrSvg = null;
+            }
+        }
+
+        return view('frontend.pages.account.qr-code.index', $this->viewData([
+            'page_title' => 'رمز QR الخاص بي',
+            'page_subtitle' => 'استخدم هذا الرمز داخل الصالات لتعريف حسابك وربط العمليات بحساب الولاء.',
+            'customer' => $customer,
+            'wallet' => $wallet,
+            'qr_code' => $qrCode,
+            'qr_svg' => $qrSvg,
         ]));
     }
 

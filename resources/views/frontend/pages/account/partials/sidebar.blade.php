@@ -28,6 +28,9 @@
         <a href="{{ route('front.account.points-vouchers.index') }}" class="{{ request()->routeIs('front.account.points-vouchers*') ? 'active' : '' }}">
             <i class="icon icon-gift"></i> صرف النقاط
         </a>
+        <a href="{{ route('front.account.qr-code') }}" class="{{ request()->routeIs('front.account.qr-code') ? 'active' : '' }}">
+            <i class="icon icon-scan"></i> QR الحساب
+        </a>
         <a href="{{ route('front.wishlist.index') }}">
             <i class="icon icon-heart"></i> {{ __('front.toolbar.wishlist') }}
         </a>
