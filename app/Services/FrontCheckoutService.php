@@ -110,7 +110,10 @@ class FrontCheckoutService
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
                 'payment_method' => $paymentMethod->code,
-                'is_gift' => false,
+                'is_gift' => (bool) ($data['is_gift'] ?? false),
+                'gift_message' => filled($data['gift_message'] ?? null)
+                    ? trim((string) $data['gift_message'])
+                    : null,
                 'total_before_discount' => $subtotal,
                 'discount_value' => 0,
                 'coupon_discount_value' => 0,

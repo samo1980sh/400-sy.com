@@ -455,6 +455,41 @@
                                 @error('payment_method')<div class="text-danger mt-2">{{ $message }}</div>@enderror
                             </div>
 
+
+                            <div class="checkout-card mb_24">
+                                <h5 class="checkout-section-title">هل الطلب هدية؟</h5>
+
+                                <label class="checkout-option">
+                                    <input
+                                        type="checkbox"
+                                        name="is_gift"
+                                        value="1"
+                                        id="checkout-is-gift"
+                                        @checked(old('is_gift'))
+                                        data-checkout-gift-toggle
+                                    >
+                                    <span>
+                                        <span class="d-block fw-6">هذا الطلب هدية</span>
+                                        <span class="d-block text-muted mt-1">يمكنك إضافة رسالة قصيرة تظهر مع تفاصيل الطلب.</span>
+                                    </span>
+                                </label>
+
+                                <div class="mt_16 {{ old('is_gift') ? '' : 'd-none' }}" data-checkout-gift-message-wrap>
+                                    <label for="checkout-gift-message" class="checkout-label">
+                                        رسالة الهدية
+                                        <span class="text-muted fw-normal">(اختياري)</span>
+                                    </label>
+                                    <textarea
+                                        id="checkout-gift-message"
+                                        name="gift_message"
+                                        rows="3"
+                                        class="form-control @error('gift_message') is-invalid @enderror"
+                                        placeholder="اكتب رسالة قصيرة للهدية"
+                                    >{{ old('gift_message') }}</textarea>
+                                    @error('gift_message')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+
                             <div class="checkout-card">
                                 <label for="checkout-notes" class="checkout-label">
                                     {{ __('front.checkout.notes') }}
@@ -646,6 +681,19 @@
 @push('scripts')
     <script src="{{ asset('js/frontend-checkout.js') }}?v={{ filemtime(public_path('js/frontend-checkout.js')) }}"></script>
     <script>
+        document.addEventListener('change', function (event) {
+            var toggle = event.target.closest('[data-checkout-gift-toggle]');
+            if (!toggle) {
+                return;
+            }
+
+            var wrapper = document.querySelector('[data-checkout-gift-message-wrap]');
+            if (!wrapper) {
+                return;
+            }
+
+            wrapper.classList.toggle('d-none', !toggle.checked);
+        });
         document.addEventListener('change', function (event) {
             var select = event.target.closest('[data-checkout-saved-address]');
             if (!select || !select.selectedOptions.length) {

@@ -74,6 +74,8 @@ class StoreFrontOrderRequest extends FormRequest
                 Rule::exists('payment_methods', 'code')->where(fn ($query) => $query->where('active', true)),
             ],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'is_gift' => ['nullable', 'boolean'],
+            'gift_message' => ['nullable', 'string', 'max:1000'],
             'coupon_code' => ['nullable', 'string', 'max:100'],
             'terms' => ['accepted'],
         ];
@@ -132,6 +134,8 @@ class StoreFrontOrderRequest extends FormRequest
             'shipping_method_id' => __('front.checkout.shipping_method'),
             'payment_method' => __('front.checkout.payment_method'),
             'notes' => __('front.checkout.notes'),
+            'is_gift' => 'Gift order',
+            'gift_message' => 'Gift message',
             'coupon_code' => __('front.checkout.coupon_code'),
             'terms' => __('front.checkout.terms'),
         ];
