@@ -61,7 +61,17 @@ class FrontCustomerAccountService
         return DB::transaction(fn (): Customer => Customer::create([
             'account_no' => $this->generateAccountNo(),
             'name' => trim((string) $data['name']),
+            'birth_date' => $data['birth_date'],
+            'nationality' => trim((string) $data['nationality']),
             'mobile' => $mobile,
+            'secondary_mobile' => filled($data['secondary_mobile'] ?? null)
+                ? $this->normalizeMobile((string) $data['secondary_mobile'])
+                : null,
+            'gender' => $data['gender'],
+            'city' => trim((string) $data['city']),
+            'area' => trim((string) $data['area']),
+            'job_title' => filled($data['job_title'] ?? null) ? trim((string) $data['job_title']) : null,
+            'marital_status' => filled($data['marital_status'] ?? null) ? $data['marital_status'] : null,
             'email' => $email,
             'password' => $data['password'],
             'status' => 'active',
