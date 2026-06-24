@@ -53,6 +53,11 @@ class FrontPageController extends Controller
         return view('frontend.pages.home', $this->homePageData->build());
     }
 
+    public function branches(): View
+    {
+        return view('frontend.pages.branches.index', $this->homePageData->buildBranchesPage());
+    }
+
     public function category(Request $request, string $slug): View|JsonResponse
     {
         $category = Category::query()

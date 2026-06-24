@@ -271,6 +271,61 @@ class FrontHomePageDataService
         return $presentation;
     }
 
+    public function buildBranchesPage(): array
+    {
+        $locale = app()->getLocale();
+        $data = $this->build();
+        $data['page_title'] = __('front.nav.branches');
+        $data['branch_categories'] = $this->buildBranchCategories($locale);
+
+        return $data;
+    }
+
+    protected function buildBranchCategories(string $locale): Collection
+    {
+        return \App\Models\BranchCategory::query()
+            ->where('status', 'active')
+            ->with(['branches' => function ($query): void {
+                $query
+                    ->where('status', 'active')
+                    ->orderBy('sort_order');
+            }])
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function (\App\Models\BranchCategory $category) use ($locale): array {
+                $branches = $category->branches
+                    ->map(function (\App\Models\Branch $branch) use ($locale): array {
+                        $gallery = collect($branch->gallery_images ?? [])
+                            ->filter()
+                            ->map(fn (string $image): string => Storage::disk('public')->url($image))
+                            ->values();
+
+                        return [
+                            'name' => $this->localizedValue($branch->name_ar ?? null, $branch->name_en ?? null, $locale) ?: __('front.branches.untitled'),
+                            'type' => $branch->type ?: '',
+                            'address' => trim((string) $this->localizedValue($branch->address_ar ?? null, $branch->address_en ?? null, $locale)),
+                            'description' => trim((string) $this->localizedValue($branch->description_ar ?? null, $branch->description_en ?? null, $locale)),
+                            'notes' => trim((string) $this->localizedValue($branch->notes_ar ?? null, $branch->notes_en ?? null, $locale)),
+                            'phone' => $branch->phone ?: '',
+                            'mobile' => $branch->mobile ?: '',
+                            'whatsapp' => $branch->whatsapp ?: '',
+                            'email' => $branch->email ?: '',
+                            'map_url' => $branch->map_url ?: '',
+                            'image' => filled($branch->main_image) ? Storage::disk('public')->url($branch->main_image) : asset('images/shop/store/ourstore1.png'),
+                            'gallery' => $gallery,
+                        ];
+                    })
+                    ->values();
+
+                return [
+                    'name' => $this->localizedValue($category->name_ar ?? null, $category->name_en ?? null, $locale) ?: __('front.branches.untitled'),
+                    'description' => trim((string) $this->localizedValue($category->description_ar ?? null, $category->description_en ?? null, $locale)),
+                    'branches' => $branches,
+                ];
+            })
+            ->filter(fn (array $category): bool => $category['branches']->isNotEmpty())
+            ->values();
+    }
     protected function buildBranches(string $locale): Collection
     {
         $branches = Branch::query()
@@ -299,7 +354,7 @@ class FrontHomePageDataService
             [
                 'name' => $this->demoText($locale, 'الفرع الأول', 'First branch'),
                 'address' => $this->demoText($locale, 'اختبر عنوان الفرع وموقعه هنا', 'Experience the branch address and location'),
-                'hours' => $this->demoText($locale, 'السبت - الخميس، 8:30 صباحًا - 10:30 مساءً' . "\n" . 'السبت، 8:30 صباحًا - 10:30 مساءً' . "\n" . 'الجمعة مغلق', 'Sat - Thu, 8:30am - 10:30pm' . "\n" . 'Saturday, 8:30am - 10:30pm' . "\n" . 'Friday Closed'),
+                'hours' => $this->demoText($locale, 'السبت - الخميس، 8:30 صباحاً - 10:30 مساءً' . "\n" . 'الجمعة مغلق', 'Sat - Thu, 8:30am - 10:30pm' . "\n" . 'Friday Closed'),
                 'image' => asset('images/shop/store/ourstore1.png'),
                 'phone' => '+963 11 691 2400',
                 'email' => 'info.sy@400-online.com',
@@ -307,7 +362,7 @@ class FrontHomePageDataService
             [
                 'name' => $this->demoText($locale, 'الفرع الثاني', 'Branch Two'),
                 'address' => $this->demoText($locale, 'اختبر عنوان الفرع وموقعه هنا', 'Experience the branch address and location'),
-                'hours' => $this->demoText($locale, 'السبت - الخميس، 8:30 صباحًا - 10:30 مساءً' . "\n" . 'السبت، 8:30 صباحًا - 10:30 مساءً' . "\n" . 'الجمعة مغلق', 'Sat - Thu, 8:30am - 10:30pm' . "\n" . 'Saturday, 8:30am - 10:30pm' . "\n" . 'Friday Closed'),
+                'hours' => $this->demoText($locale, 'السبت - الخميس، 8:30 صباحاً - 10:30 مساءً' . "\n" . 'الجمعة مغلق', 'Sat - Thu, 8:30am - 10:30pm' . "\n" . 'Friday Closed'),
                 'image' => asset('images/shop/store/ourstore2.png'),
                 'phone' => '+963 11 691 2400',
                 'email' => 'info.sy@400-online.com',
@@ -315,7 +370,7 @@ class FrontHomePageDataService
             [
                 'name' => $this->demoText($locale, 'الفرع الثالث', 'Third branch'),
                 'address' => $this->demoText($locale, 'اختبر عنوان الفرع وموقعه هنا', 'Experience the branch address and location'),
-                'hours' => $this->demoText($locale, 'السبت - الخميس، 8:30 صباحًا - 10:30 مساءً' . "\n" . 'السبت، 8:30 صباحًا - 10:30 مساءً' . "\n" . 'الجمعة مغلق', 'Sat - Thu, 8:30am - 10:30pm' . "\n" . 'Saturday, 8:30am - 10:30pm' . "\n" . 'Friday Closed'),
+                'hours' => $this->demoText($locale, 'السبت - الخميس، 8:30 صباحاً - 10:30 مساءً' . "\n" . 'الجمعة مغلق', 'Sat - Thu, 8:30am - 10:30pm' . "\n" . 'Friday Closed'),
                 'image' => asset('images/shop/store/ourstore3.png'),
                 'phone' => '+963 11 691 2400',
                 'email' => 'info.sy@400-online.com',
@@ -430,7 +485,7 @@ class FrontHomePageDataService
 
         $links->push([
             'label' => __('front.nav.branches'),
-            'href' => route('front.home') . '#store-locations',
+            'href' => route('front.branches.index'),
         ]);
 
         return $links;

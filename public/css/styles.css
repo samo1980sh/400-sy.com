@@ -20836,9 +20836,15 @@ blockquote .text {
     justify-content: center;
     width: 18px;
     height: 18px;
-    font-size: 14px;
     line-height: 1;
     flex: 0 0 auto;
+}
+
+.language-switch-icon svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
 }
 
 .language-switch-label {

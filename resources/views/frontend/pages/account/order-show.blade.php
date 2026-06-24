@@ -52,8 +52,8 @@
                                 <small class="d-block text-muted" dir="ltr">{{ $item->product_sku_snapshot }}</small>
                             @endif
                         </td>
-                        <td>{{ $item->color_name_snapshot ?: 'â€”' }}</td>
-                        <td>{{ $item->size_name_snapshot ?: 'â€”' }}</td>
+                        <td>{{ $item->color_name_snapshot ?: '—' }}</td>
+                        <td>{{ $item->size_name_snapshot ?: '—' }}</td>
                         <td>{{ $item->quantity }}</td>
                         <td><span class="js-currency-price" data-base-price="{{ (float) $item->unit_price }}" data-base-currency="{{ $currency }}">{{ number_format((float) $item->unit_price, 0) }} {{ $currency }}</span></td>
                         <td><span class="js-currency-price" data-base-price="{{ (float) $item->line_total }}" data-base-currency="{{ $currency }}">{{ number_format((float) $item->line_total, 0) }} {{ $currency }}</span></td>
@@ -68,12 +68,12 @@
         <div class="col-lg-7">
             <div class="account-card h-100">
                 <h5 class="account-card-title">{{ __('front.account.delivery_details') }}</h5>
-                <div class="mb_8"><strong>{{ $order->shipping_contact_name_snapshot }}</strong> â€” <span dir="ltr">{{ $order->shipping_mobile_snapshot }}</span></div>
-                <div>{{ $order->shipping_city_snapshot }}ØŒ {{ $order->shipping_area_snapshot }}</div>
+                <div class="mb_8"><strong>{{ $order->shipping_contact_name_snapshot }}</strong> — <span dir="ltr">{{ $order->shipping_mobile_snapshot }}</span></div>
+                <div>{{ $order->shipping_city_snapshot }}، {{ $order->shipping_area_snapshot }}</div>
                 <div class="mt_6">{{ $order->shipping_address_line_snapshot }}</div>
                 <hr>
-                <div class="d-flex justify-content-between gap-3 mb_8"><span>{{ __('front.checkout.shipping_method') }}</span><strong>{{ $shippingName ?: 'â€”' }}</strong></div>
-                <div class="d-flex justify-content-between gap-3"><span>{{ __('front.checkout.payment_method') }}</span><strong>{{ $paymentName ?: 'â€”' }}</strong></div>
+                <div class="d-flex justify-content-between gap-3 mb_8"><span>{{ __('front.checkout.shipping_method') }}</span><strong>{{ $shippingName ?: '—' }}</strong></div>
+                <div class="d-flex justify-content-between gap-3"><span>{{ __('front.checkout.payment_method') }}</span><strong>{{ $paymentName ?: '—' }}</strong></div>
             </div>
         </div>
         <div class="col-lg-5">
@@ -345,4 +345,3 @@
         </div>
     @endif
 @endsection
-

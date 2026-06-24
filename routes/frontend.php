@@ -4,6 +4,7 @@ use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\FrontCustomerAccountController;
 use App\Http\Controllers\FrontCustomerAuthController;
 use App\Http\Controllers\FrontPageController;
+use App\Http\Controllers\FrontBranchController;
 use App\Http\Controllers\FrontGiftCardRequestController;
 use App\Http\Middleware\AuthenticateFrontCustomer;
 use Illuminate\Support\Facades\Route;
@@ -56,6 +57,8 @@ Route::middleware('front.locale')->group(function (): void {
 
     Route::get('/products', [FrontPageController::class, 'productsIndex'])->name('front.products.index');
     Route::get('/offers', [FrontPageController::class, 'offers'])->name('front.offers');
+    Route::get('/branches', [FrontBranchController::class, 'index'])->name('front.branches.index');
+    Route::get('/branches/{branch:slug}', [FrontBranchController::class, 'show'])->name('front.branches.show');
     Route::get('/gift-cards', [FrontGiftCardRequestController::class, 'create'])->name('front.gift-cards.create');
     Route::post('/gift-cards', [FrontGiftCardRequestController::class, 'store'])
         ->middleware(AuthenticateFrontCustomer::class)
@@ -80,4 +83,3 @@ Route::middleware('front.locale')->group(function (): void {
     Route::patch('/cart/items/{key}', [FrontPageController::class, 'updateCartItem'])->name('front.cart.update');
     Route::delete('/cart/items/{key}', [FrontPageController::class, 'removeCartItem'])->name('front.cart.remove');
 });
-

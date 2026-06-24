@@ -36,7 +36,7 @@ class BranchCategoryForm
                                 ->required()
                                 ->maxLength(255),
                             TextInput::make('name_en')
-                                ->label('الاسم بالانكليزية')
+                                ->label('الاسم بالإنكليزية')
                                 ->extraInputAttributes(['dir' => 'ltr'])
                                 ->required()
                                 ->maxLength(255),

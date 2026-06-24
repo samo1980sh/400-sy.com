@@ -25,7 +25,7 @@ class BranchCategoriesTable
                     ->searchable()
                     ->badge(),
                 TextColumn::make('name_en')
-                    ->label('الاسم بالانكليزية')
+                    ->label('الاسم بالإنكليزية')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('branches_count')

@@ -65,7 +65,7 @@ class BranchForm
                                 ->required()
                                 ->maxLength(255),
                             TextInput::make('name_en')
-                                ->label('الاسم بالانكليزية')
+                                ->label('الاسم بالإنكليزية')
                                 ->extraInputAttributes(['dir' => 'ltr'])
                                 ->required()
                                 ->maxLength(255),
@@ -90,7 +90,7 @@ class BranchForm
                         ->columns(2)
                         ->schema([
                             TextInput::make('whatsapp')
-                                ->label('واتس')
+                                ->label('واتساب')
                                 ->extraInputAttributes(['dir' => 'ltr'])
                                 ->tel()
                                 ->maxLength(255),
@@ -102,7 +102,7 @@ class BranchForm
                         ])
                         ->columnSpanFull(),
                     TextInput::make('map_url')
-                        ->label('رابط')
+                        ->label('رابط الخريطة')
                         ->extraInputAttributes(['dir' => 'ltr'])
                         ->url()
                         ->maxLength(2048)
@@ -115,7 +115,7 @@ class BranchForm
                                 ->extraInputAttributes(['dir' => 'rtl'])
                                 ->rows(3),
                             Textarea::make('address_en')
-                                ->label('العنوان بالانكليزية')
+                                ->label('العنوان بالإنكليزية')
                                 ->extraInputAttributes(['dir' => 'ltr'])
                                 ->rows(3),
                         ])
@@ -125,7 +125,7 @@ class BranchForm
                         ->extraInputAttributes(['dir' => 'rtl', 'style' => 'min-height: 18rem;'])
                         ->columnSpanFull(),
                     RichEditor::make('description_en')
-                        ->label('الوصف بالانكليزية')
+                        ->label('الوصف بالإنكليزية')
                         ->extraInputAttributes(['dir' => 'ltr', 'style' => 'min-height: 18rem;'])
                         ->columnSpanFull(),
                     FileUpload::make('main_image')
