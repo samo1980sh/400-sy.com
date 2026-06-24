@@ -49,6 +49,12 @@
     }
 
     $whatsappInquiryUrl = 'https://wa.me/' . $whatsappPhone . '?text=' . rawurlencode(implode("\n", $whatsappMessageLines));
+    $productShareUrl = url()->current();
+    $productShareTitle = trim((string) ($product['title'] ?? ($page_title ?? __('front.brand'))));
+    $productShareText = trim($productShareTitle . ($whatsappProductCode !== '' ? ' - ' . $whatsappProductCode : ''));
+    $productShareWhatsAppUrl = 'https://wa.me/?text=' . rawurlencode(trim($productShareText . ' ' . $productShareUrl));
+    $productShareFacebookUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . rawurlencode($productShareUrl);
+    $productShareXUrl = 'https://twitter.com/intent/tweet?url=' . rawurlencode($productShareUrl) . '&text=' . rawurlencode($productShareText);
     $wishlistActive = ! empty($product['is_in_wishlist']);
     $wishlistAddUrl = $product['wishlist_add_url'] ?? '';
     $wishlistRemoveUrl = $product['wishlist_remove_url'] ?? '';
@@ -383,6 +389,141 @@
         }
     </style>
 @endpush
+
+@push('styles')
+    <style>
+        .product-detail-share-row {
+            flex: 1 1 100%;
+            width: 100%;
+            margin-top: 14px;
+            padding: 14px;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            background: #fbfbfb;
+        }
+
+        .product-detail-share-row__header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .product-detail-share-row__title {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #111;
+        }
+
+        .product-detail-share-row__title .icon {
+            font-size: 16px;
+        }
+
+        .product-detail-share-row__hint {
+            min-height: 18px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #198754;
+            opacity: 0;
+            transition: opacity .18s ease;
+        }
+
+        .product-detail-share-row__hint.is-visible {
+            opacity: 1;
+        }
+
+        .product-detail-share-row__icons {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .product-detail-share-row__item {
+            min-height: 44px;
+            padding: 0 12px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+
+        .product-detail-share-row__item:hover {
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .12);
+        }
+
+        .product-detail-share-row__item.is-whatsapp {
+            background: #25d366;
+        }
+
+        .product-detail-share-row__item.is-facebook {
+            background: #1877f2;
+        }
+
+        .product-detail-share-row__item.is-x {
+            background: #111;
+        }
+
+        .product-detail-share-row__item.is-copy {
+            background: #fff;
+            color: #111;
+            border-color: #dedede;
+        }
+
+        .product-detail-share-row__item.is-copy svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .product-detail-share-row__url {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border: 1px solid #ededed;
+            border-radius: 6px;
+            background: #fff;
+            color: #666;
+            font-size: 12px;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 575.98px) {
+            .product-detail-share-row__header {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 6px;
+                margin-bottom: 10px;
+            }
+
+            .product-detail-share-row__icons {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .product-detail-share-row__item {
+                min-height: 42px;
+                padding: 0 10px;
+            }
+        }
+    </style>
+@endpush
+
 @section('content')
     @include('frontend.partials.announcement-bar', ['tickerItems' => $ticker_items ?? [], 'socialLinks' => $social_links ?? []])
     @include('frontend.partials.header', [
@@ -614,6 +755,48 @@
                                                 <span class="icon icon-delete"></span>
                                             </a>
                                         </form>
+                                        <div class="product-detail-share-row" aria-label="{{ $isArabic ? 'مشاركة المنتج' : 'Share product' }}">
+                                            <div class="product-detail-share-row__header">
+                                                <span class="product-detail-share-row__title">
+                                                    <i class="icon icon-share" aria-hidden="true"></i>
+                                                    {{ $isArabic ? 'شارك المنتج' : 'Share this product' }}
+                                                </span>
+                                                <span class="product-detail-share-row__hint" data-product-detail-copy-status>
+                                                    {{ $isArabic ? 'تم نسخ الرابط' : 'Link copied' }}
+                                                </span>
+                                            </div>
+                                            <div class="product-detail-share-row__icons">
+                                                <a class="product-detail-share-row__item is-whatsapp" href="{{ $productShareWhatsAppUrl }}" target="_blank"
+                                                    rel="noopener" aria-label="WhatsApp" title="WhatsApp">
+                                                    <i class="icon icon-whatsapp" aria-hidden="true"></i>
+                                                    <span>WhatsApp</span>
+                                                </a>
+
+                                                <a class="product-detail-share-row__item is-facebook" href="{{ $productShareFacebookUrl }}" target="_blank"
+                                                    rel="noopener" aria-label="Facebook" title="Facebook">
+                                                    <i class="icon icon-fb" aria-hidden="true"></i>
+                                                    <span>Facebook</span>
+                                                </a>
+
+                                                <a class="product-detail-share-row__item is-x" href="{{ $productShareXUrl }}" target="_blank" rel="noopener"
+                                                    aria-label="X" title="X">
+                                                    <i class="icon icon-Icon-x" aria-hidden="true"></i>
+                                                    <span>X</span>
+                                                </a>
+
+                                                <button type="button" class="product-detail-share-row__item is-copy"
+                                                    data-product-detail-copy-share="{{ $productShareUrl }}"
+                                                    aria-label="{{ $isArabic ? 'نسخ رابط المنتج' : 'Copy product link' }}">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path
+                                                            d="M10.59 13.41a1 1 0 0 1 0-1.41l2.83-2.83a3 3 0 0 1 4.24 4.24l-2.12 2.12a3 3 0 0 1-4.24 0 1 1 0 1 1 1.41-1.41 1 1 0 0 0 1.41 0l2.12-2.12a1 1 0 1 0-1.41-1.41L12 13.41a1 1 0 0 1-1.41 0Z"
+                                                            fill="currentColor" />
+                                                    </svg>
+                                                    <span>{{ $isArabic ? 'نسخ الرابط' : 'Copy link' }}</span>
+                                                </button>
+                                            </div>
+                                            <div class="product-detail-share-row__url" dir="ltr">{{ $productShareUrl }}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -647,6 +830,39 @@
     @include('frontend.partials.quick-add')
     @include('frontend.partials.quick-view')
     @include('frontend.partials.find-size')
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('[data-product-detail-copy-share]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var url = button.getAttribute('data-product-detail-copy-share') || window.location.href;
+                    var shareRow = button.closest('.product-detail-share-row');
+                    var status = shareRow ? shareRow.querySelector('[data-product-detail-copy-status]') : null;
+
+                    function showCopiedStatus() {
+                        if (!status) {
+                            return;
+                        }
+
+                        clearTimeout(button.productDetailCopyTimer);
+                        status.classList.add('is-visible');
+                        button.productDetailCopyTimer = setTimeout(function () {
+                            status.classList.remove('is-visible');
+                        }, 1800);
+                    }
+
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(url).then(showCopiedStatus).catch(function () {
+                            window.prompt(url, url);
+                        });
+                        return;
+                    }
+
+                    window.prompt(url, url);
+                });
+            });
+        });
+    </script>
 @endsection
 
 @push('scripts')
