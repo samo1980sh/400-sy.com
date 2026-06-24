@@ -116,4 +116,3 @@ return new class extends Migration
         Schema::dropIfExists('gift_card_requests');
     }
 };
-

@@ -71,7 +71,7 @@
                         {{ $customer ? __('front.account.title') : __('front.auth.login_title') }}
                     </a>
                 </li>
-                <li class="nav-mb-item"><a href="{{ $languageSwitchUrl }}" class="mb-menu-link mobile-language-switch-link"><span class="language-switch-icon" aria-hidden="true">🌐</span><span class="language-switch-label">{{ $languageSwitchLabel }}</span></a></li>
+                <li class="nav-mb-item"><a href="{{ $languageSwitchUrl }}" class="mb-menu-link mobile-language-switch-link"><span class="language-switch-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.93 9h-3.1a15.7 15.7 0 0 0-1.18-5.02A8.03 8.03 0 0 1 18.93 11ZM12 4.05c.58.85 1.5 2.65 1.8 6.95h-3.6c.3-4.3 1.22-6.1 1.8-6.95ZM4.07 13h3.1c.13 1.96.51 3.67 1.18 5.02A8.03 8.03 0 0 1 4.07 13Zm3.1-2h-3.1a8.03 8.03 0 0 1 4.28-5.02A15.7 15.7 0 0 0 7.17 11ZM12 19.95c-.58-.85-1.5-2.65-1.8-6.95h3.6c-.3 4.3-1.22 6.1-1.8 6.95Zm2.65-1.93A15.7 15.7 0 0 0 15.83 13h3.1a8.03 8.03 0 0 1-4.28 5.02Z" /></svg></span><span class="language-switch-label">{{ $languageSwitchLabel }}</span></a></li>
             </ul>
             <div class="mb-bottom">
                 <div class="mb-other-content">
