@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Customer;
+use App\Models\Trader;
 use App\Models\User;
 
 return [
@@ -19,6 +20,10 @@ return [
             'driver' => 'session',
             'provider' => 'customers',
         ],
+        'trader' => [
+            'driver' => 'session',
+            'provider' => 'traders',
+        ],
     ],
 
     'providers' => [
@@ -29,6 +34,10 @@ return [
         'customers' => [
             'driver' => 'eloquent',
             'model' => Customer::class,
+        ],
+        'traders' => [
+            'driver' => 'eloquent',
+            'model' => Trader::class,
         ],
     ],
 

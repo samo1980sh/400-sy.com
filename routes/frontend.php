@@ -4,9 +4,11 @@ use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\FrontCustomerAccountController;
 use App\Http\Controllers\FrontCustomerAuthController;
 use App\Http\Controllers\FrontPageController;
+use App\Http\Controllers\FrontTraderAuthController;
 use App\Http\Controllers\FrontBranchController;
 use App\Http\Controllers\FrontGiftCardRequestController;
 use App\Http\Middleware\AuthenticateFrontCustomer;
+use App\Http\Middleware\AuthenticateFrontTrader;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('front.locale')->group(function (): void {
@@ -15,6 +17,18 @@ Route::middleware('front.locale')->group(function (): void {
     Route::get('/lang/{locale}', [FrontPageController::class, 'setLocale'])->name('front.locale');
     Route::post('/currency', [CurrencyController::class, 'update'])->name('front.currency');
 
+    Route::get('/trader/login', [FrontTraderAuthController::class, 'showLogin'])->name('front.trader.login');
+    Route::post('/trader/login', [FrontTraderAuthController::class, 'login'])
+        ->middleware('throttle:6,1')
+        ->name('front.trader.login.store');
+    Route::post('/trader/logout', [FrontTraderAuthController::class, 'logout'])->name('front.trader.logout');
+
+    Route::middleware(AuthenticateFrontTrader::class)
+        ->prefix('trader')
+        ->name('front.trader.')
+        ->group(function (): void {
+            Route::get('/dashboard', [FrontTraderAuthController::class, 'dashboard'])->name('dashboard');
+        });
     Route::post('/account/login', [FrontCustomerAuthController::class, 'login'])
         ->middleware('throttle:6,1')
         ->name('front.customer.login');
