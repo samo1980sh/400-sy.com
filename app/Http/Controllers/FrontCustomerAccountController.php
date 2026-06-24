@@ -11,6 +11,7 @@ use App\Models\CustomerLoyaltyTransaction;
 use App\Models\CustomerLoyaltyWallet;
 use App\Models\CustomerQrCode;
 use App\Models\Order;
+use App\Models\OrderRating;
 use App\Models\PointVoucherRedemption;
 use App\Models\PointsVoucher;
 use App\Models\PaymentMethod;
@@ -203,6 +204,7 @@ class FrontCustomerAccountController extends Controller
             'shippingMethod',
             'shippingAddress',
             'statusHistory' => fn ($query) => $query->latest('created_at')->latest('id'),
+            'rating',
         ]);
 
         $paymentMethod = PaymentMethod::query()
@@ -218,6 +220,41 @@ class FrontCustomerAccountController extends Controller
         ]));
     }
 
+    public function storeOrderRating(Request $request, Order $order): RedirectResponse
+    {
+        $customer = $this->customer();
+
+        abort_unless((int) $order->customer_id === (int) $customer->getKey(), 404);
+
+        if ($order->status !== 'delivered') {
+            return back()->withErrors(['rating' => 'يمكن تقييم الطلب بعد استلامه فقط.']);
+        }
+
+        if ($order->rating()->exists()) {
+            return back()->withErrors(['rating' => 'تم تقييم هذا الطلب سابقاً.']);
+        }
+
+        $validated = $request->validate([
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'rating.required' => 'يرجى اختيار عدد النجوم.',
+            'rating.min' => 'يرجى اختيار تقييم من نجمة إلى خمس نجوم.',
+            'rating.max' => 'يرجى اختيار تقييم من نجمة إلى خمس نجوم.',
+            'comment.max' => 'الملاحظة طويلة جداً.',
+        ]);
+
+        OrderRating::create([
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'rating' => (int) $validated['rating'],
+            'comment' => filled($validated['comment'] ?? null)
+                ? trim((string) $validated['comment'])
+                : null,
+        ]);
+
+        return back()->with('account_success', 'شكراً لك، تم حفظ تقييم الطلب بنجاح.');
+    }
 
     public function pointsVouchers(): View
     {

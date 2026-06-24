@@ -139,7 +139,7 @@ class OrdersTable
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('إغلاق')
                     ->modalContent(fn (Order $record) => view('filament.orders.order-details', [
-                        'order' => $record->load(['customer', 'shippingAddress', 'shippingMethod', 'items']),
+                        'order' => $record->load(['customer', 'shippingAddress', 'shippingMethod', 'items', 'rating']),
                         'paymentMethodLabel' => self::paymentMethodLabel($record->payment_method),
                         'statusLabels' => self::statusLabels(),
                         'paymentStatusLabels' => self::paymentStatusLabels(),
@@ -200,7 +200,7 @@ class OrdersTable
                     ->label('تطبيق كوبون')
                     ->icon(Heroicon::OutlinedTicket)
                     ->color('primary')
-                    ->visible(fn (Order $record): bool => $record->status !== 'cancelled' && filled($record->customer_id))
+                    ->visible(false)
                     ->modalHeading('تطبيق كوبون على الطلب')
                     ->modalSubmitActionLabel('تطبيق')
                     ->modalWidth('4xl')

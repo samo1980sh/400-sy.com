@@ -76,6 +76,11 @@ class Customer extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    public function orderRatings(): HasMany
+    {
+        return $this->hasMany(OrderRating::class);
+    }
+
     public function pointVoucherRedemptions(): HasMany
     {
         return $this->hasMany(PointVoucherRedemption::class);

@@ -407,6 +407,22 @@
             <div class="oad-section-body">
                 <p class="oad-note">{{ $order->notes ?: 'لا توجد ملاحظات على الطلب.' }}</p>
 
+                @if ($order->rating)
+                    <div class="oad-section" data-admin-order-rating>
+                        <h3 class="oad-section-title">{!! '&#1578;&#1602;&#1610;&#1610;&#1605; &#1575;&#1604;&#1593;&#1605;&#1610;&#1604;' !!}</h3>
+                        <div class="oad-card">
+                            <div style="color:#f5a623; font-size:22px; margin-bottom:8px;">
+                                @for ($i = 1; $i <= 5; $i++)
+                                    {!! $i <= (int) $order->rating->rating ? '&#9733;' : '&#9734;' !!}
+                                @endfor
+                            </div>
+                            @if ($order->rating->comment)
+                                <p class="oad-note">{{ $order->rating->comment }}</p>
+                            @endif
+                            <small>{{ optional($order->rating->created_at)->format('Y-m-d H:i') }}</small>
+                        </div>
+                    </div>
+                @endif
                 @if ($order->is_gift)
                     <div style="margin-top: 12px;">
                         <div class="oad-label" style="margin-bottom: 5px;">رسالة الهدية</div>

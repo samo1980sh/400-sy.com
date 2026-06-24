@@ -139,4 +139,9 @@ class Order extends Model
     {
         return $this->hasMany(OrderStatusHistory::class);
     }
+
+    public function rating(): HasOne
+    {
+        return $this->hasOne(OrderRating::class);
+    }
 }

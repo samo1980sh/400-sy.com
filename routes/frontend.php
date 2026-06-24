@@ -47,6 +47,7 @@ Route::middleware('front.locale')->group(function (): void {
             Route::get('/orders', [FrontCustomerAccountController::class, 'orders'])->name('orders');
             Route::get('/qr-code', [FrontCustomerAccountController::class, 'qrCode'])->name('qr-code');
             Route::get('/orders/{order:order_no}', [FrontCustomerAccountController::class, 'showOrder'])->name('orders.show');
+            Route::post('/orders/{order:order_no}/rating', [FrontCustomerAccountController::class, 'storeOrderRating'])->name('orders.rating.store');
             Route::get('/gift-card-requests', [FrontGiftCardRequestController::class, 'accountIndex'])->name('gift-card-requests.index');
             Route::get('/gift-card-requests/{giftCardRequest:request_no}', [FrontGiftCardRequestController::class, 'accountShow'])->name('gift-card-requests.show');
             Route::get('/points-vouchers', [FrontCustomerAccountController::class, 'pointsVouchers'])->name('points-vouchers.index');
