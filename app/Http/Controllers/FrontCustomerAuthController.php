@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\FrontCustomerActivateRequest;
+use App\Http\Requests\FrontCustomerForgotPasswordRequest;
 use App\Http\Requests\FrontCustomerLoginRequest;
 use App\Http\Requests\FrontCustomerRegisterRequest;
 use App\Models\Customer;
@@ -99,6 +100,25 @@ class FrontCustomerAuthController extends Controller
             ->with('account_success', __('front.auth.activation_success'));
     }
 
+    public function forgotPassword(FrontCustomerForgotPasswordRequest $request): RedirectResponse
+    {
+        if (Auth::guard('customer')->check()) {
+            return redirect()->route('front.account.index');
+        }
+
+        try {
+            $this->accounts->resetPasswordByOrderProof($request->validated());
+        } catch (ValidationException $exception) {
+            return back()
+                ->withErrors($exception->errors(), 'customerForgotPassword')
+                ->withInput($request->safe()->except(['password', 'password_confirmation']))
+                ->with('auth_modal', 'forgotPassword');
+        }
+
+        return back()
+            ->with('account_success', __('front.auth.password_reset_success'))
+            ->with('auth_modal', 'login');
+    }
     public function logout(Request $request): RedirectResponse
     {
         $customer = Auth::guard('customer')->user();

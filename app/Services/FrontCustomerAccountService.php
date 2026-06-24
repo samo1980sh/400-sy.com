@@ -119,6 +119,55 @@ class FrontCustomerAccountService
         return $customer->refresh();
     }
 
+    public function resetPasswordByOrderProof(array $data): Customer
+    {
+        $mobile = $this->normalizeMobile((string) $data['mobile']);
+        $customer = Customer::query()->where('mobile', $mobile)->first();
+
+        if (! $customer instanceof Customer) {
+            throw ValidationException::withMessages([
+                'mobile' => __('front.auth.reset_customer_not_found'),
+            ]);
+        }
+
+        if ($customer->status !== 'active') {
+            throw ValidationException::withMessages([
+                'mobile' => __('front.auth.account_inactive'),
+            ]);
+        }
+
+        $orderNo = strtoupper(trim((string) $data['order_no']));
+        $ownsOrder = Order::query()
+            ->where('order_no', $orderNo)
+            ->where(function ($query) use ($customer, $mobile): void {
+                $query->where('customer_id', $customer->getKey())
+                    ->orWhere(function ($snapshotQuery) use ($mobile): void {
+                        $snapshotQuery->whereNull('customer_id')
+                            ->where('customer_mobile_snapshot', $mobile);
+                    });
+            })
+            ->exists();
+
+        if (! $ownsOrder) {
+            throw ValidationException::withMessages([
+                'order_no' => __('front.auth.reset_order_invalid'),
+            ]);
+        }
+
+        DB::transaction(function () use ($customer, $data, $mobile): void {
+            $customer->forceFill([
+                'password' => $data['password'],
+                'status' => 'active',
+            ])->save();
+
+            Order::query()
+                ->whereNull('customer_id')
+                ->where('customer_mobile_snapshot', $mobile)
+                ->update(['customer_id' => $customer->getKey()]);
+        });
+
+        return $customer->refresh();
+    }
     public function passwordMatches(Customer $customer, string $password): bool
     {
         return filled($customer->password) && Hash::check($password, $customer->password);

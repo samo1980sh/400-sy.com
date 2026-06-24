@@ -94,6 +94,11 @@ return [
         'activation_success' => 'Your account was activated and previous orders were linked successfully.',
         'back_to_login' => 'Back to login',
         'reset_unavailable_message' => 'Password recovery by email or SMS will be added with customer notifications. For now, contact the store to recover access.',
+        'reset_password_help' => 'Enter your mobile number and a previous order number linked to the account, then choose a new password.',
+        'reset_password_button' => 'Set new password',
+        'password_reset_success' => 'Your password has been updated successfully. You can log in now.',
+        'reset_customer_not_found' => 'No customer account is linked to the entered mobile number.',
+        'reset_order_invalid' => 'The order number is invalid or not linked to the entered mobile number.',
         'logout_success' => 'You have been logged out successfully.',
     ],
     'cart' => [

@@ -180,10 +180,42 @@
                     <span class="icon-close icon-close-popup" data-bs-dismiss="modal"></span>
                 </div>
                 <div class="tf-login-form">
-                    <p class="mb_20">{{ __('front.auth.reset_unavailable_message') }}</p>
-                    <a href="#login" data-bs-toggle="modal" class="tf-btn btn-outline radius-3 w-100 justify-content-center">
-                        {{ __('front.auth.back_to_login') }}
-                    </a>
+                    <form method="POST" action="{{ route('front.customer.forgot-password') }}">
+                        @csrf
+
+                        <p class="text-muted mb_20">{{ __('front.auth.reset_password_help') }}</p>
+
+                        @if ($errors->customerForgotPassword->any())
+                            <div class="alert alert-danger mb_20">
+                                @foreach ($errors->customerForgotPassword->all() as $error)
+                                    <div>{{ $error }}</div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <div class="tf-field style-1">
+                            <input class="tf-field-input tf-input" placeholder=" " type="tel" name="mobile" value="{{ old('mobile') }}" dir="ltr" required>
+                            <label class="tf-field-label">{{ __('front.auth.mobile_number') }}</label>
+                        </div>
+                        <div class="tf-field style-1">
+                            <input class="tf-field-input tf-input" placeholder=" " type="text" name="order_no" value="{{ old('order_no') }}" dir="ltr" required>
+                            <label class="tf-field-label">{{ __('front.auth.previous_order_no') }}</label>
+                        </div>
+                        <div class="tf-field style-1">
+                            <input class="tf-field-input tf-input" placeholder=" " type="password" name="password" autocomplete="new-password" required>
+                            <label class="tf-field-label">{{ __('front.auth.new_password') }}</label>
+                        </div>
+                        <div class="tf-field style-1">
+                            <input class="tf-field-input tf-input" placeholder=" " type="password" name="password_confirmation" autocomplete="new-password" required>
+                            <label class="tf-field-label">{{ __('front.auth.password_confirmation') }}</label>
+                        </div>
+                        <div class="bottom">
+                            <button type="submit" class="tf-btn btn-fill animate-hover-btn radius-3 w-100 justify-content-center">
+                                {{ __('front.auth.reset_password_button') }}
+                            </button>
+                            <a href="#login" data-bs-toggle="modal" class="btn-link fw-6 w-100 link">{{ __('front.auth.back_to_login') }}</a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
