@@ -13,6 +13,8 @@
     $languageSwitchLabel = $locale === 'ar' ? __('front.ui.english') : __('front.ui.arabic');
     $languageSwitchUrl = route('front.locale', $languageSwitchLocale);
     $customer = auth('customer')->user();
+    $trader = auth('trader')->user();
+    $homeUrl = $trader ? route('front.trader.dashboard') : $homeUrl;
     $accountUrl = $customer ? route('front.account.index') : '#login';
 @endphp
 
@@ -77,17 +79,25 @@
                             </form>
                         </li>
                         <li class="nav-search"><a href="#canvasSearch" data-bs-toggle="offcanvas" aria-controls="offcanvasLeft" class="nav-icon-item"><i class="icon icon-search"></i></a></li>
+                        @if ($trader)
                         <li class="nav-account">
-                            <a
-                                href="{{ $accountUrl }}"
-                                @unless($customer) data-bs-toggle="modal" @endunless
-                                class="nav-icon-item"
-                                aria-label="{{ $customer ? __('front.account.title') : __('front.auth.login_title') }}"
-                                title="{{ $customer?->name ?: __('front.auth.login_title') }}"
-                            ><i class="icon icon-account"></i></a>
+                            <a href="{{ route('front.trader.dashboard') }}" class="nav-icon-item" aria-label="لوحة التاجر"
+                                title="{{ $trader->name }}">
+                                <i class="icon icon-account"></i>
+                            </a>
+                            </li>
+                            @else
+                            <li class="nav-account">
+                                <a href="{{ $accountUrl }}" @unless($customer) data-bs-toggle="modal" @endunless class="nav-icon-item"
+                                    aria-label="{{ $customer ? __('front.account.title') : __('front.auth.login_title') }}"
+                                title="{{ $customer?->name ?: __('front.auth.login_title') }}"><i class="icon icon-account"></i></a>
                         </li>
-                        <li class="nav-wishlist"><a href="{{ $wishlistUrl }}" class="nav-icon-item" aria-label="{{ __('front.toolbar.wishlist') }}"><i class="icon icon-heart"></i><span class="count-box" data-wishlist-count>{{ $wishlistCount }}</span></a></li>
-                        <li class="nav-cart"><a href="#shoppingCart" data-bs-toggle="modal" class="nav-icon-item"><i class="icon icon-bag"></i><span class="count-box" data-cart-count>{{ $cartCount }}</span></a></li>
+                        <li class="nav-wishlist"><a href="{{ $wishlistUrl }}" class="nav-icon-item"
+                                aria-label="{{ __('front.toolbar.wishlist') }}"><i class="icon icon-heart"></i><span class="count-box"
+                                    data-wishlist-count>{{ $wishlistCount }}</span></a></li>
+                        <li class="nav-cart"><a href="#shoppingCart" data-bs-toggle="modal" class="nav-icon-item"><i
+                                    class="icon icon-bag"></i><span class="count-box" data-cart-count>{{ $cartCount }}</span></a></li>
+                        @endif
                     </ul>
                 </div>
             </div>
@@ -99,6 +109,13 @@
             <div class="wrapper-header d-flex justify-content-center align-items-center">
                 <nav class="box-navigation text-center">
                     <ul class="box-nav-ul d-flex align-items-center justify-content-center gap-30">
+                        @if ($trader)
+                        <li class="menu-item">
+                            <a href="{{ route('front.trader.dashboard') }}" class="item-link">
+                                {{ app()->getLocale() === 'ar' ? 'لوحة التاجر' : 'Trader Dashboard' }}
+                            </a>
+                        </li>
+                        @endif
                         <li class="menu-item"><a href="{{ $homeUrl }}" class="item-link">{{ __('front.nav.home') }}</a></li>
                         @if ($navCategories->isNotEmpty())
                             @foreach ($navCategories as $category)

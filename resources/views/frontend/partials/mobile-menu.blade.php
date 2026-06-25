@@ -56,6 +56,13 @@
     <div class="mb-canvas-content">
         <div class="mb-body">
             <ul class="nav-ul-mb" id="wrapper-menu-navigation">
+                @if (auth('trader')->check())
+                <li class="nav-mb-item">
+                    <a href="{{ route('front.trader.dashboard') }}" class="mb-menu-link">
+                        {{ app()->getLocale() === 'ar' ? 'لوحة التاجر' : 'Trader Dashboard' }}
+                    </a>
+                </li>
+                @endif
                 <li class="nav-mb-item">
                     <a href="{{ route('front.home') }}" class="mb-menu-link">{{ __('front.nav.home') }}</a>
                 </li>

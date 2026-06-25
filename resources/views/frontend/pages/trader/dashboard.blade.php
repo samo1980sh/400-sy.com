@@ -273,12 +273,12 @@
                         </div>
 
                         <div class="trader-dashboard-actions">
-                            <a href="#" class="trader-action-card trader-action-card--featured">
+                            <a href="{{ route('front.trader.products.index') }}" class="trader-action-card trader-action-card--featured">                                
                                 <div>
                                     <h3>{{ $isArabic ? 'منتجات الجملة' : 'Wholesale products' }}</h3>
                                     <p>{{ $isArabic ? 'عرض المنتجات والسيريالات المتاحة لحسابك التجاري.' : 'Browse products and series available for your trader group.' }}</p>
                                 </div>
-                                <span class="trader-action-link">{{ $isArabic ? 'قريباً' : 'Coming soon' }}</span>
+                                <span class="trader-action-link">{{ $isArabic ? 'عرض المنتجات' : 'Browse products' }}</span>
                             </a>
                             <a href="#" class="trader-action-card">
                                 <div>

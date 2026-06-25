@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FrontTraderProductsController;
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\FrontCustomerAccountController;
 use App\Http\Controllers\FrontCustomerAuthController;
@@ -28,6 +29,8 @@ Route::middleware('front.locale')->group(function (): void {
         ->name('front.trader.')
         ->group(function (): void {
             Route::get('/dashboard', [FrontTraderAuthController::class, 'dashboard'])->name('dashboard');
+            Route::get('/products', [FrontTraderProductsController::class, 'index'])->name('products.index');
+            Route::get('/products/{product}', [FrontTraderProductsController::class, 'show'])->name('products.show');
         });
     Route::post('/account/login', [FrontCustomerAuthController::class, 'login'])
         ->middleware('throttle:6,1')
