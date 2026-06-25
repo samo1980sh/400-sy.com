@@ -1,137 +1,174 @@
 @php
     $locale = app()->getLocale();
     $isArabic = $locale === 'ar';
-    $title = $isArabic
+    $presentation = $product_presentations[$product->getKey()] ?? [];
+
+    $title = (string) ($presentation['title'] ?? ($isArabic
         ? ($product->title_ar ?: $product->title_en ?: $product->model_no)
-        : ($product->title_en ?: $product->title_ar ?: $product->model_no);
+        : ($product->title_en ?: $product->title_ar ?: $product->model_no)));
 
-    $categoryTitle = '';
-    if ($product->category) {
-        $categoryTitle = $isArabic
-            ? ($product->category->name_ar ?? $product->category->title_ar ?? $product->category->name ?? '')
-            : ($product->category->name_en ?? $product->category->title_en ?? $product->category->name ?? '');
-    }
+    $currency = (string) ($presentation['base_currency'] ?? ($isArabic ? ($product->currency_ar ?: 'ل.س') : ($product->currency_en ?: 'SYP')));
 
-    $availableColors = $product->wholesaleAvailabilities
-        ->filter(fn ($availability) => (int) $availability->max_quantity > 0)
-        ->values();
+    $unitPrice = (float) (
+        $presentation['base_price']
+        ?? $presentation['price_current']
+        ?? $presentation['compare_price']
+        ?? $product->price
+        ?? $product->compare_price
+        ?? 0
+    );
 
-    $colorsById = $product->wholesaleColors->keyBy('id');
-    $quantityRows = $product->wholesaleQuantities ?? collect();
-    $totalAvailableColors = $availableColors->count();
+    $priceText = (string) (
+        $presentation['base_price_label']
+        ?? $presentation['price_label']
+        ?? $presentation['compare_price_label']
+        ?? ($unitPrice > 0 ? number_format($unitPrice, 0).' '.$currency : ($isArabic ? 'السعر غير مضبوط' : 'Price not configured'))
+    );
+
+    $cardImageUrl = (string) ($presentation['image'] ?? '');
 @endphp
 
-<article class="wholesale-product-card">
-    <div class="wholesale-product-card__head">
-        <span class="wholesale-product-card__badge">
-            {{ $isArabic ? 'جملة' : 'Wholesale' }}
-        </span>
-
-        @if ($categoryTitle !== '')
-            <span class="wholesale-product-card__category">{{ $categoryTitle }}</span>
+<article class="wholesale-product-card wholesale-product-card--simple">
+    <a href="{{ route('front.trader.products.show', $product) }}" class="wholesale-product-card-simple__image-link">
+        @if ($cardImageUrl !== '')
+            <img src="{{ $cardImageUrl }}" alt="{{ $title }}" class="wholesale-product-card-simple__image">
+        @else
+            <div class="wholesale-product-card-simple__image-placeholder">{{ $title }}</div>
         @endif
-    </div>
-
-    <div>
-        <h3 class="wholesale-product-card__title">{{ $title }}</h3>
-        <div class="wholesale-product-card__model" dir="ltr">{{ $product->model_no }}</div>
-    </div>
-
-    <div class="wholesale-product-card__quantity">
-        <span>{{ $isArabic ? 'ألوان متاحة لحسابك' : 'Colors Available for You' }}</span>
-        <strong dir="ltr">{{ number_format($totalAvailableColors) }}</strong>
-    </div>
-
-    @if ($availableColors->isNotEmpty())
-        <div class="wholesale-product-card__colors">
-            <div class="wholesale-product-card__colors-label">
-                {{ $isArabic ? 'السيريات والكميات حسب اللون' : 'Series and Quantities by Color' }}
-            </div>
-
-            <div class="wholesale-product-card__series">
-                @foreach ($availableColors as $availability)
-                    @php
-                        $color = $colorsById->get($availability->product_wholesale_color_id);
-                        $colorName = $color
-                            ? ($isArabic
-                                ? ($color->color_name_ar ?? $color->color_name_en ?? $color->color_code ?? '')
-                                : ($color->color_name_en ?? $color->color_name_ar ?? $color->color_code ?? ''))
-                            : '';
-
-                        $colorQuantities = $quantityRows
-                            ->filter(fn ($row) => (int) $row->product_wholesale_color_id === (int) $availability->product_wholesale_color_id && (int) $row->quantity > 0)
-                            ->sortBy(function ($row) {
-                                $size = trim((string) $row->size_text);
-                                $sizeSort = is_numeric($size)
-                                    ? str_pad((string) ((int) $size), 8, '0', STR_PAD_LEFT)
-                                    : 'zzzzzzzz'.$size;
-
-                                return str_pad((string) ((int) $row->series_group), 4, '0', STR_PAD_LEFT).'|'.$sizeSort;
-                            })
-                            ->values();
-
-                        if ($colorQuantities->isEmpty()) {
-                            $colorQuantities = $quantityRows
-                                ->filter(fn ($row) => blank($row->product_wholesale_color_id) && (int) $row->quantity > 0)
-                                ->sortBy(function ($row) {
-                                    $size = trim((string) $row->size_text);
-                                    $sizeSort = is_numeric($size)
-                                        ? str_pad((string) ((int) $size), 8, '0', STR_PAD_LEFT)
-                                        : 'zzzzzzzz'.$size;
-
-                                    return str_pad((string) ((int) $row->series_group), 4, '0', STR_PAD_LEFT).'|'.$sizeSort;
-                                })
-                                ->values();
-                        }
-
-                        $seriesGroups = $colorQuantities->groupBy(fn ($row) => (int) $row->series_group)->sortKeys();
-                    @endphp
-
-                    <div class="wholesale-product-card__color-block">
-                        <div class="wholesale-product-card__color-head">
-                            <span class="wholesale-product-card__color-name">
-                                {{ $colorName !== '' ? $colorName : ($isArabic ? 'لون جملة' : 'Wholesale Color') }}
-                            </span>
-                            <span class="wholesale-product-card__availability-limit" dir="ltr">
-                                {{ $isArabic ? 'حد المجموعة: ' : 'Group limit: ' }}{{ (int) $availability->max_quantity }}
-                            </span>
-                        </div>
-
-                        @if ($seriesGroups->isEmpty())
-                            <div class="wholesale-product-card__no-series">
-                                {{ $isArabic
-                                    ? 'لا توجد سيريات مضبوطة لهذا اللون بعد.'
-                                    : 'No series quantities have been configured for this color yet.' }}
-                            </div>
-                        @else
-                            @foreach ($seriesGroups as $seriesGroup => $seriesRows)
-                                @if ($seriesGroups->count() > 1)
-                                    <div class="wholesale-product-card__series-title">
-                                        {{ $isArabic ? 'السيريا' : 'Series' }} <span dir="ltr">{{ $seriesGroup }}</span>
-                                    </div>
-                                @endif
-
-                                <div class="wholesale-product-card__matrix">
-                                    <div class="wholesale-product-card__matrix-row wholesale-product-card__matrix-row--sizes">
-                                        @foreach ($seriesRows as $row)
-                                            <span class="wholesale-product-card__matrix-cell" dir="ltr">{{ $row->size_text }}</span>
-                                        @endforeach
-                                    </div>
-                                    <div class="wholesale-product-card__matrix-row wholesale-product-card__matrix-row--quantities">
-                                        @foreach ($seriesRows as $row)
-                                            <span class="wholesale-product-card__matrix-cell" dir="ltr">{{ (int) $row->quantity }}</span>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endforeach
-                        @endif
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
-
-    <a href="{{ route('front.trader.products.show', $product) }}" class="wholesale-product-card__action">
-        {{ $isArabic ? 'تفاصيل المنتج' : 'Product Details' }}
     </a>
+
+    <div class="wholesale-product-card-simple__body">
+        <h3 class="wholesale-product-card-simple__title">{{ $title }}</h3>
+        <div class="wholesale-product-card-simple__model" dir="ltr">{{ $product->model_no }}</div>
+
+        <div class="wholesale-product-card-simple__price">
+            <span>{{ $isArabic ? 'سعر القطعة' : 'Unit Price' }}</span>
+            <strong dir="ltr">{{ $priceText }}</strong>
+        </div>
+
+        <a href="{{ route('front.trader.products.show', $product) }}" class="wholesale-product-card-simple__action">
+            {{ $isArabic ? 'تفاصيل المنتج' : 'Product Details' }}
+        </a>
+    </div>
 </article>
+
+<style>
+    .wholesale-product-card--simple {
+        padding: 0 !important;
+        overflow: hidden;
+        border-radius: 24px !important;
+        border: 1px solid rgba(185, 134, 25, .22) !important;
+        background: #fff !important;
+    }
+
+    .wholesale-product-card--simple::before,
+    .wholesale-product-card--simple .wholesale-product-card__head,
+    .wholesale-product-card--simple .wholesale-product-card__quantity,
+    .wholesale-product-card--simple .wholesale-product-card__colors,
+    .wholesale-product-card--simple .wholesale-product-card__series,
+    .wholesale-product-card--simple .wholesale-product-card__action {
+        display: none !important;
+    }
+
+    .wholesale-product-card-simple__image-link {
+        display: block;
+        height: 220px;
+        background: #f7f7f7;
+        overflow: hidden;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .wholesale-product-card-simple__image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+        background: #fff;
+        transition: transform .25s ease;
+    }
+
+    .wholesale-product-card--simple:hover .wholesale-product-card-simple__image {
+        transform: scale(1.025);
+    }
+
+    .wholesale-product-card-simple__image-placeholder {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        text-align: center;
+        color: #fff;
+        font-weight: 900;
+        background: linear-gradient(135deg, #111 0%, #3d321d 100%);
+    }
+
+    .wholesale-product-card-simple__body {
+        padding: 16px 18px 18px;
+    }
+
+    .wholesale-product-card-simple__title {
+        margin: 0;
+        color: #111;
+        font-family: inherit;
+        font-size: 19px;
+        line-height: 1.45;
+        font-weight: 900;
+        text-align: start;
+    }
+
+    .wholesale-product-card-simple__model {
+        margin-top: 5px;
+        color: #6f7890;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: start;
+    }
+
+    .wholesale-product-card-simple__price {
+        margin-top: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 13px;
+        border-radius: 14px;
+        background: #f7f0e2;
+        color: #111;
+    }
+
+    .wholesale-product-card-simple__price span {
+        color: #6f5a28;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .wholesale-product-card-simple__price strong {
+        color: #111;
+        font-size: 16px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .wholesale-product-card-simple__action {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        width: 100%;
+        border-radius: 999px;
+        background: #111;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+        transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+
+    .wholesale-product-card-simple__action:hover {
+        color: #fff;
+        background: #2b2b2b;
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(0,0,0,.12);
+    }
+</style>

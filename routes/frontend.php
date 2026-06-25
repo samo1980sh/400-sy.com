@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FrontTraderOrderController;
 use App\Http\Controllers\FrontTraderProductsController;
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\FrontCustomerAccountController;
@@ -31,6 +32,11 @@ Route::middleware('front.locale')->group(function (): void {
             Route::get('/dashboard', [FrontTraderAuthController::class, 'dashboard'])->name('dashboard');
             Route::get('/products', [FrontTraderProductsController::class, 'index'])->name('products.index');
             Route::get('/products/{product}', [FrontTraderProductsController::class, 'show'])->name('products.show');
+            Route::post('/products/{product}/order', [FrontTraderOrderController::class, 'store'])->name('orders.store');
+            Route::get('/cart', [FrontTraderOrderController::class, 'cartPage'])->name('cart.index');
+            Route::post('/cart/{cartKey}/update', [FrontTraderOrderController::class, 'updateCartItem'])->name('cart.update');
+            Route::delete('/cart/{cartKey}', [FrontTraderOrderController::class, 'removeCartItem'])->name('cart.remove');
+            Route::post('/cart/submit', [FrontTraderOrderController::class, 'submitCart'])->name('cart.submit');
         });
     Route::post('/account/login', [FrontCustomerAuthController::class, 'login'])
         ->middleware('throttle:6,1')

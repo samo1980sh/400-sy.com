@@ -10,6 +10,8 @@ class TraderOrderStatusHistory extends Model
 {
     use HasFactory;
 
+    protected $table = 'trader_order_status_history';
+
     protected $fillable = [
         'trader_order_id',
         'from_status',
