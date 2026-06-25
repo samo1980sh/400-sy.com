@@ -26,6 +26,67 @@ class FrontTraderOrderController extends Controller
         protected ProductPresentationService $productPresentation,
     ) {}
 
+    public function ordersPage(Request $request): View
+    {
+        /** @var Trader $trader */
+        $trader = Auth::guard('trader')->user();
+        $trader->loadMissing('wholesaleCustomerGroup');
+
+        $isArabic = app()->getLocale() === 'ar';
+        $filters = [
+            'status' => (string) $request->query('status', ''),
+            'payment_status' => (string) $request->query('payment_status', ''),
+        ];
+
+        $orders = $trader->orders()
+            ->withCount('items')
+            ->when($filters['status'] !== '', fn ($query) => $query->where('status', $filters['status']))
+            ->when($filters['payment_status'] !== '', fn ($query) => $query->where('payment_status', $filters['payment_status']))
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('frontend.pages.trader.orders', array_merge($this->homePageData->build(), [
+            'page_title' => $isArabic ? 'طلباتي' : 'My Orders',
+            'page_subtitle' => $isArabic
+                ? 'متابعة طلبات الجملة وحالاتها بعد الإرسال.'
+                : 'Track submitted wholesale orders and their statuses.',
+            'breadcrumb_items' => [
+                ['label' => $isArabic ? 'لوحة التاجر' : 'Trader Dashboard', 'url' => route('front.trader.dashboard')],
+                ['label' => $isArabic ? 'طلباتي' : 'My Orders', 'url' => null],
+            ],
+            'trader' => $trader,
+            'orders' => $orders,
+            'filters' => $filters,
+            'trader_cart_count' => count($this->cart()),
+        ]));
+    }
+
+    public function showOrder(TraderOrder $traderOrder): View
+    {
+        /** @var Trader $trader */
+        $trader = Auth::guard('trader')->user();
+        abort_unless((int) $traderOrder->trader_id === (int) $trader->getKey(), 404);
+
+        $isArabic = app()->getLocale() === 'ar';
+        $traderOrder->load(['items.wholesaleColor', 'statusHistory.changedBy']);
+
+        return view('frontend.pages.trader.order-show', array_merge($this->homePageData->build(), [
+            'page_title' => ($isArabic ? 'تفاصيل الطلب ' : 'Order Details ').$traderOrder->order_no,
+            'page_subtitle' => $isArabic
+                ? 'تفاصيل بنود طلب الجملة وسجل الحالة.'
+                : 'Wholesale order items and status history.',
+            'breadcrumb_items' => [
+                ['label' => $isArabic ? 'لوحة التاجر' : 'Trader Dashboard', 'url' => route('front.trader.dashboard')],
+                ['label' => $isArabic ? 'طلباتي' : 'My Orders', 'url' => route('front.trader.orders.index')],
+                ['label' => $traderOrder->order_no, 'url' => null],
+            ],
+            'trader' => $trader,
+            'order' => $traderOrder,
+            'trader_cart_count' => count($this->cart()),
+        ]));
+    }
+
     public function store(Request $request, Product $product): RedirectResponse
     {
         $isArabic = app()->getLocale() === 'ar';
@@ -96,7 +157,6 @@ class FrontTraderOrderController extends Controller
                 ? 'راجع السيريات التي أضفتها قبل إرسال طلب الجملة إلى الإدارة.'
                 : 'Review selected wholesale series before submitting your order.',
             'breadcrumb_items' => [
-                ['label' => __('front.nav.home'), 'url' => route('front.home')],
                 ['label' => $isArabic ? 'لوحة التاجر' : 'Trader Dashboard', 'url' => route('front.trader.dashboard')],
                 ['label' => $isArabic ? 'منتجات الجملة' : 'Wholesale Products', 'url' => route('front.trader.products.index')],
                 ['label' => $isArabic ? 'طلب الجملة المؤقت' : 'Wholesale Cart', 'url' => null],
@@ -105,6 +165,7 @@ class FrontTraderOrderController extends Controller
             'cart_items' => $cart,
             'cart_summary' => $summary,
             'cart_warning' => $refreshWarning,
+            'trader_cart_count' => count($cart),
         ]));
     }
 
@@ -234,7 +295,7 @@ class FrontTraderOrderController extends Controller
                         'product_sku_snapshot' => null,
                         'product_barcode_snapshot' => null,
                         'color_name_snapshot' => (string) $item['color_name'],
-                        'series_snapshot' => 'Series ' . (int) $item['series_group'] . ' × ' . (int) $item['series_count'],
+                        'series_snapshot' => 'Series '.(int) $item['series_group'].' x '.(int) $item['series_count'],
                         'quantity' => $itemQuantity,
                         'unit_price' => (float) $item['unit_price'],
                         'line_total' => $lineTotal,
@@ -254,7 +315,7 @@ class FrontTraderOrderController extends Controller
                 'to_status' => 'pending',
                 'from_payment_status' => null,
                 'to_payment_status' => 'unpaid',
-                'note' => 'Trader submitted wholesale cart from frontend.',
+                'note' => 'تم إرسال طلب الجملة من واجهة التاجر.',
                 'changed_by' => null,
             ]);
 
@@ -264,12 +325,12 @@ class FrontTraderOrderController extends Controller
         session()->forget($this->cartSessionKey($trader));
 
         return redirect()
-            ->route('front.trader.cart.index')
+            ->route('front.trader.orders.show', $order->order_no)
             ->with(
                 'success',
                 $isArabic
-                    ? 'تم إرسال طلب الجملة بنجاح. رقم الطلب: ' . $order->order_no
-                    : 'Wholesale order submitted successfully. Order no: ' . $order->order_no
+                    ? 'تم إرسال طلب الجملة بنجاح. رقم الطلب: '.$order->order_no
+                    : 'Wholesale order submitted successfully. Order no: '.$order->order_no
             );
     }
 
@@ -324,8 +385,8 @@ class FrontTraderOrderController extends Controller
 
             throw ValidationException::withMessages([
                 'series_count' => $isArabic
-                    ? 'لا يمكنك طلب عدد سيريات أكبر من المتاح لهذا اللون. المتبقي حالياً: ' . $remaining
-                    : 'You cannot request more series than available for this color. Remaining now: ' . $remaining,
+                    ? 'لا يمكنك طلب عدد سيريات أكبر من المتاح لهذا اللون. المتبقي حالياً: '.$remaining
+                    : 'You cannot request more series than available for this color. Remaining now: '.$remaining,
             ]);
         }
 
@@ -348,6 +409,7 @@ class FrontTraderOrderController extends Controller
             ?? $product->compare_price
             ?? 0
         );
+
         if ($unitPrice <= 0) {
             throw ValidationException::withMessages([
                 'series_count' => $isArabic
@@ -356,7 +418,7 @@ class FrontTraderOrderController extends Controller
             ]);
         }
 
-        $piecesPerSeries = (int) $seriesRows->sum(fn($row) => max(0, (int) $row->quantity));
+        $piecesPerSeries = (int) $seriesRows->sum(fn ($row) => max(0, (int) $row->quantity));
         $lineTotal = $piecesPerSeries * $seriesCount * $unitPrice;
         $title = (string) ($presentation['title'] ?? $this->productTitle($product));
         $color = $availability->wholesaleColor;
@@ -383,11 +445,11 @@ class FrontTraderOrderController extends Controller
                 $presentation['base_price_label']
                 ?? $presentation['price_label']
                 ?? $presentation['compare_price_label']
-                ?? number_format($unitPrice, 0) . ' ' . ($isArabic ? ($product->currency_ar ?: 'ل.س') : ($product->currency_en ?: 'SYP'))
+                ?? number_format($unitPrice, 0).' '.($isArabic ? ($product->currency_ar ?: 'ل.س') : ($product->currency_en ?: 'SYP'))
             ),
             'pieces_per_series' => $piecesPerSeries,
             'line_total' => $lineTotal,
-            'series_rows' => $seriesRows->map(fn($row) => [
+            'series_rows' => $seriesRows->map(fn ($row) => [
                 'size_text' => (string) $row->size_text,
                 'quantity_per_series' => (int) $row->quantity,
             ])->values()->all(),
@@ -433,12 +495,12 @@ class FrontTraderOrderController extends Controller
 
     protected function cartSessionKey(Trader $trader): string
     {
-        return 'front_trader_wholesale_cart_' . $trader->getKey();
+        return 'front_trader_wholesale_cart_'.$trader->getKey();
     }
 
     protected function cartItemKey(int $productId, int $colorId, int $seriesGroup): string
     {
-        return $productId . '-' . $colorId . '-' . $seriesGroup;
+        return $productId.'-'.$colorId.'-'.$seriesGroup;
     }
 
     protected function cartSeriesCountForColor(array $cart, int $productId, int $colorId, ?string $exceptCartKey = null): int
@@ -478,7 +540,7 @@ class FrontTraderOrderController extends Controller
                     currentCart: $cart,
                     exceptCartKey: $cartKey,
                 );
-            } catch (\Throwable $exception) {
+            } catch (\Throwable) {
                 $warning = app()->getLocale() === 'ar'
                     ? 'تم حذف بند غير صالح من طلب الجملة المؤقت لأن السعر أو التوافر لم يعد مضبوطاً.'
                     : 'An invalid item was removed from the wholesale cart because price or availability is no longer configured.';
@@ -529,63 +591,8 @@ class FrontTraderOrderController extends Controller
         $isArabic = app()->getLocale() === 'ar';
 
         return $isArabic
-            ? ($group->name_ar ?? $group->name_en ?? $group->name ?? '#' . $group->id)
-            : ($group->name_en ?? $group->name_ar ?? $group->name ?? '#' . $group->id);
-    }
-
-    protected function resolveProductImageUrl(Product $product): ?string
-    {
-        $product->loadMissing('productColors');
-
-        $candidates = [
-            data_get($product, 'image'),
-            data_get($product, 'image_path'),
-            data_get($product, 'main_image'),
-            data_get($product, 'thumbnail'),
-            data_get($product, 'photo'),
-        ];
-
-        foreach (($product->productColors ?? collect()) as $productColor) {
-            foreach (['image', 'image_path', 'main_image', 'photo', 'swatch_image', 'thumbnail'] as $field) {
-                $candidates[] = data_get($productColor, $field);
-            }
-        }
-
-        foreach ($candidates as $candidate) {
-            $url = $this->normalizeImageUrl($candidate);
-            if ($url !== null) {
-                return $url;
-            }
-        }
-
-        return null;
-    }
-
-    protected function normalizeImageUrl(mixed $value): ?string
-    {
-        $path = trim((string) $value);
-
-        if ($path === '') {
-            return null;
-        }
-
-        if (preg_match('/^(https?:)?\/\//', $path) === 1 || str_starts_with($path, 'data:')) {
-            return $path;
-        }
-
-        if (str_starts_with($path, '/')) {
-            return $path;
-        }
-
-        if (str_starts_with($path, 'storage/')) {
-            return asset($path);
-        }
-
-        if (str_starts_with($path, 'public/')) {
-            return asset('storage/' . substr($path, 7));
-        }
-
-        return asset('storage/' . $path);
+            ? ($group->name_ar ?? $group->name_en ?? $group->name ?? '#'.$group->id)
+            : ($group->name_en ?? $group->name_ar ?? $group->name ?? '#'.$group->id);
     }
 
     protected function validationMessages(bool $isArabic): array

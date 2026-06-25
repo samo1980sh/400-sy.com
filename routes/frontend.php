@@ -19,6 +19,7 @@ Route::middleware('front.locale')->group(function (): void {
     Route::get('/lang/{locale}', [FrontPageController::class, 'setLocale'])->name('front.locale');
     Route::post('/currency', [CurrencyController::class, 'update'])->name('front.currency');
 
+    Route::get('/trader', [FrontTraderAuthController::class, 'entry'])->name('front.trader.entry');
     Route::get('/trader/login', [FrontTraderAuthController::class, 'showLogin'])->name('front.trader.login');
     Route::post('/trader/login', [FrontTraderAuthController::class, 'login'])
         ->middleware('throttle:6,1')
@@ -33,6 +34,8 @@ Route::middleware('front.locale')->group(function (): void {
             Route::get('/products', [FrontTraderProductsController::class, 'index'])->name('products.index');
             Route::get('/products/{product}', [FrontTraderProductsController::class, 'show'])->name('products.show');
             Route::post('/products/{product}/order', [FrontTraderOrderController::class, 'store'])->name('orders.store');
+            Route::get('/orders', [FrontTraderOrderController::class, 'ordersPage'])->name('orders.index');
+            Route::get('/orders/{traderOrder:order_no}', [FrontTraderOrderController::class, 'showOrder'])->name('orders.show');
             Route::get('/cart', [FrontTraderOrderController::class, 'cartPage'])->name('cart.index');
             Route::post('/cart/{cartKey}/update', [FrontTraderOrderController::class, 'updateCartItem'])->name('cart.update');
             Route::delete('/cart/{cartKey}', [FrontTraderOrderController::class, 'removeCartItem'])->name('cart.remove');

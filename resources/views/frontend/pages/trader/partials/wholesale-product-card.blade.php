@@ -8,7 +8,6 @@
         : ($product->title_en ?: $product->title_ar ?: $product->model_no)));
 
     $currency = (string) ($presentation['base_currency'] ?? ($isArabic ? ($product->currency_ar ?: 'ل.س') : ($product->currency_en ?: 'SYP')));
-
     $unitPrice = (float) (
         $presentation['base_price']
         ?? $presentation['price_current']
@@ -17,7 +16,6 @@
         ?? $product->compare_price
         ?? 0
     );
-
     $priceText = (string) (
         $presentation['base_price_label']
         ?? $presentation['price_label']
@@ -25,150 +23,171 @@
         ?? ($unitPrice > 0 ? number_format($unitPrice, 0).' '.$currency : ($isArabic ? 'السعر غير مضبوط' : 'Price not configured'))
     );
 
+    $detailUrl = route('front.trader.products.show', $product);
     $cardImageUrl = (string) ($presentation['image'] ?? '');
+    $hoverImageUrl = '';
+
+    if (! empty($presentation['gallery'][1])) {
+        $hoverImageUrl = (string) $presentation['gallery'][1];
+    }
+
+    $availableColors = ($product->wholesaleAvailabilities ?? collect())
+        ->filter(fn ($availability) => (int) $availability->max_quantity > 0)
+        ->values();
+    $availableColorIds = $availableColors
+        ->pluck('product_wholesale_color_id')
+        ->filter()
+        ->unique()
+        ->values();
+    $availableColorsCount = $availableColorIds->count();
 @endphp
 
-<article class="wholesale-product-card wholesale-product-card--simple">
-    <a href="{{ route('front.trader.products.show', $product) }}" class="wholesale-product-card-simple__image-link">
-        @if ($cardImageUrl !== '')
-            <img src="{{ $cardImageUrl }}" alt="{{ $title }}" class="wholesale-product-card-simple__image">
-        @else
-            <div class="wholesale-product-card-simple__image-placeholder">{{ $title }}</div>
-        @endif
-    </a>
+<article class="card-product trader-product-card card-product-skeleton">
+    <div class="card-product-wrapper hover-img trader-product-card__media">
+        <a href="{{ $detailUrl }}" class="collection-image img-style {{ $hoverImageUrl !== '' ? 'product-img has-card-hover-image' : 'product-img' }}">
+            @if ($cardImageUrl !== '')
+                <img class="lazyload img-product" data-src="{{ $cardImageUrl }}" src="{{ $cardImageUrl }}" alt="{{ $title }}">
+                @if ($hoverImageUrl !== '')
+                    <img class="lazyload img-hover" data-src="{{ $hoverImageUrl }}" src="{{ $hoverImageUrl }}" alt="{{ $title }}">
+                @endif
+            @else
+                <span class="trader-product-card__placeholder">{{ $title }}</span>
+            @endif
+        </a>
+    </div>
 
-    <div class="wholesale-product-card-simple__body">
-        <h3 class="wholesale-product-card-simple__title">{{ $title }}</h3>
-        <div class="wholesale-product-card-simple__model" dir="ltr">{{ $product->model_no }}</div>
+    <div class="card-product-info trader-product-card__info">
+        <a href="{{ $detailUrl }}" class="title link trader-product-card__title">{{ $title }}</a>
 
-        <div class="wholesale-product-card-simple__price">
-            <span>{{ $isArabic ? 'سعر القطعة' : 'Unit Price' }}</span>
-            <strong dir="ltr">{{ $priceText }}</strong>
+        <div class="product-card-price trader-product-card__price">
+            <span class="price" dir="ltr">{{ $priceText }}</span>
         </div>
 
-        <a href="{{ route('front.trader.products.show', $product) }}" class="wholesale-product-card-simple__action">
-            {{ $isArabic ? 'تفاصيل المنتج' : 'Product Details' }}
-        </a>
+        <div class="trader-product-card__meta">
+            <span>{{ $isArabic ? 'ألوان متاحة' : 'Available colors' }}</span>
+            <strong dir="ltr">{{ $availableColorsCount }}</strong>
+        </div>
     </div>
 </article>
 
-<style>
-    .wholesale-product-card--simple {
-        padding: 0 !important;
-        overflow: hidden;
-        border-radius: 24px !important;
-        border: 1px solid rgba(185, 134, 25, .22) !important;
-        background: #fff !important;
-    }
+@once
+    <style>
+        .trader-product-card.card-product {
+            height: 100%;
+            padding: 10px 10px 14px;
+            border: 1px solid #eadfbe;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #fff 0%, #fffdf7 100%);
+            box-shadow: 0 14px 34px rgba(17, 17, 17, .07);
+            overflow: hidden;
+            transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+        }
 
-    .wholesale-product-card--simple::before,
-    .wholesale-product-card--simple .wholesale-product-card__head,
-    .wholesale-product-card--simple .wholesale-product-card__quantity,
-    .wholesale-product-card--simple .wholesale-product-card__colors,
-    .wholesale-product-card--simple .wholesale-product-card__series,
-    .wholesale-product-card--simple .wholesale-product-card__action {
-        display: none !important;
-    }
+        .trader-product-card.card-product:hover {
+            transform: translateY(-5px);
+            border-color: #d8bd67;
+            box-shadow: 0 24px 58px rgba(17, 17, 17, .13);
+        }
 
-    .wholesale-product-card-simple__image-link {
-        display: block;
-        height: 220px;
-        background: #f7f7f7;
-        overflow: hidden;
-        border-bottom: 1px solid #f0f0f0;
-    }
+        .trader-product-card .card-product-wrapper {
+            border-radius: 12px;
+            background: #fffaf0;
+            border: 1px solid #f0e4c5;
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .65);
+        }
 
-    .wholesale-product-card-simple__image {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        display: block;
-        background: #fff;
-        transition: transform .25s ease;
-    }
+        .trader-product-card .card-product-wrapper::after {
+            content: "";
+            position: absolute;
+            inset: auto 0 0;
+            height: 34%;
+            background: linear-gradient(180deg, transparent, rgba(17, 17, 17, .06));
+            pointer-events: none;
+        }
 
-    .wholesale-product-card--simple:hover .wholesale-product-card-simple__image {
-        transform: scale(1.025);
-    }
+        .trader-product-card .collection-image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                linear-gradient(145deg, rgba(255, 226, 147, .28), rgba(255, 255, 255, .95) 46%, rgba(17, 17, 17, .03)),
+                #fff;
+        }
 
-    .wholesale-product-card-simple__image-placeholder {
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 18px;
-        text-align: center;
-        color: #fff;
-        font-weight: 900;
-        background: linear-gradient(135deg, #111 0%, #3d321d 100%);
-    }
+        .trader-product-card .collection-image img {
+            object-fit: contain;
+            background: transparent;
+            transition: transform .26s ease;
+        }
 
-    .wholesale-product-card-simple__body {
-        padding: 16px 18px 18px;
-    }
+        .trader-product-card:hover .collection-image img {
+            transform: scale(1.035);
+        }
 
-    .wholesale-product-card-simple__title {
-        margin: 0;
-        color: #111;
-        font-family: inherit;
-        font-size: 19px;
-        line-height: 1.45;
-        font-weight: 900;
-        text-align: start;
-    }
+        .trader-product-card__placeholder {
+            width: 100%;
+            min-height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 22px;
+            color: #666;
+            text-align: center;
+            font-weight: 800;
+            line-height: 1.6;
+        }
 
-    .wholesale-product-card-simple__model {
-        margin-top: 5px;
-        color: #6f7890;
-        font-size: 13px;
-        font-weight: 700;
-        text-align: start;
-    }
+        .trader-product-card__info.card-product-info {
+            text-align: center;
+            padding: 14px 6px 0;
+        }
 
-    .wholesale-product-card-simple__price {
-        margin-top: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 11px 13px;
-        border-radius: 14px;
-        background: #f7f0e2;
-        color: #111;
-    }
+        .trader-product-card__title.title {
+            min-height: 44px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            color: #111;
+            line-height: 1.45;
+            transition: color .18s ease;
+        }
 
-    .wholesale-product-card-simple__price span {
-        color: #6f5a28;
-        font-size: 12px;
-        font-weight: 800;
-    }
+        .trader-product-card:hover .trader-product-card__title.title {
+            color: #7a5b11;
+        }
 
-    .wholesale-product-card-simple__price strong {
-        color: #111;
-        font-size: 16px;
-        font-weight: 900;
-        white-space: nowrap;
-    }
+        .trader-product-card__price.product-card-price {
+            justify-content: center;
+            margin-top: 7px;
+        }
 
-    .wholesale-product-card-simple__action {
-        margin-top: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 42px;
-        width: 100%;
-        border-radius: 999px;
-        background: #111;
-        color: #fff;
-        font-size: 13px;
-        font-weight: 900;
-        transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
-    }
+        .trader-product-card__price .price {
+            color: #111;
+            font-size: 15px;
+            font-weight: 800;
+        }
 
-    .wholesale-product-card-simple__action:hover {
-        color: #fff;
-        background: #2b2b2b;
-        transform: translateY(-2px);
-        box-shadow: 0 12px 24px rgba(0,0,0,.12);
-    }
-</style>
+        .trader-product-card__meta {
+            width: fit-content;
+            min-height: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 10px auto 0;
+            padding: 5px 11px;
+            border-radius: 999px;
+            background: #fff3c8;
+            border: 1px solid #eedb9d;
+            color: #4d3d12;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .trader-product-card__meta strong {
+            color: #111;
+        }
+
+    </style>
+@endonce

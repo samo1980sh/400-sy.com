@@ -6,6 +6,8 @@ use App\Models\Trader;
 use App\Models\TraderOrder;
 use App\Models\WholesaleCustomerGroup;
 use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -19,71 +21,66 @@ class TraderOrdersTable
     {
         return $table
             ->defaultSort('id', 'desc')
-            ->modifyQueryUsing(fn ($query) => $query->with(['trader.wholesaleCustomerGroup', 'items.wholesaleColor'])->withCount('items'))
+            ->modifyQueryUsing(fn ($query) => $query
+                ->with(['trader.wholesaleCustomerGroup', 'items.wholesaleColor'])
+                ->withCount('items'))
             ->columns([
                 TextColumn::make('order_no')
                     ->label('رقم الطلب')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight('bold'),
+
                 TextColumn::make('trader.name')
                     ->label('التاجر')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->description(fn (TraderOrder $record): ?string => $record->trader_account_no_snapshot
+                        ? 'رقم الحساب: '.$record->trader_account_no_snapshot
+                        : null),
+
+                TextColumn::make('trader_mobile_snapshot')
+                    ->label('موبايل التاجر')
+                    ->searchable()
+                    ->toggleable(),
+
                 TextColumn::make('trader.wholesaleCustomerGroup.name_ar')
                     ->label('فئة التاجر')
                     ->badge()
                     ->toggleable(),
+
                 TextColumn::make('status')
                     ->label('حالة الطلب')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'pending' => 'قيد المراجعة',
-                        'confirmed' => 'مؤكد',
-                        'shipped' => 'مُشحن',
-                        'delivered' => 'مُسلم',
-                        'cancelled' => 'ملغى',
-                        default => (string) $state,
-                    })
-                    ->color(fn (?string $state): string => match ($state) {
-                        'pending' => 'warning',
-                        'confirmed' => 'info',
-                        'shipped' => 'primary',
-                        'delivered' => 'success',
-                        'cancelled' => 'danger',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(fn (?string $state): string => self::statusLabel($state))
+                    ->color(fn (?string $state): string => self::statusColor($state)),
+
                 TextColumn::make('payment_status')
                     ->label('حالة الدفع')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'unpaid' => 'غير مدفوع',
-                        'paid' => 'مدفوع',
-                        default => (string) $state,
-                    })
-                    ->color(fn (?string $state): string => match ($state) {
-                        'paid' => 'success',
-                        'unpaid' => 'warning',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(fn (?string $state): string => self::paymentStatusLabel($state))
+                    ->color(fn (?string $state): string => self::paymentStatusColor($state)),
+
                 TextColumn::make('items_count')
-                    ->label('العناصر')
+                    ->label('البنود')
                     ->badge()
                     ->state(fn (TraderOrder $record): int => (int) ($record->items_count ?? 0)),
-                TextColumn::make('total_before_discount')
-                    ->label('قبل الحسم')
-                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, '.', ',')),
-                TextColumn::make('discount_value')
-                    ->label('الحسم')
-                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, '.', ',')),
-                TextColumn::make('shipping_cost')
-                    ->label('الشحن')
-                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, '.', ',')),
+
+                TextColumn::make('price_guard')
+                    ->label('فحص السعر')
+                    ->badge()
+                    ->state(fn (TraderOrder $record): string => self::hasZeroPriceIssue($record) ? 'يوجد سعر صفر' : 'سليم')
+                    ->color(fn (TraderOrder $record): string => self::hasZeroPriceIssue($record) ? 'danger' : 'success'),
+
                 TextColumn::make('total')
                     ->label('الإجمالي')
+                    ->alignEnd()
+                    ->sortable()
                     ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, '.', ',')),
+
                 TextColumn::make('created_at')
                     ->label('تاريخ الطلب')
-                    ->dateTime()
+                    ->dateTime('Y-m-d H:i')
                     ->sortable(),
             ])
             ->filters([
@@ -92,16 +89,18 @@ class TraderOrdersTable
                     ->options([
                         'pending' => 'قيد المراجعة',
                         'confirmed' => 'مؤكد',
-                        'shipped' => 'مُشحن',
-                        'delivered' => 'مُسلم',
+                        'shipped' => 'مشحون',
+                        'delivered' => 'مسلم',
                         'cancelled' => 'ملغى',
                     ]),
+
                 SelectFilter::make('payment_status')
                     ->label('حالة الدفع')
                     ->options([
                         'unpaid' => 'غير مدفوع',
                         'paid' => 'مدفوع',
                     ]),
+
                 SelectFilter::make('trader_id')
                     ->label('التاجر')
                     ->options(fn (): array => Trader::query()
@@ -110,6 +109,7 @@ class TraderOrdersTable
                         ->all())
                     ->searchable()
                     ->preload(),
+
                 SelectFilter::make('wholesale_customer_group_id')
                     ->label('فئة التاجر')
                     ->options(fn (): array => WholesaleCustomerGroup::query()
@@ -134,42 +134,52 @@ class TraderOrdersTable
                     ->label('التفاصيل')
                     ->icon(Heroicon::OutlinedEye)
                     ->color('gray')
-                    ->modalHeading('تفاصيل طلب التاجر')
-                    ->modalWidth('6xl')
+                    ->slideOver()
+                    ->modalHeading(fn (TraderOrder $record): string => 'تفاصيل طلب التاجر: '.$record->order_no)
+                    ->modalWidth('7xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('إغلاق')
                     ->modalContent(fn (TraderOrder $record) => view('filament.trader-orders.order-details', [
-                        'order' => $record->load(['trader.wholesaleCustomerGroup', 'items.wholesaleColor']),
+                        'order' => $record->load([
+                            'trader.wholesaleCustomerGroup',
+                            'items.wholesaleColor',
+                        ]),
                     ])),
+
                 Action::make('viewHistory')
                     ->label('سجل الحالة')
                     ->icon(Heroicon::OutlinedClock)
                     ->color('gray')
-                    ->modalHeading('سجل حالة طلب التاجر')
-                    ->modalWidth('6xl')
+                    ->slideOver()
+                    ->modalHeading(fn (TraderOrder $record): string => 'سجل حالة الطلب: '.$record->order_no)
+                    ->modalWidth('5xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('إغلاق')
                     ->modalContent(fn (TraderOrder $record) => view('filament.trader-orders.order-status-history', [
                         'history' => $record->statusHistory()->with('changedBy')->latest()->get(),
                     ])),
+
                 Action::make('confirmOrder')
                     ->label('تأكيد')
                     ->icon(Heroicon::OutlinedCheckCircle)
                     ->color('success')
                     ->visible(fn (TraderOrder $record): bool => $record->status === 'pending')
                     ->action(fn (TraderOrder $record) => self::transitionStatus($record, 'confirmed')),
+
                 Action::make('markShipped')
                     ->label('شحن')
                     ->icon(Heroicon::OutlinedTruck)
                     ->color('warning')
                     ->visible(fn (TraderOrder $record): bool => $record->status === 'confirmed')
                     ->action(fn (TraderOrder $record) => self::transitionStatus($record, 'shipped')),
+
                 Action::make('markDelivered')
                     ->label('تسليم')
                     ->icon(Heroicon::OutlinedCheckBadge)
                     ->color('success')
                     ->visible(fn (TraderOrder $record): bool => $record->status === 'shipped')
                     ->action(fn (TraderOrder $record) => self::transitionStatus($record, 'delivered')),
+
                 Action::make('cancelOrder')
                     ->label('إلغاء')
                     ->icon(Heroicon::OutlinedXCircle)
@@ -177,12 +187,14 @@ class TraderOrdersTable
                     ->visible(fn (TraderOrder $record): bool => ! in_array($record->status, ['delivered', 'cancelled'], true))
                     ->requiresConfirmation()
                     ->action(fn (TraderOrder $record) => self::transitionStatus($record, 'cancelled')),
+
                 Action::make('markPaid')
                     ->label('مدفوع')
                     ->icon(Heroicon::OutlinedCurrencyDollar)
                     ->color('success')
                     ->visible(fn (TraderOrder $record): bool => $record->payment_status !== 'paid')
                     ->action(fn (TraderOrder $record) => self::setPaymentStatus($record, 'paid')),
+
                 Action::make('markUnpaid')
                     ->label('غير مدفوع')
                     ->icon(Heroicon::OutlinedCurrencyDollar)
@@ -190,11 +202,26 @@ class TraderOrdersTable
                     ->visible(fn (TraderOrder $record): bool => $record->payment_status !== 'unpaid')
                     ->requiresConfirmation()
                     ->action(fn (TraderOrder $record) => self::setPaymentStatus($record, 'unpaid')),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 
     protected static function transitionStatus(TraderOrder $order, string $status): void
     {
+        if (self::hasZeroPriceIssue($order) && in_array($status, ['confirmed', 'shipped', 'delivered'], true)) {
+            Notification::make()
+                ->title('لا يمكن معالجة الطلب.')
+                ->body('يوجد في الطلب بند بسعر صفر أو إجمالي الطلب صفر. يرجى مراجعة الأسعار قبل تغيير الحالة.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
         $fromStatus = $order->status;
         $updates = ['status' => $status];
 
@@ -242,11 +269,21 @@ class TraderOrdersTable
 
     protected static function setPaymentStatus(TraderOrder $order, string $status): void
     {
+        if ($status === 'paid' && self::hasZeroPriceIssue($order)) {
+            Notification::make()
+                ->title('لا يمكن اعتماد الدفع.')
+                ->body('يوجد في الطلب بند بسعر صفر أو إجمالي الطلب صفر. يرجى مراجعة الأسعار قبل تغيير حالة الدفع.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
         try {
             $fromPaymentStatus = $order->payment_status;
             $updates = ['payment_status' => $status];
 
-            if ($status === 'paid' && blank($order->paid_at)) {
+            if ($status === 'paid' && blank($order->paid_at ?? null)) {
                 $updates['paid_at'] = now();
             }
 
@@ -288,8 +325,8 @@ class TraderOrdersTable
         ?string $note = null,
     ): void {
         $note ??= match (true) {
-            filled($fromStatus) || filled($toStatus) => 'تغيير حالة الطلب من ' . ($fromStatus ?? '—') . ' إلى ' . ($toStatus ?? $order->status),
-            filled($fromPaymentStatus) || filled($toPaymentStatus) => 'تغيير حالة الدفع من ' . ($fromPaymentStatus ?? '—') . ' إلى ' . ($toPaymentStatus ?? $order->payment_status),
+            filled($fromStatus) || filled($toStatus) => 'تغيير حالة الطلب من '.self::statusLabel($fromStatus).' إلى '.self::statusLabel($toStatus ?? $order->status),
+            filled($fromPaymentStatus) || filled($toPaymentStatus) => 'تغيير حالة الدفع من '.self::paymentStatusLabel($fromPaymentStatus).' إلى '.self::paymentStatusLabel($toPaymentStatus ?? $order->payment_status),
             default => null,
         };
 
@@ -302,5 +339,60 @@ class TraderOrdersTable
             'note' => $note,
             'changed_by' => auth()->id(),
         ]);
+    }
+
+    protected static function hasZeroPriceIssue(TraderOrder $order): bool
+    {
+        $order->loadMissing('items');
+
+        if ((float) $order->total <= 0) {
+            return true;
+        }
+
+        return $order->items->contains(fn ($item): bool => (float) $item->unit_price <= 0 || (float) $item->line_total <= 0);
+    }
+
+    protected static function statusLabel(?string $state): string
+    {
+        return match ($state) {
+            'pending' => 'قيد المراجعة',
+            'confirmed' => 'مؤكد',
+            'shipped' => 'مشحون',
+            'delivered' => 'مسلم',
+            'cancelled' => 'ملغى',
+            null, '' => '—',
+            default => (string) $state,
+        };
+    }
+
+    protected static function statusColor(?string $state): string
+    {
+        return match ($state) {
+            'pending' => 'warning',
+            'confirmed' => 'info',
+            'shipped' => 'primary',
+            'delivered' => 'success',
+            'cancelled' => 'danger',
+            default => 'gray',
+        };
+    }
+
+    protected static function paymentStatusLabel(?string $state): string
+    {
+        return match ($state) {
+            'unpaid' => 'غير مدفوع',
+            'paid' => 'مدفوع',
+            null, '' => '—',
+            default => (string) $state,
+        };
+    }
+
+    protected static function paymentStatusColor(?string $state): string
+    {
+        return match ($state) {
+            'paid' => 'success',
+            'unpaid' => 'warning',
+            default => 'gray',
+        };
     }
 }

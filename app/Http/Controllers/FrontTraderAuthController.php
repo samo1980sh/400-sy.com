@@ -16,20 +16,30 @@ class FrontTraderAuthController extends Controller
     {
     }
 
+    public function entry(): RedirectResponse
+    {
+        return redirect()->route(
+            Auth::guard('trader')->check()
+                ? 'front.trader.dashboard'
+                : 'front.trader.login'
+        );
+    }
+
     public function showLogin(): View|RedirectResponse
     {
         if (Auth::guard('trader')->check()) {
             return redirect()->route('front.trader.dashboard');
         }
 
+        $isArabic = app()->getLocale() === 'ar';
+
         return view('frontend.pages.trader.login', array_merge($this->homePageData->build(), [
-            'page_title' => app()->getLocale() === 'ar' ? 'دخول التجار' : 'Trader Login',
-            'page_subtitle' => app()->getLocale() === 'ar'
+            'page_title' => $isArabic ? 'دخول التجار' : 'Trader Login',
+            'page_subtitle' => $isArabic
                 ? 'تسجيل دخول تجار الجملة المعتمدين.'
                 : 'Login for approved wholesale traders.',
             'breadcrumb_items' => [
-                ['label' => __('front.nav.home'), 'url' => route('front.home')],
-                ['label' => app()->getLocale() === 'ar' ? 'دخول التجار' : 'Trader Login', 'url' => null],
+                ['label' => $isArabic ? 'دخول التجار' : 'Trader Login', 'url' => null],
             ],
         ]));
     }
@@ -40,12 +50,14 @@ class FrontTraderAuthController extends Controller
             return redirect()->route('front.trader.dashboard');
         }
 
+        $isArabic = app()->getLocale() === 'ar';
+
         $validated = $request->validate([
             'login' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'max:255'],
         ], [
-            'login.required' => app()->getLocale() === 'ar' ? 'يرجى إدخال رقم الحساب أو الجوال.' : 'Please enter account number or mobile.',
-            'password.required' => app()->getLocale() === 'ar' ? 'يرجى إدخال كلمة المرور.' : 'Please enter the password.',
+            'login.required' => $isArabic ? 'يرجى إدخال رقم الحساب أو الجوال.' : 'Please enter account number or mobile.',
+            'password.required' => $isArabic ? 'يرجى إدخال كلمة المرور.' : 'Please enter the password.',
         ]);
 
         $login = trim((string) $validated['login']);
@@ -58,13 +70,13 @@ class FrontTraderAuthController extends Controller
 
         if (! $trader instanceof Trader || ! Hash::check($password, (string) $trader->password)) {
             return back()
-                ->withErrors(['login' => app()->getLocale() === 'ar' ? 'بيانات الدخول غير صحيحة.' : 'Invalid login credentials.'])
+                ->withErrors(['login' => $isArabic ? 'بيانات الدخول غير صحيحة.' : 'Invalid login credentials.'])
                 ->withInput($request->only('login'));
         }
 
         if ($trader->status !== 'active') {
             return back()
-                ->withErrors(['login' => app()->getLocale() === 'ar' ? 'حساب التاجر غير مفعل حالياً.' : 'Trader account is not active.'])
+                ->withErrors(['login' => $isArabic ? 'حساب التاجر غير مفعل حالياً.' : 'Trader account is not active.'])
                 ->withInput($request->only('login'));
         }
 
@@ -80,18 +92,20 @@ class FrontTraderAuthController extends Controller
         $trader = Auth::guard('trader')->user();
         $trader->loadMissing('wholesaleCustomerGroup');
 
+        $isArabic = app()->getLocale() === 'ar';
+
         return view('frontend.pages.trader.dashboard', array_merge($this->homePageData->build(), [
-            'page_title' => app()->getLocale() === 'ar' ? 'لوحة التاجر' : 'Trader Dashboard',
-            'page_subtitle' => app()->getLocale() === 'ar'
+            'page_title' => $isArabic ? 'لوحة التاجر' : 'Trader Dashboard',
+            'page_subtitle' => $isArabic
                 ? 'ملخص حساب تاجر الجملة.'
                 : 'Wholesale trader account overview.',
             'breadcrumb_items' => [
-                ['label' => __('front.nav.home'), 'url' => route('front.home')],
-                ['label' => app()->getLocale() === 'ar' ? 'لوحة التاجر' : 'Trader Dashboard', 'url' => null],
+                ['label' => $isArabic ? 'لوحة التاجر' : 'Trader Dashboard', 'url' => null],
             ],
             'trader' => $trader,
             'orders_count' => $trader->orders()->count(),
             'latest_orders' => $trader->orders()->latest()->limit(5)->get(),
+            'trader_cart_count' => count(session()->get('front_trader_wholesale_cart_'.$trader->getKey(), [])),
         ]));
     }
 

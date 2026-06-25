@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\Trader;
 use App\Services\FrontHomePageDataService;
 use App\Services\ProductPresentationService;
+use Illuminate\Contracts\Pagination\Paginator;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -17,17 +20,24 @@ class FrontTraderProductsController extends Controller
     ) {
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
         /** @var Trader $trader */
         $trader = Auth::guard('trader')->user();
         $trader->loadMissing('wholesaleCustomerGroup');
 
+        $locale = app()->getLocale();
+        $isArabic = $locale === 'ar';
         $groupId = $trader->wholesale_customer_group_id;
         $products = collect();
+        $categoryOptions = collect();
+        $filters = [
+            'q' => trim((string) $request->query('q', '')),
+            'category_id' => (string) $request->query('category_id', ''),
+        ];
 
         if ($groupId !== null) {
-            $products = Product::query()
+            $baseQuery = Product::query()
                 ->with([
                     'category',
                     'productColors.filterColor',
@@ -45,14 +55,40 @@ class FrontTraderProductsController extends Controller
                 ->where('show_wholesale', true)
                 ->whereHas('wholesaleAvailabilities', fn ($query) => $query
                     ->where('wholesale_customer_group_id', $groupId)
+                    ->where('max_quantity', '>', 0));
+
+            $availableCategoryIds = Product::query()
+                ->whereNotNull('category_id')
+                ->where('is_active', true)
+                ->where('show_web', true)
+                ->where('show_wholesale', true)
+                ->whereHas('wholesaleAvailabilities', fn ($query) => $query
+                    ->where('wholesale_customer_group_id', $groupId)
                     ->where('max_quantity', '>', 0))
+                ->distinct()
+                ->pluck('category_id');
+
+            $categoryOptions = Category::query()
+                ->whereIn('id', $availableCategoryIds)
+                ->orderBy($isArabic ? 'title_ar' : 'title_en')
+                ->get();
+
+            $products = $baseQuery
+                ->when($filters['q'] !== '', fn ($query) => $query->where(function ($searchQuery) use ($filters) {
+                    $term = $filters['q'];
+
+                    $searchQuery
+                        ->where('model_no', 'like', "%{$term}%")
+                        ->orWhere('title_ar', 'like', "%{$term}%")
+                        ->orWhere('title_en', 'like', "%{$term}%");
+                }))
+                ->when($filters['category_id'] !== '', fn ($query) => $query->where('category_id', (int) $filters['category_id']))
                 ->latest('id')
-                ->paginate(12);
+                ->paginate(12)
+                ->withQueryString();
         }
 
-        $locale = app()->getLocale();
-        $isArabic = $locale === 'ar';
-        $productPresentations = $products instanceof \Illuminate\Contracts\Pagination\Paginator
+        $productPresentations = $products instanceof Paginator
             ? collect($products->items())->mapWithKeys(fn (Product $item): array => [
                 $item->getKey() => $this->productPresentation->presentProduct($item, $locale, [], null),
             ])->all()
@@ -64,7 +100,6 @@ class FrontTraderProductsController extends Controller
                 ? 'المنتجات المتاحة حسب مجموعة الجملة المرتبطة بحسابك.'
                 : 'Products available for your assigned wholesale group.',
             'breadcrumb_items' => [
-                ['label' => __('front.nav.home'), 'url' => route('front.home')],
                 ['label' => $isArabic ? 'لوحة التاجر' : 'Trader Dashboard', 'url' => route('front.trader.dashboard')],
                 ['label' => $isArabic ? 'منتجات الجملة' : 'Wholesale Products', 'url' => null],
             ],
@@ -72,6 +107,9 @@ class FrontTraderProductsController extends Controller
             'products' => $products,
             'wholesale_group' => $trader->wholesaleCustomerGroup,
             'product_presentations' => $productPresentations,
+            'category_options' => $categoryOptions,
+            'filters' => $filters,
+            'trader_cart_count' => count(session()->get('front_trader_wholesale_cart_'.$trader->getKey(), [])),
         ]));
     }
 
@@ -88,8 +126,8 @@ class FrontTraderProductsController extends Controller
             ->with([
                 'category',
                 'productColors.filterColor',
-                    'variants.size',
-                    'structureColor',
+                'variants.size',
+                'structureColor',
                 'wholesaleColors',
                 'wholesaleAvailabilities' => fn ($query) => $query
                     ->where('wholesale_customer_group_id', $groupId)
@@ -122,7 +160,6 @@ class FrontTraderProductsController extends Controller
                 ? 'تفاصيل منتج الجملة المتاح لمجموعتك فقط.'
                 : 'Wholesale product details available only for your group.',
             'breadcrumb_items' => [
-                ['label' => __('front.nav.home'), 'url' => route('front.home')],
                 ['label' => $isArabic ? 'لوحة التاجر' : 'Trader Dashboard', 'url' => route('front.trader.dashboard')],
                 ['label' => $isArabic ? 'منتجات الجملة' : 'Wholesale Products', 'url' => route('front.trader.products.index')],
                 ['label' => $title, 'url' => null],
@@ -131,6 +168,7 @@ class FrontTraderProductsController extends Controller
             'product' => $product,
             'wholesale_group' => $trader->wholesaleCustomerGroup,
             'product_presentation' => $productPresentation,
+            'trader_cart_count' => count(session()->get('front_trader_wholesale_cart_'.$trader->getKey(), [])),
         ]));
     }
 }
