@@ -127,7 +127,7 @@
                                         <tr>
                                             <td>
                                                 <strong>{{ $item->product_name_snapshot }}</strong>
-                                                <div class="text-muted small" dir="ltr">{{ $item->product_model_no_snapshot }}</div>
+                                                <div class="text-muted small" dir="ltr">{{ \Illuminate\Support\Str::substr((string) $item->product_model_no_snapshot, 3) }}</div>
                                             </td>
                                             <td>{{ $item->color_name_snapshot ?: '—' }}</td>
                                             <td>{{ $item->series_snapshot ?: $item->series_group }}</td>

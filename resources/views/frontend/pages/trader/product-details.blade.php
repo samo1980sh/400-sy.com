@@ -4,10 +4,11 @@
     $locale = app()->getLocale();
     $isArabic = $locale === 'ar';
     $presentation = $product_presentation ?? [];
+    $displayProductCode = \Illuminate\Support\Str::substr((string) $product->model_no, 3);
 
     $title = (string) ($presentation['title'] ?? ($isArabic
-        ? ($product->title_ar ?: $product->title_en ?: $product->model_no)
-        : ($product->title_en ?: $product->title_ar ?: $product->model_no)));
+        ? ($product->title_ar ?: $product->title_en ?: $displayProductCode)
+        : ($product->title_en ?: $product->title_ar ?: $displayProductCode)));
 
     $groupName = $wholesale_group
         ? ($isArabic
@@ -163,7 +164,7 @@
                         <div class="trader-product__meta">
                             <div class="trader-product__meta-row">
                                 <span>{{ $isArabic ? 'رمز المنتج' : 'Product Code' }}</span>
-                                <strong dir="ltr">{{ $product->model_no }}</strong>
+                                <strong dir="ltr">{{ $displayProductCode }}</strong>
                             </div>
                             @if ($categoryTitle !== '')
                                 <div class="trader-product__meta-row">

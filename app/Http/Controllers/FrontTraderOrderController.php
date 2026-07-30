@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -577,8 +578,13 @@ class FrontTraderOrderController extends Controller
         $isArabic = app()->getLocale() === 'ar';
 
         return $isArabic
-            ? ($product->title_ar ?: $product->title_en ?: $product->model_no)
-            : ($product->title_en ?: $product->title_ar ?: $product->model_no);
+            ? ($product->title_ar ?: $product->title_en ?: $this->traderProductCode($product->model_no))
+            : ($product->title_en ?: $product->title_ar ?: $this->traderProductCode($product->model_no));
+    }
+
+    protected function traderProductCode(?string $code): string
+    {
+        return Str::substr((string) $code, 3);
     }
 
     protected function groupName(Trader $trader): ?string

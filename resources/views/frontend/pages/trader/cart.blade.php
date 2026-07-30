@@ -118,7 +118,7 @@
                                     <div>
                                         <h3>{{ $item['product_name'] }}</h3>
                                         <div class="trader-cart__meta">
-                                            <span class="trader-pill" dir="ltr">{{ $item['product_model_no'] }}</span>
+                                            <span class="trader-pill" dir="ltr">{{ \Illuminate\Support\Str::substr((string) $item['product_model_no'], 3) }}</span>
                                             <span class="trader-pill">{{ $item['color_name'] }}</span>
                                             <span class="trader-pill">{{ $isArabic ? 'السيرية' : 'Series' }} <span dir="ltr">{{ $item['series_group'] }}</span></span>
                                             <span class="trader-pill">{{ $isArabic ? 'سعر القطعة' : 'Unit Price' }} <span dir="ltr">{{ number_format((float) $item['unit_price'], 0) }} {{ $itemCurrency }}</span></span>

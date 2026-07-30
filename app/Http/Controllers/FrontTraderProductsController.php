@@ -10,6 +10,7 @@ use App\Services\ProductPresentationService;
 use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class FrontTraderProductsController extends Controller
@@ -151,8 +152,8 @@ class FrontTraderProductsController extends Controller
         $isArabic = $locale === 'ar';
         $productPresentation = $this->productPresentation->presentProduct($product, $locale, [], null);
         $title = (string) ($productPresentation['title'] ?? ($isArabic
-            ? ($product->title_ar ?: $product->title_en ?: $product->model_no)
-            : ($product->title_en ?: $product->title_ar ?: $product->model_no)));
+            ? ($product->title_ar ?: $product->title_en ?: $this->traderProductCode($product->model_no))
+            : ($product->title_en ?: $product->title_ar ?: $this->traderProductCode($product->model_no))));
 
         return view('frontend.pages.trader.product-details', array_merge($this->homePageData->build(), [
             'page_title' => $title,
@@ -170,5 +171,10 @@ class FrontTraderProductsController extends Controller
             'product_presentation' => $productPresentation,
             'trader_cart_count' => count(session()->get('front_trader_wholesale_cart_'.$trader->getKey(), [])),
         ]));
+    }
+
+    protected function traderProductCode(?string $code): string
+    {
+        return Str::substr((string) $code, 3);
     }
 }

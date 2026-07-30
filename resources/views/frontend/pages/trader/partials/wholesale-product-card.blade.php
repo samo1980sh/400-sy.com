@@ -2,10 +2,11 @@
     $locale = app()->getLocale();
     $isArabic = $locale === 'ar';
     $presentation = $product_presentations[$product->getKey()] ?? [];
+    $displayProductCode = \Illuminate\Support\Str::substr((string) $product->model_no, 3);
 
     $title = (string) ($presentation['title'] ?? ($isArabic
-        ? ($product->title_ar ?: $product->title_en ?: $product->model_no)
-        : ($product->title_en ?: $product->title_ar ?: $product->model_no)));
+        ? ($product->title_ar ?: $product->title_en ?: $displayProductCode)
+        : ($product->title_en ?: $product->title_ar ?: $displayProductCode)));
 
     $currency = (string) ($presentation['base_currency'] ?? ($isArabic ? ($product->currency_ar ?: 'ل.س') : ($product->currency_en ?: 'SYP')));
     $unitPrice = (float) (
