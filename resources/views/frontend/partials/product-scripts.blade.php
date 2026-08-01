@@ -1154,7 +1154,6 @@
         // ---------------------------------------------------------------------
         var filterRequest = null;
         var filterRequestToken = 0;
-        var filterDebounceTimer = null;
         function shopProductsUrl() {
             return window.location.origin + window.location.pathname;
         }
@@ -1352,12 +1351,6 @@
             refreshShopProducts(queryString, options);
         }
 
-        function debounceAjaxFilter(delay) {
-            window.clearTimeout(filterDebounceTimer);
-            filterDebounceTimer = window.setTimeout(function () {
-                applyAjaxFilter();
-            }, delay || 250);
-        }
 
         $(function () {
             $('#filterShop')
@@ -1374,19 +1367,11 @@
             applyAjaxFilter();
         });
 
-        $(document).on('change', '[data-filter-form] input[name="category[]"], [data-filter-form] input[name="color[]"], [data-filter-form] input[name="size[]"], [data-filter-form] input[name="body_fit[]"], [data-filter-form] input[name="drop_type[]"], [data-filter-form] input[name="collections[]"], [data-filter-form] input[name="special_offers[]"]', function () {
+        $(document).on('change', '[data-filter-form] input[name="category[]"]', function () {
             var $form = $(this).closest('[data-filter-form]');
-
-            if ($(this).attr('name') === 'category[]') {
-                $form.find('[data-reset-categories]').prop('checked', false);
-            }
-
-            debounceAjaxFilter(120);
+            $form.find('[data-reset-categories]').prop('checked', false);
         });
 
-        $(document).on('input change', '[data-filter-form] .range-min, [data-filter-form] .range-max', function () {
-            debounceAjaxFilter(250);
-        });
 
         $(document).on('change', '[data-reset-categories]', function () {
             if (!$(this).is(':checked')) {
@@ -1395,7 +1380,6 @@
 
             var $form = $(this).closest('[data-filter-form]');
             $form.find('input[name="category[]"]').prop('checked', false);
-            debounceAjaxFilter(50);
         });
 
         $(document).on('click', '[data-filter-reset]', function (event) {
