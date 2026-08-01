@@ -207,6 +207,7 @@ class ProductsTable
                 TernaryFilter::make('is_special_offer')
                     ->label('عرض خاص'),
             ])
+            ->deferFilters(true)
             ->recordActions([
                 Action::make('deactivateProduct')
                     ->label('إيقاف العرض')
