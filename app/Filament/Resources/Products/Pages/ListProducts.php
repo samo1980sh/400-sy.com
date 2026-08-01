@@ -122,9 +122,9 @@ class ListProducts extends ListRecords
                             'إجمالي المنتجات المستوردة: ' . ($summary['products_imported'] ?? 0),
                             'المنتجات المنشأة: ' . ($summary['products_created'] ?? 0),
                             'المنتجات المحدثة: ' . ($summary['products_updated'] ?? 0),
-                            'الألوان الجديدة من عمود التركيب: ' . ($summary['new_structure_colors_created'] ?? 0),
-                            'السطور ذات تركيب فارغ: ' . ($summary['empty_structure_rows'] ?? 0),
-                            'السطور ذات تركيب مركب: ' . ($summary['composite_structure_rows'] ?? 0),
+                            'الألوان الجديدة من عمود اللون: ' . ($summary['new_structure_colors_created'] ?? 0),
+                            'السطور ذات لون فارغ: ' . ($summary['empty_structure_rows'] ?? 0),
+                            'السطور ذات لون مركب: ' . ($summary['composite_structure_rows'] ?? 0),
                             'المنتجات المتجاوزة: ' . ($summary['products_skipped'] ?? 0),
                         ]),
                     ])->save();
@@ -134,8 +134,8 @@ class ListProducts extends ListRecords
                         ->body(implode(' | ', [
                             'إجمالي المنتجات: ' . ($summary['products_imported'] ?? 0),
                             'ألوان جديدة: ' . ($summary['new_structure_colors_created'] ?? 0),
-                            'تركيب فارغ: ' . ($summary['empty_structure_rows'] ?? 0),
-                            'تركيب مركب: ' . ($summary['composite_structure_rows'] ?? 0),
+                            'لون فارغ: ' . ($summary['empty_structure_rows'] ?? 0),
+                            'لون مركب: ' . ($summary['composite_structure_rows'] ?? 0),
                             'منتجات متجاوزة: ' . ($summary['products_skipped'] ?? 0),
                         ]))
                         ->success()

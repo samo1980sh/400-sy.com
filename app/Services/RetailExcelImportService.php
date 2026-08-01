@@ -218,6 +218,7 @@ class RetailExcelImportService
     {
         return $this->normalizeText($this->value(
             $row,
+            'اللون',
             'التركيب',
             'تركيب',
             'لون الفلترة',
@@ -1024,7 +1025,7 @@ class RetailExcelImportService
 
                 if ($normalizedStructureColor === '') {
                     $summary['products_skipped']++;
-                    $this->logImportIssue($batchId, $first, 'invalid', 'قيمة التركيب فارغة، ولا يمكن ربط لون الفلترة لهذا المنتج.');
+                    $this->logImportIssue($batchId, $first, 'invalid', 'قيمة اللون فارغة، ولا يمكن ربط لون الفلترة لهذا المنتج.');
 
                     if ($isVisibleInFrontend) {
                         continue;
@@ -1033,7 +1034,7 @@ class RetailExcelImportService
 
                 if ($this->structureLooksComposite($normalizedStructureColor)) {
                     $summary['products_skipped']++;
-                    $this->logImportIssue($batchId, $first, 'invalid', 'قيمة التركيب تبدو مركبة. اختر لون فلترة واحدًا فقط مثل أسود.');
+                    $this->logImportIssue($batchId, $first, 'invalid', 'قيمة اللون تبدو مركبة. اختر لون فلترة واحدًا فقط مثل أسود.');
 
                     if ($isVisibleInFrontend) {
                         continue;
@@ -1044,7 +1045,7 @@ class RetailExcelImportService
 
                 if ($structureColorId === null && $isVisibleInFrontend) {
                     $summary['products_skipped']++;
-                    $this->logImportIssue($batchId, $first, 'invalid', 'تعذر مطابقة لون الفلترة من عمود التركيب في قاموس الألوان.');
+                    $this->logImportIssue($batchId, $first, 'invalid', 'تعذر مطابقة لون الفلترة من عمود اللون في قاموس الألوان.');
                     continue;
                 }
 
@@ -1198,7 +1199,7 @@ class RetailExcelImportService
 
                 if ($normalizedStructureColor === '') {
                     $summary['products_skipped']++;
-                    $this->logImportIssue(null, $first, 'invalid', 'قيمة التركيب فارغة، ولا يمكن ربط لون الفلترة لهذا المنتج.');
+                    $this->logImportIssue(null, $first, 'invalid', 'قيمة اللون فارغة، ولا يمكن ربط لون الفلترة لهذا المنتج.');
 
                     if ($isVisibleInFrontend) {
                         continue;
@@ -1207,7 +1208,7 @@ class RetailExcelImportService
 
                 if ($this->structureLooksComposite($normalizedStructureColor)) {
                     $summary['products_skipped']++;
-                    $this->logImportIssue(null, $first, 'invalid', 'قيمة التركيب تبدو مركبة. اختر لون فلترة واحدًا فقط مثل أسود.');
+                    $this->logImportIssue(null, $first, 'invalid', 'قيمة اللون تبدو مركبة. اختر لون فلترة واحدًا فقط مثل أسود.');
 
                     if ($isVisibleInFrontend) {
                         continue;
@@ -1218,7 +1219,7 @@ class RetailExcelImportService
 
                 if ($structureColorId === null && $isVisibleInFrontend) {
                     $summary['products_skipped']++;
-                    $this->logImportIssue(null, $first, 'invalid', 'تعذر مطابقة لون الفلترة من عمود التركيب في قاموس الألوان.');
+                    $this->logImportIssue(null, $first, 'invalid', 'تعذر مطابقة لون الفلترة من عمود اللون في قاموس الألوان.');
                     continue;
                 }
 

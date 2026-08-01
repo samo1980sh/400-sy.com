@@ -80,7 +80,7 @@ class ProductsTable
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('structure')
-                    ->label('التركيب')
+                    ->label('اللون')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('collection')
