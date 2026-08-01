@@ -24,9 +24,7 @@ class FrontCustomerRegisterRequest extends FormRequest
             'name' => trim((string) $this->input('name', '')),
             'mobile' => $mobile,
             'secondary_mobile' => $secondaryMobile !== '' ? $secondaryMobile : null,
-            'email' => filled($this->input('email'))
-                ? strtolower(trim((string) $this->input('email')))
-                : null,
+            'email' => mb_strtolower(trim((string) $this->input('email', ''))),
             'nationality' => filled($this->input('nationality')) ? trim((string) $this->input('nationality')) : null,
             'gender' => filled($this->input('gender')) ? trim((string) $this->input('gender')) : null,
             'city' => filled($this->input('city')) ? trim((string) $this->input('city')) : null,
@@ -50,7 +48,7 @@ class FrontCustomerRegisterRequest extends FormRequest
             'job_title' => ['nullable', 'string', 'max:255'],
             'secondary_mobile' => ['nullable', 'string', 'size:9', 'regex:/^9[0-9]{8}$/'],
             'marital_status' => ['nullable', 'string', Rule::in(['single', 'married', 'divorced', 'widowed'])],
-            'email' => ['nullable', 'email:rfc', 'max:255', Rule::unique('customers', 'email')],
+            'email' => ['required', 'email:rfc', 'max:255', Rule::unique('customers', 'email')],
         ];
     }
 
@@ -67,7 +65,7 @@ class FrontCustomerRegisterRequest extends FormRequest
             'job_title' => __('front.auth.job_title'),
             'secondary_mobile' => __('front.auth.secondary_mobile'),
             'marital_status' => __('front.auth.marital_status'),
-            'email' => __('front.auth.email'),
+            'email' => __('customer_auth.email'),
             'password' => __('front.auth.password_plain'),
         ];
     }

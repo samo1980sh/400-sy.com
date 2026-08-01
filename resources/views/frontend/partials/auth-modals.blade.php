@@ -1,5 +1,5 @@
 @guest('customer')
-    
+
     <style>
         .customer-register-modal .modal-dialog { max-width: 860px; }
         .customer-register-modal .modal-content { border-radius: 14px; }
@@ -15,12 +15,16 @@
         .customer-register-separator { grid-column: 1 / -1; border: 0; border-top: 1px solid #eeeeee; margin: 2px 0; }
         .customer-password-rules { grid-column: 1 / -1; border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px 16px; background: #fafafa; }
         .customer-password-rules-title { font-weight: 700; margin-bottom: 10px; }
-        .customer-password-rules-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: #555; }
+        .customer-password-rules-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin: 0; padding: 0; list-style: none; font-size: 13px;color: #555; }
         .customer-password-rules-list li::before { content: '✓'; display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: #219653; color: #fff; font-size: 11px; margin-inline-end: 7px; }
         .customer-register-terms { grid-column: 1 / -1; border-top: 1px solid #eeeeee; padding-top: 16px; color: #555; font-size: 14px; }
         .customer-register-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; }
         .customer-register-submit { min-width: 230px; }
         .customer-register-login-link { color: #b98619; font-weight: 700; text-decoration: underline; }
+        .customer-auth-note { border: 1px solid #d9eadf; background: #f2fbf5; color: #1f6b3a; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; line-height: 1.7; }
+        .customer-auth-divider { border: 0; border-top: 1px solid #eeeeee; margin: 24px 0; }
+        .customer-auth-section-title { font-size: 15px; font-weight: 700; margin: 0 0 12px; }
+        .customer-auth-help { color: #666; line-height: 1.7; margin-bottom: 16px; }
         @media (max-width: 767.98px) {
             .customer-register-modal .modal-dialog { max-width: calc(100% - 16px); margin: 8px auto; }
             .customer-register-form { max-height: 82vh; }
@@ -60,7 +64,7 @@
                                 dir="ltr"
                                 required
                             >
-                            <label class="tf-field-label">{{ __('front.auth.login_identifier') }}</label>
+                            <label class="tf-field-label">{{ __('customer_auth.login_identifier') }}</label>
                         </div>
                         <div class="tf-field style-1">
                             <input
@@ -74,8 +78,8 @@
                             <label class="tf-field-label">{{ __('front.auth.password_plain') }}</label>
                         </div>
                         <div class="d-flex justify-content-between gap-3 flex-wrap">
-                            <a href="#forgotPassword" data-bs-toggle="modal" class="btn-link link">{{ __('front.auth.forgot_password') }}</a>
-                            <a href="#activateAccount" data-bs-toggle="modal" class="btn-link link">{{ __('front.auth.activate_previous_customer') }}</a>
+                            <a href="#forgotPassword" data-bs-toggle="modal" class="btn-link link">{{ __('customer_auth.forgot_password') }}</a>
+                            <a href="#activateAccount" data-bs-toggle="modal" class="btn-link link">{{ __('customer_auth.activate_existing') }}</a>
                         </div>
                         <div class="bottom">
                             <div class="w-100">
@@ -115,7 +119,7 @@
                             </div>
                         @endif
 
-                        
+
                         @php
                             $nationalityOptions = ['syrian', 'egyptian', 'jordanian', 'iraqi', 'lebanese', 'palestinian', 'saudi', 'emirati', 'kuwaiti', 'qatari', 'other'];
                             $maritalStatusOptions = ['single', 'married', 'divorced', 'widowed'];
@@ -187,8 +191,8 @@
                             </div>
 
                             <div class="customer-register-field full-width">
-                                <label class="customer-register-label" for="register_email">{{ __('front.auth.email_optional') }}</label>
-                                <input id="register_email" class="customer-register-control" type="email" name="email" value="{{ old('email') }}" placeholder="{{ __('front.auth.email_placeholder') }}" autocomplete="email" dir="ltr">
+                                <label class="customer-register-label" for="register_email">{{ __('customer_auth.email_required') }}<span class="customer-register-required">*</span></label>
+                                <input id="register_email" class="customer-register-control" type="email" name="email" value="{{ old('email') }}" placeholder="{{ __('front.auth.email_placeholder') }}" autocomplete="email" dir="ltr" required>
                             </div>
 
                             <hr class="customer-register-separator">
@@ -231,50 +235,81 @@
             </div>
         </div>
     </div>
+
     <div class="modal modalCentered fade form-sign-in modal-part-content" id="activateAccount" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="header">
-                    <div class="demo-title">{{ __('front.auth.activation_title') }}</div>
+                    <div class="demo-title">{{ __('customer_auth.activation_title') }}</div>
                     <span class="icon-close icon-close-popup" data-bs-dismiss="modal"></span>
                 </div>
                 <div class="tf-login-form">
+                    <p class="customer-auth-help">{{ __('customer_auth.activation_help') }}</p>
+
+                    @if (session('auth_notice') && session('auth_modal') === 'activateAccount')
+                        <div class="customer-auth-note">{{ session('auth_notice') }}</div>
+                    @endif
+
+                    @if ($errors->customerActivationCode->any())
+                        <div class="alert alert-danger mb_20">
+                            @foreach ($errors->customerActivationCode->all() as $error)
+                                <div>{{ $error }}</div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('front.customer.activate.code') }}">
+                        @csrf
+
+                        <div class="customer-auth-section-title">{{ __('customer_auth.activation_request_help') }}</div>
+                        <div class="tf-field style-1">
+                            <input class="tf-field-input tf-input" placeholder=" " type="email" name="email" value="{{ old('email', session('activation_email')) }}" autocomplete="email" dir="ltr" required>
+                            <label class="tf-field-label">{{ __('customer_auth.email') }}</label>
+                        </div>
+                        <button type="submit" class="tf-btn btn-outline radius-3 w-100 justify-content-center">
+                            {{ __('customer_auth.send_activation_code') }}
+                        </button>
+                    </form>
+
+                    <hr class="customer-auth-divider">
+
+                    @if ($errors->customerActivate->any())
+                        <div class="alert alert-danger mb_20">
+                            @foreach ($errors->customerActivate->all() as $error)
+                                <div>{{ $error }}</div>
+                            @endforeach
+                        </div>
+                    @endif
+
                     <form method="POST" action="{{ route('front.customer.activate') }}">
                         @csrf
 
-                        <p class="text-muted mb_20">{{ __('front.auth.activation_help') }}</p>
-
-                        @if ($errors->customerActivate->any())
-                            <div class="alert alert-danger mb_20">
-                                @foreach ($errors->customerActivate->all() as $error)
-                                    <div>{{ $error }}</div>
-                                @endforeach
-                            </div>
-                        @endif
-
+                        <p class="customer-auth-help">{{ __('customer_auth.activation_complete_help') }}</p>
                         <div class="tf-field style-1">
-                            <input class="tf-field-input tf-input" placeholder=" " type="tel" name="mobile" value="{{ old('mobile') }}" dir="ltr" required>
-                            <label class="tf-field-label">{{ __('front.auth.mobile_number') }}</label>
+                            <input class="tf-field-input tf-input" placeholder=" " type="email" name="email" value="{{ old('email', session('activation_email')) }}" autocomplete="email" dir="ltr" required>
+                            <label class="tf-field-label">{{ __('customer_auth.email') }}</label>
                         </div>
                         <div class="tf-field style-1">
-                            <input class="tf-field-input tf-input" placeholder=" " type="text" name="order_no" value="{{ old('order_no') }}" dir="ltr" required>
-                            <label class="tf-field-label">{{ __('front.auth.previous_order_no') }}</label>
+                            <input class="tf-field-input tf-input" placeholder=" " type="text" name="code" value="{{ old('code') }}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" dir="ltr" required>
+                            <label class="tf-field-label">{{ __('customer_auth.verification_code') }}</label>
                         </div>
                         <div class="tf-field style-1">
                             <input class="tf-field-input tf-input" placeholder=" " type="password" name="password" autocomplete="new-password" required>
-                            <label class="tf-field-label">{{ __('front.auth.new_password') }}</label>
+                            <label class="tf-field-label">{{ __('customer_auth.new_password') }}</label>
                         </div>
                         <div class="tf-field style-1">
                             <input class="tf-field-input tf-input" placeholder=" " type="password" name="password_confirmation" autocomplete="new-password" required>
-                            <label class="tf-field-label">{{ __('front.auth.password_confirmation') }}</label>
+                            <label class="tf-field-label">{{ __('customer_auth.password_confirmation') }}</label>
                         </div>
                         <div class="bottom">
                             <button type="submit" class="tf-btn btn-fill animate-hover-btn radius-3 w-100 justify-content-center">
-                                {{ __('front.auth.activate_button') }}
+                                {{ __('customer_auth.activate_button') }}
                             </button>
-                            <a href="#login" data-bs-toggle="modal" class="btn-link fw-6 w-100 link">{{ __('front.auth.back_to_login') }}</a>
+                            <a href="#login" data-bs-toggle="modal" class="btn-link fw-6 w-100 link">{{ __('customer_auth.back_to_login') }}</a>
                         </div>
                     </form>
+
+                    <small class="text-muted d-block mt_16">{{ __('customer_auth.resend_note') }}</small>
                 </div>
             </div>
         </div>
@@ -284,46 +319,75 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="header">
-                    <div class="demo-title">{{ __('front.auth.reset_password') }}</div>
+                    <div class="demo-title">{{ __('customer_auth.password_reset_title') }}</div>
                     <span class="icon-close icon-close-popup" data-bs-dismiss="modal"></span>
                 </div>
                 <div class="tf-login-form">
+                    <p class="customer-auth-help">{{ __('customer_auth.password_reset_help') }}</p>
+
+                    @if (session('auth_notice') && session('auth_modal') === 'forgotPassword')
+                        <div class="customer-auth-note">{{ session('auth_notice') }}</div>
+                    @endif
+
+                    @if ($errors->customerPasswordResetCode->any())
+                        <div class="alert alert-danger mb_20">
+                            @foreach ($errors->customerPasswordResetCode->all() as $error)
+                                <div>{{ $error }}</div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('front.customer.forgot-password.code') }}">
+                        @csrf
+
+                        <div class="tf-field style-1">
+                            <input class="tf-field-input tf-input" placeholder=" " type="email" name="email" value="{{ old('email', session('password_reset_email')) }}" autocomplete="email" dir="ltr" required>
+                            <label class="tf-field-label">{{ __('customer_auth.email') }}</label>
+                        </div>
+                        <button type="submit" class="tf-btn btn-outline radius-3 w-100 justify-content-center">
+                            {{ __('customer_auth.send_password_reset_code') }}
+                        </button>
+                    </form>
+
+                    <hr class="customer-auth-divider">
+
+                    @if ($errors->customerForgotPassword->any())
+                        <div class="alert alert-danger mb_20">
+                            @foreach ($errors->customerForgotPassword->all() as $error)
+                                <div>{{ $error }}</div>
+                            @endforeach
+                        </div>
+                    @endif
+
                     <form method="POST" action="{{ route('front.customer.forgot-password') }}">
                         @csrf
 
-                        <p class="text-muted mb_20">{{ __('front.auth.reset_password_help') }}</p>
-
-                        @if ($errors->customerForgotPassword->any())
-                            <div class="alert alert-danger mb_20">
-                                @foreach ($errors->customerForgotPassword->all() as $error)
-                                    <div>{{ $error }}</div>
-                                @endforeach
-                            </div>
-                        @endif
-
+                        <p class="customer-auth-help">{{ __('customer_auth.password_reset_complete_help') }}</p>
                         <div class="tf-field style-1">
-                            <input class="tf-field-input tf-input" placeholder=" " type="tel" name="mobile" value="{{ old('mobile') }}" dir="ltr" required>
-                            <label class="tf-field-label">{{ __('front.auth.mobile_number') }}</label>
+                            <input class="tf-field-input tf-input" placeholder=" " type="email" name="email" value="{{ old('email', session('password_reset_email')) }}" autocomplete="email" dir="ltr" required>
+                            <label class="tf-field-label">{{ __('customer_auth.email') }}</label>
                         </div>
                         <div class="tf-field style-1">
-                            <input class="tf-field-input tf-input" placeholder=" " type="text" name="order_no" value="{{ old('order_no') }}" dir="ltr" required>
-                            <label class="tf-field-label">{{ __('front.auth.previous_order_no') }}</label>
+                            <input class="tf-field-input tf-input" placeholder=" " type="text" name="code" value="{{ old('code') }}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" dir="ltr" required>
+                            <label class="tf-field-label">{{ __('customer_auth.verification_code') }}</label>
                         </div>
                         <div class="tf-field style-1">
                             <input class="tf-field-input tf-input" placeholder=" " type="password" name="password" autocomplete="new-password" required>
-                            <label class="tf-field-label">{{ __('front.auth.new_password') }}</label>
+                            <label class="tf-field-label">{{ __('customer_auth.new_password') }}</label>
                         </div>
                         <div class="tf-field style-1">
                             <input class="tf-field-input tf-input" placeholder=" " type="password" name="password_confirmation" autocomplete="new-password" required>
-                            <label class="tf-field-label">{{ __('front.auth.password_confirmation') }}</label>
+                            <label class="tf-field-label">{{ __('customer_auth.password_confirmation') }}</label>
                         </div>
                         <div class="bottom">
                             <button type="submit" class="tf-btn btn-fill animate-hover-btn radius-3 w-100 justify-content-center">
-                                {{ __('front.auth.reset_password_button') }}
+                                {{ __('customer_auth.reset_password_button') }}
                             </button>
-                            <a href="#login" data-bs-toggle="modal" class="btn-link fw-6 w-100 link">{{ __('front.auth.back_to_login') }}</a>
+                            <a href="#login" data-bs-toggle="modal" class="btn-link fw-6 w-100 link">{{ __('customer_auth.back_to_login') }}</a>
                         </div>
                     </form>
+
+                    <small class="text-muted d-block mt_16">{{ __('customer_auth.resend_note') }}</small>
                 </div>
             </div>
         </div>

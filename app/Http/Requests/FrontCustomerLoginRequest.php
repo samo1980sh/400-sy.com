@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 
 class FrontCustomerLoginRequest extends FormRequest
 {
@@ -24,7 +24,7 @@ class FrontCustomerLoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'login' => ['required', 'string', 'max:100'],
+            'login' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'max:255'],
         ];
     }
@@ -32,7 +32,7 @@ class FrontCustomerLoginRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'login' => __('front.auth.login_identifier'),
+            'login' => __('customer_auth.login_identifier'),
             'password' => __('front.auth.password_plain'),
         ];
     }

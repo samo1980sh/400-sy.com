@@ -1,0 +1,51 @@
+<?php
+
+return [
+    'login_identifier' => 'Account number, mobile number, or email address',
+    'email' => 'Email address',
+    'email_required' => 'Email address *',
+    'activate_existing' => 'Already have an account? Activate it',
+    'forgot_password' => 'Forgot your password?',
+
+    'activation_title' => 'Activate an existing account',
+    'activation_help' => 'Enter the email address saved on your account to receive an activation code, then use it to set your first password.',
+    'activation_request_help' => 'Send an activation code to your email address',
+    'send_activation_code' => 'Send activation code',
+    'activation_code_sent' => 'If this email belongs to an account awaiting activation, an activation code has been sent.',
+    'activation_complete_help' => 'Enter the code sent to your email and choose a new password.',
+    'activate_button' => 'Activate account',
+    'activation_success' => 'Your account was activated and you are now signed in.',
+
+    'password_reset_title' => 'Reset password',
+    'password_reset_help' => 'Enter the email address saved on your account to receive a password reset code.',
+    'send_password_reset_code' => 'Send reset code',
+    'password_reset_code_sent' => 'If this email belongs to an active account, a password reset code has been sent.',
+    'password_reset_complete_help' => 'Enter the code sent to your email and choose a new password.',
+    'reset_password_button' => 'Set new password',
+    'password_reset_success' => 'Your password was updated successfully. You can sign in now.',
+
+    'verification_code' => 'Verification code',
+    'new_password' => 'New password',
+    'password_confirmation' => 'Confirm password',
+    'back_to_login' => 'Back to sign in',
+    'resend_note' => 'You can use the send button again after 60 seconds if the message does not arrive.',
+
+    'code_invalid_or_expired' => 'The verification code is incorrect or has expired. Request a new code.',
+    'code_attempts_exceeded' => 'The code was canceled after too many attempts. Request a new code.',
+    'resend_wait' => 'A code was sent recently. Wait :seconds seconds before requesting another one.',
+    'too_many_requests' => 'Too many requests were sent in a short time. Please wait and try again.',
+    'mail_send_failed' => 'Email could not be sent right now. Please try again later.',
+    'account_inactive' => 'This account is inactive. Please contact the store.',
+    'account_already_active' => 'This account is already active. Use sign in or password reset.',
+    'account_needs_activation' => 'This account has not been activated yet. Use the existing account activation option.',
+    'mobile_needs_activation' => 'This mobile number belongs to an existing account awaiting activation. Use the existing account activation option.',
+
+    'email_subject_activation' => 'Your account activation code',
+    'email_subject_password_reset' => 'Your password reset code',
+    'email_heading_activation' => 'Activate your account',
+    'email_heading_password_reset' => 'Reset your password',
+    'email_intro_activation' => 'Use the following code to activate your account and set a password:',
+    'email_intro_password_reset' => 'Use the following code to set a new password for your account:',
+    'email_expires' => 'This code expires in :minutes minutes and can only be used once.',
+    'email_ignore' => 'If you did not request this code, ignore this email and do not share it with anyone.',
+];

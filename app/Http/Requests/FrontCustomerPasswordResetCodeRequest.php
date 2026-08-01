@@ -5,9 +5,9 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
-class FrontCustomerForgotPasswordRequest extends FormRequest
+class FrontCustomerPasswordResetCodeRequest extends FormRequest
 {
-    protected $errorBag = 'customerForgotPassword';
+    protected $errorBag = 'customerPasswordResetCode';
 
     public function authorize(): bool
     {
@@ -16,16 +16,8 @@ class FrontCustomerForgotPasswordRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $code = strtr((string) $this->input('code', ''), [
-            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
-            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
-            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
-            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
-        ]);
-
         $this->merge([
             'email' => mb_strtolower(trim((string) $this->input('email', ''))),
-            'code' => preg_replace('/\D+/', '', trim($code)) ?: '',
         ]);
     }
 
@@ -33,8 +25,6 @@ class FrontCustomerForgotPasswordRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email:rfc', 'max:255'],
-            'code' => ['required', 'digits:6'],
-            'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
         ];
     }
 
@@ -42,8 +32,6 @@ class FrontCustomerForgotPasswordRequest extends FormRequest
     {
         return [
             'email' => __('customer_auth.email'),
-            'code' => __('customer_auth.verification_code'),
-            'password' => __('front.auth.password_plain'),
         ];
     }
 

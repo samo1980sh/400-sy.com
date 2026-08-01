@@ -47,11 +47,17 @@ Route::middleware('front.locale')->group(function (): void {
     Route::post('/account/register', [FrontCustomerAuthController::class, 'register'])
         ->middleware('throttle:4,1')
         ->name('front.customer.register');
+    Route::post('/account/activate/code', [FrontCustomerAuthController::class, 'requestActivationCode'])
+        ->middleware('throttle:3,10')
+        ->name('front.customer.activate.code');
     Route::post('/account/activate', [FrontCustomerAuthController::class, 'activate'])
-        ->middleware('throttle:4,1')
+        ->middleware('throttle:6,1')
         ->name('front.customer.activate');
+    Route::post('/account/forgot-password/code', [FrontCustomerAuthController::class, 'requestPasswordResetCode'])
+        ->middleware('throttle:3,10')
+        ->name('front.customer.forgot-password.code');
     Route::post('/account/forgot-password', [FrontCustomerAuthController::class, 'forgotPassword'])
-        ->middleware('throttle:4,1')
+        ->middleware('throttle:6,1')
         ->name('front.customer.forgot-password');
     Route::post('/account/logout', [FrontCustomerAuthController::class, 'logout'])
         ->name('front.customer.logout');

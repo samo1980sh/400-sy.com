@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Customer;
-use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -25,13 +24,18 @@ class FrontCustomerAccountService
     {
         $login = trim($login);
         $normalizedMobile = $this->normalizeMobile($login);
+        $normalizedEmail = mb_strtolower($login);
 
         return Customer::query()
-            ->where(function ($query) use ($login, $normalizedMobile): void {
+            ->where(function ($query) use ($login, $normalizedMobile, $normalizedEmail): void {
                 $query->where('account_no', $login);
 
                 if ($normalizedMobile !== '') {
                     $query->orWhere('mobile', $normalizedMobile);
+                }
+
+                if ($normalizedEmail !== '') {
+                    $query->orWhere('email', $normalizedEmail);
                 }
             })
             ->first();
@@ -46,13 +50,13 @@ class FrontCustomerAccountService
             throw ValidationException::withMessages([
                 'mobile' => filled($existing->password)
                     ? __('front.auth.mobile_already_registered')
-                    : __('front.auth.mobile_needs_activation'),
+                    : __('customer_auth.mobile_needs_activation'),
             ]);
         }
 
-        $email = filled($data['email'] ?? null) ? strtolower(trim((string) $data['email'])) : null;
+        $email = mb_strtolower(trim((string) $data['email']));
 
-        if ($email && Customer::query()->where('email', $email)->exists()) {
+        if (Customer::query()->where('email', $email)->exists()) {
             throw ValidationException::withMessages([
                 'email' => __('front.auth.email_already_registered'),
             ]);
@@ -78,106 +82,6 @@ class FrontCustomerAccountService
         ]));
     }
 
-    public function activate(array $data): Customer
-    {
-        $mobile = $this->normalizeMobile((string) $data['mobile']);
-        $customer = Customer::query()->where('mobile', $mobile)->first();
-
-        if (! $customer instanceof Customer) {
-            throw ValidationException::withMessages([
-                'mobile' => __('front.auth.activation_customer_not_found'),
-            ]);
-        }
-
-        if (filled($customer->password)) {
-            throw ValidationException::withMessages([
-                'mobile' => __('front.auth.account_already_active'),
-            ]);
-        }
-
-        $orderNo = strtoupper(trim((string) $data['order_no']));
-        $ownsOrder = Order::query()
-            ->where('order_no', $orderNo)
-            ->where(function ($query) use ($customer, $mobile): void {
-                $query->where('customer_id', $customer->getKey())
-                    ->orWhere(function ($snapshotQuery) use ($mobile): void {
-                        $snapshotQuery->whereNull('customer_id')
-                            ->where('customer_mobile_snapshot', $mobile);
-                    });
-            })
-            ->exists();
-
-        if (! $ownsOrder) {
-            throw ValidationException::withMessages([
-                'order_no' => __('front.auth.activation_order_invalid'),
-            ]);
-        }
-
-        DB::transaction(function () use ($customer, $data, $mobile): void {
-            $customer->forceFill([
-                'account_no' => $customer->account_no ?: $this->generateAccountNo(),
-                'password' => $data['password'],
-                'status' => 'active',
-            ])->save();
-
-            Order::query()
-                ->whereNull('customer_id')
-                ->where('customer_mobile_snapshot', $mobile)
-                ->update(['customer_id' => $customer->getKey()]);
-        });
-
-        return $customer->refresh();
-    }
-
-    public function resetPasswordByOrderProof(array $data): Customer
-    {
-        $mobile = $this->normalizeMobile((string) $data['mobile']);
-        $customer = Customer::query()->where('mobile', $mobile)->first();
-
-        if (! $customer instanceof Customer) {
-            throw ValidationException::withMessages([
-                'mobile' => __('front.auth.reset_customer_not_found'),
-            ]);
-        }
-
-        if ($customer->status !== 'active') {
-            throw ValidationException::withMessages([
-                'mobile' => __('front.auth.account_inactive'),
-            ]);
-        }
-
-        $orderNo = strtoupper(trim((string) $data['order_no']));
-        $ownsOrder = Order::query()
-            ->where('order_no', $orderNo)
-            ->where(function ($query) use ($customer, $mobile): void {
-                $query->where('customer_id', $customer->getKey())
-                    ->orWhere(function ($snapshotQuery) use ($mobile): void {
-                        $snapshotQuery->whereNull('customer_id')
-                            ->where('customer_mobile_snapshot', $mobile);
-                    });
-            })
-            ->exists();
-
-        if (! $ownsOrder) {
-            throw ValidationException::withMessages([
-                'order_no' => __('front.auth.reset_order_invalid'),
-            ]);
-        }
-
-        DB::transaction(function () use ($customer, $data, $mobile): void {
-            $customer->forceFill([
-                'password' => $data['password'],
-                'status' => 'active',
-            ])->save();
-
-            Order::query()
-                ->whereNull('customer_id')
-                ->where('customer_mobile_snapshot', $mobile)
-                ->update(['customer_id' => $customer->getKey()]);
-        });
-
-        return $customer->refresh();
-    }
     public function passwordMatches(Customer $customer, string $password): bool
     {
         return filled($customer->password) && Hash::check($password, $customer->password);
