@@ -1315,6 +1315,8 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         if ($sizes !== []) {
             $query->whereHas('variants', function (Builder $variantQuery) use ($sizes): void {
                 $variantQuery
+                    ->where('status', 'active')
+                    ->where('quantity', '>', 0)
                     ->whereHas('productColor', fn (Builder $colorQuery) => $colorQuery->where('status', 'active'))
                     ->whereHas('size', function (Builder $sizeQuery) use ($sizes): void {
                         $sizeQuery->where(function (Builder $nested) use ($sizes): void {
@@ -1603,6 +1605,8 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
         $variants = ProductVariant::query()
             ->with('size')
             ->select(['product_id', 'size_id'])
+            ->where('status', 'active')
+            ->where('quantity', '>', 0)
             ->whereHas('productColor', fn (Builder $query) => $query->where('status', 'active'))
             ->whereHas('product', function (Builder $query) use ($filters): void {
                 $this->applyProductsFilters($query, $filters);
