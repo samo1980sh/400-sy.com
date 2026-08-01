@@ -1602,35 +1602,81 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
     protected function buildSizeOptions(array $filters, string $locale, array $selectedSizes): Collection
     {
-        $variants = ProductVariant::query()
-            ->with('size')
-            ->select(['product_id', 'size_id'])
-            ->where('status', 'active')
-            ->where('quantity', '>', 0)
+        $sizeGroups = Size::query()
+            ->get(['id', 'code', 'name_ar', 'name_en'])
+            ->filter(function (Size $size): bool {
+                return $this->makeFilterSlug($size->code ?: $size->name_ar ?: $size->name_en) !== '';
+            })
+            ->groupBy(function (Size $size): string {
+                return $this->makeFilterSlug($size->code ?: $size->name_ar ?: $size->name_en);
+            });
+
+        if ($sizeGroups->isEmpty()) {
+            return collect();
+        }
+
+        $caseParts = [];
+        $caseBindings = [];
+        $sizeIds = [];
+
+        foreach ($sizeGroups as $value => $group) {
+            $groupSizeIds = $group
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->filter()
+                ->values()
+                ->all();
+
+            if ($groupSizeIds === []) {
+                continue;
+            }
+
+            $sizeIds = array_merge($sizeIds, $groupSizeIds);
+            $caseParts[] = 'WHEN product_variants.size_id IN ('
+                . implode(', ', array_fill(0, count($groupSizeIds), '?'))
+                . ') THEN ?';
+
+            foreach ($groupSizeIds as $sizeId) {
+                $caseBindings[] = $sizeId;
+            }
+
+            $caseBindings[] = (string) $value;
+        }
+
+        if ($caseParts === [] || $sizeIds === []) {
+            return collect();
+        }
+
+        $sizeKeyExpression = 'CASE ' . implode(' ', $caseParts) . ' ELSE NULL END';
+
+        $sizeCounts = ProductVariant::query()
+            ->whereIn('product_variants.size_id', array_values(array_unique($sizeIds)))
+            ->where('product_variants.status', 'active')
+            ->where('product_variants.quantity', '>', 0)
             ->whereHas('productColor', fn (Builder $query) => $query->where('status', 'active'))
             ->whereHas('product', function (Builder $query) use ($filters): void {
                 $this->applyProductsFilters($query, $filters);
             })
-            ->whereHas('size')
-            ->get();
+            ->selectRaw(
+                "{$sizeKeyExpression} as size_key, COUNT(DISTINCT product_variants.product_id) as products_count",
+                $caseBindings
+            )
+            ->groupBy('size_key')
+            ->pluck('products_count', 'size_key');
 
-        return $variants
-            ->filter(fn (ProductVariant $variant): bool => $variant->size !== null)
-            ->groupBy(function (ProductVariant $variant): string {
-                return $this->makeFilterSlug($variant->size->code ?: $variant->size->name_ar ?: $variant->size->name_en);
-            })
-            ->map(function (Collection $group) use ($locale, $selectedSizes): array {
-                /** @var ProductVariant|null $first */
-                $first = $group->first();
-                $size = $first?->size;
-                $value = $this->makeFilterSlug($size?->code ?: $size?->name_ar ?: $size?->name_en);
-                $label = trim((string) ($size?->code ?: ($locale === 'ar' ? ($size?->name_ar ?: $size?->name_en) : ($size?->name_en ?: $size?->name_ar))));
+        return $sizeCounts
+            ->map(function ($count, $value) use ($locale, $selectedSizes, $sizeGroups): array {
+                $group = $sizeGroups->get((string) $value);
+                $size = $group instanceof Collection ? $group->first() : null;
+                $label = trim((string) ($size?->code ?: ($locale === 'ar'
+                    ? ($size?->name_ar ?: $size?->name_en)
+                    : ($size?->name_en ?: $size?->name_ar))));
 
                 return [
-                    'value' => $value,
+                    'value' => (string) $value,
                     'label' => $label,
-                    'count' => $group->pluck('product_id')->unique()->count(),
-                    'selected' => in_array($value, $selectedSizes, true),
+                    'count' => (int) $count,
+                    'selected' => in_array((string) $value, $selectedSizes, true),
                 ];
             })
             ->filter(fn (array $option): bool => $option['label'] !== '')
@@ -2057,15 +2103,38 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
 
     protected function applyCategoryCounts(Collection $categories, Builder $baseQuery): Collection
     {
-        return $categories->map(function (Category $category) use ($baseQuery): Category {
+        $leafIds = $categories
+            ->flatMap(fn (Category $category): array => $this->collectLeafCategoryIds($category))
+            ->map(fn ($id): int => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $countsByLeafCategory = $leafIds->isEmpty()
+            ? collect()
+            : (clone $baseQuery)
+                ->whereIn('category_id', $leafIds->all())
+                ->selectRaw('category_id, COUNT(DISTINCT products.id) as products_count')
+                ->groupBy('category_id')
+                ->pluck('products_count', 'category_id');
+
+        return $this->applyCategoryCountsFromMap($categories, $countsByLeafCategory);
+    }
+
+    protected function applyCategoryCountsFromMap(Collection $categories, Collection $countsByLeafCategory): Collection
+    {
+        return $categories->map(function (Category $category) use ($countsByLeafCategory): Category {
             if ($category->relationLoaded('children')) {
-                $category->setRelation('children', $this->applyCategoryCounts($category->children, $baseQuery));
+                $category->setRelation(
+                    'children',
+                    $this->applyCategoryCountsFromMap($category->children, $countsByLeafCategory)
+                );
             }
 
-            $leafIds = $this->collectLeafCategoryIds($category);
-            $category->setAttribute('products_count', $leafIds === []
-                ? 0
-                : (clone $baseQuery)->whereIn('category_id', $leafIds)->count());
+            $productsCount = collect($this->collectLeafCategoryIds($category))
+                ->sum(fn ($leafId): int => (int) ($countsByLeafCategory[(int) $leafId] ?? 0));
+
+            $category->setAttribute('products_count', $productsCount);
             $category->setAttribute('is_selectable_leaf', $category->relationLoaded('children')
                 ? $category->children->isEmpty()
                 : $category->children()->doesntExist());
