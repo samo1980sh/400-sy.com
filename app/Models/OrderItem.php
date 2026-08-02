@@ -15,6 +15,7 @@ class OrderItem extends Model
         'product_id',
         'product_variant_id',
         'quantity',
+        'approved_quantity',
         'unit_price',
         'product_name_snapshot',
         'product_model_no_snapshot',
@@ -30,6 +31,7 @@ class OrderItem extends Model
     {
         return [
             'quantity' => 'integer',
+            'approved_quantity' => 'integer',
             'unit_price' => 'decimal:2',
             'line_total' => 'decimal:2',
         ];

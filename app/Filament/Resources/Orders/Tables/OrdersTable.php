@@ -163,7 +163,101 @@ class OrdersTable
                     ->icon(Heroicon::OutlinedCheckCircle)
                     ->color('success')
                     ->visible(fn (Order $record): bool => $record->status === 'pending')
-                    ->action(fn (Order $record) => self::transitionStatus($record, 'confirmed')),
+                    ->modalHeading('اعتماد كميات طلب المفرق')
+                    ->modalDescription(
+                        'حدد الكمية المتوفرة والمعتمدة لكل منتج. '
+                        . 'ستُعاد حساب الفاتورة بناءً على الكميات المعتمدة فقط.'
+                    )
+                    ->modalSubmitActionLabel('اعتماد الطلب')
+                    ->modalWidth('5xl')
+                    ->fillForm(function (Order $record): array {
+                        return [
+                            'items' => $record->items()
+                                ->orderBy('id')
+                                ->get()
+                                ->map(fn ($item): array => [
+                                    'item_id' => $item->getKey(),
+                                    'product_name' => trim((string) (
+                                        $item->product_name_snapshot
+                                        ?: 'المنتج رقم ' . $item->getKey()
+                                    )),
+                                    'requested_quantity' => (int) $item->quantity,
+                                    'approved_quantity' => (int) $item->quantity,
+                                ])
+                                ->all(),
+                            'approval_note' => null,
+                        ];
+                    })
+                    ->schema([
+                        \Filament\Forms\Components\Repeater::make('items')
+                            ->label('منتجات الطلب')
+                            ->addable(false)
+                            ->deletable(false)
+                            ->reorderable(false)
+                            ->columns(4)
+                            ->schema([
+                                \Filament\Forms\Components\Hidden::make('item_id'),
+                                \Filament\Forms\Components\TextInput::make('product_name')
+                                    ->label('المنتج')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->columnSpan(2),
+                                \Filament\Forms\Components\TextInput::make('requested_quantity')
+                                    ->label('الكمية المطلوبة')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->numeric(),
+                                \Filament\Forms\Components\TextInput::make('approved_quantity')
+                                    ->label('الكمية المعتمدة')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->required(),
+                            ])
+                            ->columnSpanFull(),
+                        \Filament\Forms\Components\Textarea::make('approval_note')
+                            ->label('ملاحظة الاعتماد')
+                            ->placeholder('مثال: تم اعتماد الكمية المتوفرة حالياً.')
+                            ->rows(3)
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function (Order $record, array $data): void {
+                        try {
+                            $approved = app(
+                                \App\Services\RetailOrderApprovalService::class
+                            )->approve(
+                                order: $record,
+                                submittedItems: $data['items'] ?? [],
+                                approvalNote: $data['approval_note'] ?? null,
+                            );
+
+                            $requestedUnits = $approved->items()->sum('quantity');
+                            $approvedUnits = $approved->items()->sum('approved_quantity');
+
+                            Notification::make()
+                                ->title(
+                                    $approvedUnits < $requestedUnits
+                                        ? 'تم اعتماد الطلب جزئياً.'
+                                        : 'تم اعتماد كامل الطلب.'
+                                )
+                                ->body(
+                                    'الكمية المطلوبة: ' . $requestedUnits
+                                    . ' | الكمية المعتمدة: ' . $approvedUnits
+                                    . ' | الإجمالي الجديد: '
+                                    . number_format((float) $approved->total, 2)
+                                )
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $exception) {
+                            report($exception);
+
+                            Notification::make()
+                                ->title('تعذر اعتماد كميات الطلب.')
+                                ->body($exception->getMessage())
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                        }
+                    }),
                 Action::make('markShipped')
                     ->label('شحن')
                     ->icon(Heroicon::OutlinedTruck)
