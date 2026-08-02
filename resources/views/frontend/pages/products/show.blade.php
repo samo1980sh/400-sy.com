@@ -32,6 +32,14 @@
 
     $defaultColorIndex = $defaultColorIndex === false ? 0 : (int) $defaultColorIndex;
     $defaultColor = $colors->get($defaultColorIndex) ?? [];
+
+    $initialCurrentPrice = (float) ($product['price_current'] ?? ($product['base_price'] ?? 0));
+    $initialComparePrice = (float) ($product['compare_price'] ?? 0);
+    $initialHasDiscount = $initialCurrentPrice > 0 && $initialComparePrice > $initialCurrentPrice;
+    $initialDiscountPercent = $initialHasDiscount
+        ? max(1, min(99, (int) round((($initialComparePrice - $initialCurrentPrice) / $initialComparePrice) * 100)))
+        : 0;
+
     $whatsappPhone = '963995010400';
     $whatsappProductCode = trim((string) ($product['product_code'] ?? ''));
     $whatsappDefaultColorCode = trim((string) ($defaultColor['color_code'] ?? ''));
@@ -645,11 +653,26 @@
 
 
                                     <div class="tf-product-info-price">
-                                        <div class="price-on-sale js-currency-price" data-detail-current-price data-base-price="{{ $product['price_current'] ?? $product['base_price'] ?? 0 }}" data-base-currency="{{ $product['base_currency'] ?? 'SYP' }}">
+                                        <div class="compare-at-price js-currency-price {{ $initialHasDiscount ? '' : 'd-none' }}"
+                                            data-detail-compare-price
+                                            data-base-price="{{ $initialHasDiscount ? $initialComparePrice : 0 }}"
+                                            data-base-currency="{{ $product['base_currency'] ?? 'SYP' }}"
+                                            aria-label="{{ $isArabic ? 'السعر الأصلي قبل الحسم' : 'Original price before discount' }}">
+                                            {{ $initialHasDiscount ? ($product['compare_price_label'] ?? '') : '' }}
+                                        </div>
+
+                                        <div class="price-on-sale js-currency-price"
+                                            data-detail-current-price
+                                            data-base-price="{{ $initialCurrentPrice }}"
+                                            data-base-currency="{{ $product['base_currency'] ?? 'SYP' }}"
+                                            aria-label="{{ $isArabic ? 'السعر بعد الحسم' : 'Price after discount' }}">
                                             {{ $product['price_current_label'] ?? $product['price_label'] ?? '' }}
                                         </div>
-                                        <div class="compare-at-price js-currency-price {{ empty($product['compare_price_label']) ? 'd-none' : '' }}" data-detail-compare-price data-base-price="{{ $product['compare_price'] ?? 0 }}" data-base-currency="{{ $product['base_currency'] ?? 'SYP' }}">
-                                            {{ $product['compare_price_label'] ?? '' }}
+
+                                        <div class="badges-on-sale {{ $initialHasDiscount ? '' : 'd-none' }}"
+                                            data-detail-discount-badge
+                                            aria-label="{{ $isArabic ? 'نسبة الخصم' : 'Discount percentage' }}">
+                                            {{ $initialHasDiscount ? $initialDiscountPercent . '%' : '' }}
                                         </div>
                                     </div>
 

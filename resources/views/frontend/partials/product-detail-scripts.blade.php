@@ -552,6 +552,12 @@
             var comparePrice = (size && size.compare_price) || color.compare_price || product.compare_price || 0;
             var currentLabel = (size && size.price_current_label) || color.price_current_label || product.price_current_label || product.price_label || '';
             var compareLabel = (size && size.compare_price_label) || color.compare_price_label || product.compare_price_label || '';
+            var numericCurrentPrice = Number(currentPrice || 0);
+            var numericComparePrice = Number(comparePrice || 0);
+            var hasDiscount = numericCurrentPrice > 0 && numericComparePrice > numericCurrentPrice;
+            var discountPercent = hasDiscount
+                ? Math.max(1, Math.min(99, Math.round(((numericComparePrice - numericCurrentPrice) / numericComparePrice) * 100)))
+                : 0;
             var currency = currentBaseCurrency();
             var sizeLabel = normalizeSizeLabel(size);
 
@@ -566,10 +572,14 @@
                 .attr('data-base-currency', currency);
 
             $root.find('[data-detail-compare-price]')
-                .text(compareLabel || '')
-                .attr('data-base-price', comparePrice || 0)
+                .text(hasDiscount ? (compareLabel || '') : '')
+                .attr('data-base-price', hasDiscount ? numericComparePrice : 0)
                 .attr('data-base-currency', currency)
-                .toggleClass('d-none', ! compareLabel);
+                .toggleClass('d-none', ! hasDiscount);
+
+            $root.find('[data-detail-discount-badge]')
+                .text(hasDiscount ? discountPercent + '%' : '')
+                .toggleClass('d-none', ! hasDiscount);
 
             var colorCode = String(color.color_code || '').trim();
 
