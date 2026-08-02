@@ -8,6 +8,8 @@
             colorInput: 'input[name="detail_color"]',
             colorLabel: 'label.color-btn',
             sizesWrap: '[data-detail-sizes]',
+            sizeControls: '[data-detail-size-controls]',
+            sizesEmpty: '[data-detail-sizes-empty]',
             sizeInput: 'input[name="detail_size"]',
             quantityInput: '[data-detail-quantity]',
             quantityButton: '[data-detail-qty]',
@@ -443,18 +445,20 @@
          * Sizes, price, labels
          */
         function renderSizes() {
-            var sizes = currentSizes();
+            var sizes = currentSizes().filter(function (size) {
+                return normalizeSizeLabel(size) !== '';
+            });
+            var hasSizes = sizes.length > 0;
 
-            selectedSizeIndex = firstAvailableSizeIndex(sizes);
+            selectedSizeIndex = hasSizes ? firstAvailableSizeIndex(sizes) : -1;
+
+            $root.find(SELECTORS.sizeControls).toggleClass('d-none', ! hasSizes);
+            $root.find(SELECTORS.sizesEmpty).toggleClass('d-none', hasSizes);
 
             $root.find(SELECTORS.sizesWrap).html(sizes.map(function (size, index) {
                 var label = normalizeSizeLabel(size);
                 var soldOut = isSoldOut(size);
                 var checked = index === selectedSizeIndex && ! soldOut;
-
-                if (! label) {
-                    return '';
-                }
 
                 return [
                     '<input type="radio" name="detail_size" id="detail-size-js-', index, '" value="', escapeHtml(label), '" ',

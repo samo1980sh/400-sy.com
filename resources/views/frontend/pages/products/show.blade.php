@@ -656,8 +656,8 @@
                                             </div>
                                         @endif
 
-                                        @if ($sizeOptions->isNotEmpty())
-                                            <div class="variant-picker-item">
+                                        <div class="variant-picker-item">
+                                            <div data-detail-size-controls class="{{ $sizeOptions->isEmpty() ? 'd-none' : '' }}">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div class="variant-picker-label">
                                                         {{ __('front.products.size') }}:
@@ -695,7 +695,14 @@
                                                     @endforeach
                                                 </div>
                                             </div>
-                                        @endif
+                                            <div
+                                                class="text-muted small {{ $sizeOptions->isNotEmpty() ? 'd-none' : '' }}"
+                                                data-detail-sizes-empty
+                                                role="status"
+                                            >
+                                                {{ $isArabic ? 'لا يتوفر جدول قياسات مرتبط بهذا المنتج حالياً.' : 'No size table is currently available for this product.' }}
+                                            </div>
+                                        </div>
                                     </div>
 
 
