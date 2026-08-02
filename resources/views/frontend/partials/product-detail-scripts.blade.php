@@ -353,21 +353,33 @@
 
         function applyGalleryColorFilter() {
             var color = currentColor();
+            var colorId = String(color.id || '').trim();
             var normalized = normalizeColor(color.name || '');
             var scope = galleryScope();
 
-            if (! normalized || ! scope.$thumbSlides.length || ! scope.$mainSlides.length) {
+            if ((! colorId && ! normalized) || ! scope.$thumbSlides.length || ! scope.$mainSlides.length) {
                 return;
+            }
+
+            function belongsToSelectedColor($slide) {
+                var slideColorId = String($slide.attr('data-color-id') || '').trim();
+
+                if (colorId && slideColorId && slideColorId !== '0') {
+                    return slideColorId === colorId;
+                }
+
+                return normalized !== ''
+                    && normalizeColor($slide.attr('data-color')) === normalized;
             }
 
             scope.$thumbSlides.each(function () {
                 var $slide = $(this);
-                $slide.css('display', normalizeColor($slide.data('color')) === normalized ? '' : 'none');
+                $slide.css('display', belongsToSelectedColor($slide) ? '' : 'none');
             });
 
             scope.$mainSlides.each(function () {
                 var $slide = $(this);
-                $slide.css('display', normalizeColor($slide.data('color')) === normalized ? '' : 'none');
+                $slide.css('display', belongsToSelectedColor($slide) ? '' : 'none');
             });
 
             initScopedGallery();
@@ -547,8 +559,11 @@
                 .attr('data-base-currency', currency)
                 .toggleClass('d-none', ! compareLabel);
 
+            var colorCode = String(color.color_code || '').trim();
+
             $root.find('[data-detail-color-label]').text(color.name || '');
-            $root.find('[data-detail-color-code]').text(color.color_code || '');
+            $root.find('[data-detail-color-code]').text(colorCode);
+            $root.find('[data-detail-color-code-wrap]').toggleClass('d-none', colorCode === '');
             $root.find('[data-detail-size-label]').text(sizeLabel || '');
             syncWhatsappInquiryLink(color);
 

@@ -78,6 +78,7 @@
 
     $gallerySlides = $colors
         ->flatMap(function (array $color) {
+            $colorId = (int) ($color['id'] ?? 0);
             $colorName = trim((string) ($color['name'] ?? ''));
             $images = collect($color['gallery'] ?? [])
                 ->prepend($color['image'] ?? null)
@@ -87,6 +88,7 @@
 
             return $images->map(fn ($image): array => [
                 'image' => $image,
+                'color_id' => $colorId,
                 'color' => $colorName,
             ]);
         })
@@ -95,6 +97,7 @@
     if ($gallerySlides->isEmpty()) {
         $gallerySlides = $gallery->map(fn ($image): array => [
             'image' => $image,
+            'color_id' => (int) ($defaultColor['id'] ?? 0),
             'color' => trim((string) ($defaultColor['name'] ?? '')),
         ]);
     }
@@ -571,7 +574,7 @@
                                     <div dir="ltr" class="swiper tf-product-media-thumbs other-image-zoom" data-direction="vertical" data-detail-thumbs-swiper>
                                         <div class="swiper-wrapper stagger-wrap" data-detail-thumbs>
                                             @foreach ($gallerySlides as $slide)
-                                                <div class="swiper-slide stagger-item" data-color="{{ $slide['color'] }}">
+                                                <div class="swiper-slide stagger-item" data-color-id="{{ $slide['color_id'] ?? 0 }}" data-color="{{ $slide['color'] }}">
                                                     <div class="item">
                                                         <img class="lazyload" data-src="{{ $slide['image'] }}" src="{{ $slide['image'] }}" alt="{{ $product['title'] ?? '' }}">
                                                     </div>
@@ -582,7 +585,7 @@
                                     <div dir="ltr" class="swiper tf-product-media-main" id="gallery-swiper-started" data-detail-main-swiper data-detail-gallery-lightbox>
                                         <div class="swiper-wrapper" data-detail-gallery>
                                             @foreach ($gallerySlides as $slide)
-                                                <div class="swiper-slide" data-color="{{ $slide['color'] }}">
+                                                <div class="swiper-slide" data-color-id="{{ $slide['color_id'] ?? 0 }}" data-color="{{ $slide['color'] }}">
                                                     <a href="{{ $slide['image'] }}" target="_blank" class="item" data-pswp-width="770" data-pswp-height="1075">
                                                         <img class="tf-image-zoom lazyload" data-zoom="{{ $slide['image'] }}" data-src="{{ $slide['image'] }}" src="{{ $slide['image'] }}" alt="{{ $product['title'] ?? '' }}">
                                                     </a>
@@ -632,7 +635,12 @@
 
                                     @if (! empty($product['product_code']))
                                         <div class="tf-product-info-liveview">
-                                            <p>{{ __('front.products.product_code') }}: <span class="fw-6" dir="ltr">{{ $product['product_code'] }}@if (! empty($defaultColor['color_code']))-<span data-detail-color-code>{{ $defaultColor['color_code'] }}</span>@endif</span></p>
+                                            <p>
+                                                {{ __('front.products.product_code') }}:
+                                                <span class="fw-6" dir="ltr">
+                                                    {{ $product['product_code'] }}<span data-detail-color-code-wrap class="{{ empty($defaultColor['color_code']) ? 'd-none' : '' }}">-<span data-detail-color-code>{{ $defaultColor['color_code'] ?? '' }}</span></span>
+                                                </span>
+                                            </p>
                                         </div>
                                     @endif
 
