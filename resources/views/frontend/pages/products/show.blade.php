@@ -129,12 +129,11 @@
     };
 
     $sizeOptions = collect($defaultColor['size_options'] ?? [])
-        ->whenEmpty(fn () => collect($product['size_options'] ?? []))
         ->map($normalizeSizeOption)
         ->filter()
         ->values();
 
-    $defaultSize = trim((string) ($defaultColor['default_size'] ?? ($product['default_size'] ?? '')));
+    $defaultSize = trim((string) ($defaultColor['default_size'] ?? ''));
 
     if ($defaultSize === '' && $sizeOptions->isNotEmpty()) {
         $defaultSize = (string) (($sizeOptions->firstWhere('is_sold_out_normalized', false)['value'] ?? null)

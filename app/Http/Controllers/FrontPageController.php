@@ -529,6 +529,7 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             'category',
             'structureColor',
             'variants' => fn ($query) => $query
+                ->where('status', 'active')
                 ->whereHas('productColor', fn ($colorQuery) => $colorQuery->where('status', 'active'))
                 ->with('size'),
             'productColors' => fn ($query) => $query
@@ -536,7 +537,9 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
                 ->orderBy('sort_order')
                 ->orderBy('id'),
             'productColors.filterColor',
-            'productColors.variants.size',
+            'productColors.variants' => fn ($query) => $query
+                ->where('status', 'active')
+                ->with('size'),
             'measurementCharts',
             'measurementChartGroup',
             'details' => fn ($query) => $query

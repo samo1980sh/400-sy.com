@@ -119,15 +119,9 @@
         function currentSizes() {
             var color = currentColor();
 
-            if (Array.isArray(color.size_options) && color.size_options.length) {
-                return color.size_options;
-            }
-
-            if (Array.isArray(product.size_options) && product.size_options.length) {
-                return product.size_options;
-            }
-
-            return [];
+            return Array.isArray(color.size_options)
+                ? color.size_options
+                : [];
         }
 
         function selectedSize() {
