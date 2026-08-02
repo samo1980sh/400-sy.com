@@ -398,38 +398,129 @@
             flex: 1 1 100%;
             width: 100%;
             margin-top: 14px;
-            padding: 14px;
-            border: 1px solid #e8e8e8;
-            border-radius: 8px;
-            background: #fbfbfb;
-        }
-
-        .product-detail-share-row__header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .product-detail-share-row__title {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 14px;
+            gap: 7px;
+            color: #333;
+            font-size: 13px;
             font-weight: 700;
-            color: #111;
+            line-height: 1;
         }
 
         .product-detail-share-row__title .icon {
-            font-size: 16px;
+            font-size: 15px;
+        }
+
+        .product-detail-share-row__icons {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .product-detail-share-row__item {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 1px solid #dedede;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            text-decoration: none;
+            font-size: 15px;
+            line-height: 1;
+            cursor: pointer;
+            transition: color .18s ease, background-color .18s ease, border-color .18s ease, transform .18s ease;
+        }
+
+        .product-detail-share-row__item:hover,
+        .product-detail-share-row__item:focus-visible {
+            color: #fff;
+            transform: translateY(-1px);
+            outline: none;
+        }
+
+        .product-detail-share-row__item.is-whatsapp {
+            color: #25a95b;
+        }
+
+        .product-detail-share-row__item.is-whatsapp:hover,
+        .product-detail-share-row__item.is-whatsapp:focus-visible {
+            border-color: #25d366;
+            background: #25d366;
+        }
+
+        .product-detail-share-row__item.is-facebook {
+            color: #1877f2;
+        }
+
+        .product-detail-share-row__item.is-facebook:hover,
+        .product-detail-share-row__item.is-facebook:focus-visible {
+            border-color: #1877f2;
+            background: #1877f2;
+        }
+
+        .product-detail-share-row__item.is-x {
+            color: #111;
+        }
+
+        .product-detail-share-row__item.is-x:hover,
+        .product-detail-share-row__item.is-x:focus-visible {
+            border-color: #111;
+            background: #111;
+        }
+
+        .product-detail-share-row__item.is-copy {
+            color: #555;
+        }
+
+        .product-detail-share-row__item.is-copy:hover,
+        .product-detail-share-row__item.is-copy:focus-visible {
+            border-color: #555;
+            background: #555;
+        }
+
+        .product-detail-share-row__item .share-platform-icon {
+            display: block;
+            width: 18px;
+            height: 18px;
+            flex: 0 0 18px;
+            overflow: visible;
+            color: inherit;
+            pointer-events: none;
+        }
+
+        .product-detail-share-row__item .share-platform-icon--stroke {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .product-detail-share-row__item .share-platform-icon--fill {
+            fill: currentColor;
+            stroke: none;
+        }
+
+        .product-detail-share-row__item:hover .share-platform-icon,
+        .product-detail-share-row__item:focus-visible .share-platform-icon {
+            color: #fff;
         }
 
         .product-detail-share-row__hint {
-            min-height: 18px;
+            min-height: 16px;
+            color: #198754;
             font-size: 12px;
             font-weight: 600;
-            color: #198754;
             opacity: 0;
             transition: opacity .18s ease;
         }
@@ -438,89 +529,18 @@
             opacity: 1;
         }
 
-        .product-detail-share-row__icons {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 8px;
-        }
-
-        .product-detail-share-row__item {
-            min-height: 44px;
-            padding: 0 12px;
-            border: 1px solid transparent;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            color: #fff;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 700;
-            line-height: 1;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: transform .18s ease, box-shadow .18s ease;
-        }
-
-        .product-detail-share-row__item:hover {
-            color: #fff;
-            transform: translateY(-1px);
-            box-shadow: 0 8px 18px rgba(0, 0, 0, .12);
-        }
-
-        .product-detail-share-row__item.is-whatsapp {
-            background: #25d366;
-        }
-
-        .product-detail-share-row__item.is-facebook {
-            background: #1877f2;
-        }
-
-        .product-detail-share-row__item.is-x {
-            background: #111;
-        }
-
-        .product-detail-share-row__item.is-copy {
-            background: #fff;
-            color: #111;
-            border-color: #dedede;
-        }
-
-        .product-detail-share-row__item.is-copy svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        .product-detail-share-row__url {
-            margin-top: 10px;
-            padding: 10px 12px;
-            border: 1px solid #ededed;
-            border-radius: 6px;
-            background: #fff;
-            color: #666;
-            font-size: 12px;
-            line-height: 1.4;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
         @media (max-width: 575.98px) {
-            .product-detail-share-row__header {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 6px;
-                margin-bottom: 10px;
-            }
-
-            .product-detail-share-row__icons {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+            .product-detail-share-row {
+                gap: 8px;
             }
 
             .product-detail-share-row__item {
-                min-height: 42px;
-                padding: 0 10px;
+                width: 34px;
+                height: 34px;
+            }
+
+            .product-detail-share-row__hint {
+                flex-basis: 100%;
             }
         }
     </style>
@@ -770,46 +790,55 @@
                                             </a>
                                         </form>
                                         <div class="product-detail-share-row" aria-label="{{ $isArabic ? 'مشاركة المنتج' : 'Share product' }}">
-                                            <div class="product-detail-share-row__header">
-                                                <span class="product-detail-share-row__title">
-                                                    <i class="icon icon-share" aria-hidden="true"></i>
-                                                    {{ $isArabic ? 'شارك المنتج' : 'Share this product' }}
-                                                </span>
-                                                <span class="product-detail-share-row__hint" data-product-detail-copy-status>
-                                                    {{ $isArabic ? 'تم نسخ الرابط' : 'Link copied' }}
-                                                </span>
-                                            </div>
+                                            <span class="product-detail-share-row__title">
+                                                <i class="icon icon-share" aria-hidden="true"></i>
+                                                {{ $isArabic ? 'مشاركة' : 'Share' }}
+                                            </span>
+
                                             <div class="product-detail-share-row__icons">
                                                 <a class="product-detail-share-row__item is-whatsapp" href="{{ $productShareWhatsAppUrl }}" target="_blank"
-                                                    rel="noopener" aria-label="WhatsApp" title="WhatsApp">
-                                                    <i class="icon icon-whatsapp" aria-hidden="true"></i>
-                                                    <span>WhatsApp</span>
+                                                    rel="noopener" aria-label="{{ $isArabic ? 'مشاركة عبر واتساب' : 'Share on WhatsApp' }}"
+                                                    title="{{ $isArabic ? 'واتساب' : 'WhatsApp' }}">
+                                                    <svg class="share-platform-icon share-platform-icon--stroke" viewBox="0 0 24 24"
+                                                        aria-hidden="true" focusable="false">
+                                                        <path d="M20 11.5a8.5 8.5 0 0 1-12.45 7.52L4 20l.98-3.55A8.5 8.5 0 1 1 20 11.5Z" />
+                                                        <path d="M8.15 7.3c.45 3.42 2.36 5.34 5.78 5.78l1.08-1.08a.8.8 0 0 1 .9-.16l1.72.82a.8.8 0 0 1 .43.88c-.3 1.35-1.5 2.31-2.9 2.31-4.45 0-8.06-3.61-8.06-8.06 0-1.4.96-2.6 2.31-2.9a.8.8 0 0 1 .88.43l.82 1.72a.8.8 0 0 1-.16.9L9.87 9.02" />
+                                                    </svg>
                                                 </a>
 
                                                 <a class="product-detail-share-row__item is-facebook" href="{{ $productShareFacebookUrl }}" target="_blank"
-                                                    rel="noopener" aria-label="Facebook" title="Facebook">
-                                                    <i class="icon icon-fb" aria-hidden="true"></i>
-                                                    <span>Facebook</span>
+                                                    rel="noopener" aria-label="{{ $isArabic ? 'مشاركة عبر فيسبوك' : 'Share on Facebook' }}"
+                                                    title="{{ $isArabic ? 'فيسبوك' : 'Facebook' }}">
+                                                    <svg class="share-platform-icon share-platform-icon--fill" viewBox="0 0 24 24"
+                                                        aria-hidden="true" focusable="false">
+                                                        <path d="M13.7 22v-8h2.7l.4-3.1h-3.1V8.93c0-.9.25-1.51 1.55-1.51h1.66V4.65a22.4 22.4 0 0 0-2.42-.13c-2.4 0-4.04 1.46-4.04 4.15v2.23H7.73V14h2.72v8h3.25Z" />
+                                                    </svg>
                                                 </a>
 
                                                 <a class="product-detail-share-row__item is-x" href="{{ $productShareXUrl }}" target="_blank" rel="noopener"
-                                                    aria-label="X" title="X">
-                                                    <i class="icon icon-Icon-x" aria-hidden="true"></i>
-                                                    <span>X</span>
+                                                    aria-label="{{ $isArabic ? 'مشاركة عبر إكس' : 'Share on X' }}" title="X">
+                                                    <svg class="share-platform-icon share-platform-icon--stroke" viewBox="0 0 24 24"
+                                                        aria-hidden="true" focusable="false">
+                                                        <path d="M5 4 19 20" />
+                                                        <path d="M19 4 5 20" />
+                                                    </svg>
                                                 </a>
 
                                                 <button type="button" class="product-detail-share-row__item is-copy"
                                                     data-product-detail-copy-share="{{ $productShareUrl }}"
-                                                    aria-label="{{ $isArabic ? 'نسخ رابط المنتج' : 'Copy product link' }}">
-                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path
-                                                            d="M10.59 13.41a1 1 0 0 1 0-1.41l2.83-2.83a3 3 0 0 1 4.24 4.24l-2.12 2.12a3 3 0 0 1-4.24 0 1 1 0 1 1 1.41-1.41 1 1 0 0 0 1.41 0l2.12-2.12a1 1 0 1 0-1.41-1.41L12 13.41a1 1 0 0 1-1.41 0Z"
-                                                            fill="currentColor" />
+                                                    aria-label="{{ $isArabic ? 'نسخ رابط المنتج' : 'Copy product link' }}"
+                                                    title="{{ $isArabic ? 'نسخ الرابط' : 'Copy link' }}">
+                                                    <svg class="share-platform-icon share-platform-icon--stroke" viewBox="0 0 24 24"
+                                                        aria-hidden="true" focusable="false">
+                                                        <path d="M10.6 13.4a4 4 0 0 0 5.66.06l2.2-2.2a4 4 0 1 0-5.66-5.66l-1.27 1.27" />
+                                                        <path d="M13.4 10.6a4 4 0 0 0-5.66-.06l-2.2 2.2a4 4 0 1 0 5.66 5.66l1.27-1.27" />
                                                     </svg>
-                                                    <span>{{ $isArabic ? 'نسخ الرابط' : 'Copy link' }}</span>
                                                 </button>
                                             </div>
-                                            <div class="product-detail-share-row__url" dir="ltr">{{ $productShareUrl }}</div>
+
+                                            <span class="product-detail-share-row__hint" data-product-detail-copy-status aria-live="polite">
+                                                {{ $isArabic ? 'تم نسخ الرابط' : 'Link copied' }}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
