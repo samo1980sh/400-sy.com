@@ -374,12 +374,24 @@
 
             scope.$thumbSlides.each(function () {
                 var $slide = $(this);
-                $slide.css('display', belongsToSelectedColor($slide) ? '' : 'none');
+                var isSelectedColor = belongsToSelectedColor($slide);
+
+                $slide
+                    .css('display', isSelectedColor ? '' : 'none')
+                    .attr('aria-hidden', isSelectedColor ? 'false' : 'true');
             });
 
             scope.$mainSlides.each(function () {
                 var $slide = $(this);
-                $slide.css('display', belongsToSelectedColor($slide) ? '' : 'none');
+                var isSelectedColor = belongsToSelectedColor($slide);
+
+                $slide
+                    .css('display', isSelectedColor ? '' : 'none')
+                    .attr('aria-hidden', isSelectedColor ? 'false' : 'true');
+
+                $slide.find('a.item')
+                    .attr('data-detail-lightbox-active', isSelectedColor ? '1' : '0')
+                    .attr('tabindex', isSelectedColor ? '0' : '-1');
             });
 
             initScopedGallery();
@@ -1151,7 +1163,7 @@
 
         productDetailLightbox = new PhotoSwipeLightbox({
             gallery: galleryElement,
-            children: 'a.item',
+            children: 'a.item[data-detail-lightbox-active="1"]',
             pswpModule: PhotoSwipe,
             bgOpacity: 1,
             secondaryZoomLevel: 2,
