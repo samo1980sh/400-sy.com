@@ -8,6 +8,12 @@
     $shippingName = app()->getLocale() === 'ar'
         ? ($order->shippingMethod?->name_ar ?: $order->shippingMethod?->name_en)
         : ($order->shippingMethod?->name_en ?: $order->shippingMethod?->name_ar);
+    $hasPartialApproval = $order->items->contains(
+        fn ($item): bool => $item->approved_quantity !== null
+            && (int) $item->approved_quantity < (int) $item->quantity
+    );
+    $hasAdjustedTotal = $order->requested_total !== null
+        && abs((float) $order->requested_total - (float) $order->total) > 0.009;
 @endphp
 
 @section('account_content')
@@ -25,6 +31,13 @@
         </div>
     </div>
 
+    @if ($hasPartialApproval)
+        <div class="alert alert-warning mb_24" role="alert">
+            <strong>{{ __('front.account.partial_approval_title') }}</strong>
+            <div class="mt_4">{{ __('front.account.partial_approval_message') }}</div>
+        </div>
+    @endif
+
     <div class="account-card mb_24">
         <h5 class="account-card-title">{{ __('front.account.ordered_items') }}</h5>
         <div class="account-table-wrap">
@@ -34,7 +47,8 @@
                     <th>{{ __('front.account.product') }}</th>
                     <th>{{ __('front.products.color') }}</th>
                     <th>{{ __('front.products.size') }}</th>
-                    <th>{{ __('front.account.quantity') }}</th>
+                    <th>{{ __('front.account.requested_quantity') }}</th>
+                    <th>{{ __('front.account.approved_quantity') }}</th>
                     <th>{{ __('front.account.unit_price') }}</th>
                     <th>{{ __('front.account.total') }}</th>
                 </tr>
@@ -55,6 +69,13 @@
                         <td>{{ $item->color_name_snapshot ?: '—' }}</td>
                         <td>{{ $item->size_name_snapshot ?: '—' }}</td>
                         <td>{{ $item->quantity }}</td>
+                        <td>
+                            @if ($item->approved_quantity === null)
+                                <span class="text-muted">{{ __('front.account.awaiting_approval') }}</span>
+                            @else
+                                <strong>{{ $item->approved_quantity }}</strong>
+                            @endif
+                        </td>
                         <td><span class="js-currency-price" data-base-price="{{ (float) $item->unit_price }}" data-base-currency="{{ $currency }}">{{ number_format((float) $item->unit_price, 0) }} {{ $currency }}</span></td>
                         <td><span class="js-currency-price" data-base-price="{{ (float) $item->line_total }}" data-base-currency="{{ $currency }}">{{ number_format((float) $item->line_total, 0) }} {{ $currency }}</span></td>
                     </tr>
@@ -79,12 +100,18 @@
         <div class="col-lg-5">
             <div class="account-card h-100">
                 <h5 class="account-card-title">{{ __('front.account.order_summary') }}</h5>
-                <div class="d-flex justify-content-between gap-3 mb_10"><span>{{ __('front.cart.subtotal') }}</span><strong class="js-currency-price" data-base-price="{{ (float) $order->total_before_discount }}" data-base-currency="{{ $currency }}">{{ number_format((float) $order->total_before_discount, 0) }} {{ $currency }}</strong></div>
+                @if ($hasAdjustedTotal && $order->requested_total_before_discount !== null)
+                    <div class="d-flex justify-content-between gap-3 mb_10 text-muted"><span>{{ __('front.account.requested_subtotal') }}</span><span class="js-currency-price text-decoration-line-through" data-base-price="{{ (float) $order->requested_total_before_discount }}" data-base-currency="{{ $currency }}">{{ number_format((float) $order->requested_total_before_discount, 0) }} {{ $currency }}</span></div>
+                @endif
+                <div class="d-flex justify-content-between gap-3 mb_10"><span>{{ $hasAdjustedTotal ? __('front.account.approved_subtotal') : __('front.cart.subtotal') }}</span><strong class="js-currency-price" data-base-price="{{ (float) $order->total_before_discount }}" data-base-currency="{{ $currency }}">{{ number_format((float) $order->total_before_discount, 0) }} {{ $currency }}</strong></div>
                 @if ((float) $order->discount_value > 0 || (float) $order->coupon_discount_value > 0)
                     <div class="d-flex justify-content-between gap-3 mb_10"><span>{{ __('front.account.discount') }}</span><strong>-{{ number_format((float) $order->discount_value + (float) $order->coupon_discount_value, 0) }} {{ $currency }}</strong></div>
                 @endif
                 <div class="d-flex justify-content-between gap-3 mb_10"><span>{{ __('front.checkout.shipping_cost') }}</span><strong class="js-currency-price" data-base-price="{{ (float) $order->shipping_cost }}" data-base-currency="{{ $currency }}">{{ number_format((float) $order->shipping_cost, 0) }} {{ $currency }}</strong></div>
-                <div class="d-flex justify-content-between gap-3 pt_14 border-top fs-5"><span>{{ __('front.checkout.grand_total') }}</span><strong class="js-currency-price" data-base-price="{{ (float) $order->total }}" data-base-currency="{{ $currency }}">{{ number_format((float) $order->total, 0) }} {{ $currency }}</strong></div>
+                @if ($hasAdjustedTotal)
+                    <div class="d-flex justify-content-between gap-3 mb_10 text-muted"><span>{{ __('front.account.requested_total') }}</span><span class="js-currency-price text-decoration-line-through" data-base-price="{{ (float) $order->requested_total }}" data-base-currency="{{ $currency }}">{{ number_format((float) $order->requested_total, 0) }} {{ $currency }}</span></div>
+                @endif
+                <div class="d-flex justify-content-between gap-3 pt_14 border-top fs-5"><span>{{ $hasAdjustedTotal ? __('front.account.approved_total') : __('front.checkout.grand_total') }}</span><strong class="js-currency-price" data-base-price="{{ (float) $order->total }}" data-base-currency="{{ $currency }}">{{ number_format((float) $order->total, 0) }} {{ $currency }}</strong></div>
             </div>
         </div>
     </div>

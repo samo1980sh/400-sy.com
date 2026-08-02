@@ -36,6 +36,8 @@ class Order extends Model
         'branch',
         'is_gift',
         'gift_message',
+        'requested_total_before_discount',
+        'requested_total',
         'total_before_discount',
         'discount_value',
         'coupon_discount_value',
@@ -52,6 +54,8 @@ class Order extends Model
 
     protected $casts = [
         'is_gift' => 'boolean',
+        'requested_total_before_discount' => 'decimal:2',
+        'requested_total' => 'decimal:2',
         'total_before_discount' => 'decimal:2',
         'discount_value' => 'decimal:2',
         'coupon_discount_value' => 'decimal:2',

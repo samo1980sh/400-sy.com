@@ -1,6 +1,8 @@
 @extends('frontend.pages.account.base')
 
-@php($accountCurrency = session('selectedCurrency') ?? 'SYP')
+@php
+    $accountCurrency = session('selectedCurrency') ?? 'SYP';
+@endphp
 
 @section('account_content')
     <div class="account-card">
@@ -33,7 +35,23 @@
                             <td>{{ $order->items_count }}</td>
                             <td><span class="account-badge">{{ __('front.account.order_status.' . $order->status) }}</span></td>
                             <td><span class="account-badge {{ $order->payment_status === 'paid' ? 'is-success' : 'is-warning' }}">{{ __('front.account.payment_statuses.' . $order->payment_status) }}</span></td>
-                            <td><span class="js-currency-price" data-base-price="{{ (float) $order->total }}" data-base-currency="{{ $accountCurrency }}">{{ number_format((float) $order->total, 0) }} {{ $accountCurrency }}</span></td>
+                            <td>
+                                @php
+                                    $requestedTotal = $order->requested_total;
+                                    $hasApprovedTotal = $requestedTotal !== null
+                                        && abs((float) $requestedTotal - (float) $order->total) > 0.009;
+                                @endphp
+                                @if ($hasApprovedTotal)
+                                    <div class="fw-7">
+                                        <span class="js-currency-price" data-base-price="{{ (float) $order->total }}" data-base-currency="{{ $accountCurrency }}">{{ number_format((float) $order->total, 0) }} {{ $accountCurrency }}</span>
+                                    </div>
+                                    <small class="text-muted text-decoration-line-through">
+                                        <span class="js-currency-price" data-base-price="{{ (float) $requestedTotal }}" data-base-currency="{{ $accountCurrency }}">{{ number_format((float) $requestedTotal, 0) }} {{ $accountCurrency }}</span>
+                                    </small>
+                                @else
+                                    <span class="js-currency-price" data-base-price="{{ (float) $order->total }}" data-base-currency="{{ $accountCurrency }}">{{ number_format((float) $order->total, 0) }} {{ $accountCurrency }}</span>
+                                @endif
+                            </td>
                             <td><a href="{{ route('front.account.orders.show', $order->order_no) }}" class="text-decoration-underline">{{ __('front.account.details') }}</a></td>
                         </tr>
                     @endforeach

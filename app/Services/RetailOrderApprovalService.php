@@ -2,10 +2,14 @@
 
 namespace App\Services;
 
+use App\Mail\RetailOrderApprovedMail;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use RuntimeException;
+use Throwable;
 
 final class RetailOrderApprovalService
 {
@@ -204,7 +208,35 @@ final class RetailOrderApprovalService
 
         app(CustomerLoyaltyService::class)->syncForOrder($approvedOrder);
 
-        return $approvedOrder->refresh();
+        $approvedOrder = $approvedOrder->refresh();
+        $this->notifyCustomer($approvedOrder);
+
+        return $approvedOrder;
+    }
+
+    private function notifyCustomer(Order $order): void
+    {
+        $order->loadMissing(['items', 'customer']);
+
+        $email = trim((string) (
+            $order->customer_email_snapshot
+            ?: $order->customer?->email
+        ));
+
+        if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            return;
+        }
+
+        try {
+            Mail::to($email)->send(new RetailOrderApprovedMail($order));
+        } catch (Throwable $exception) {
+            Log::warning('Retail order approval email could not be sent.', [
+                'order_id' => $order->getKey(),
+                'order_no' => $order->order_no,
+                'email' => $email,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function scaledDiscount(
