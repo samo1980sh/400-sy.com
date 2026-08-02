@@ -1824,7 +1824,16 @@ class RetailExcelImportService
 
     private function ensureImportedProductSlug(Product $product, string $code): void
     {
-        $slug = $this->generateUniqueImportedProductSlug($code, $product->getKey());
+        $slug = Product::slugFromModelCode($code);
+
+        $conflictExists = Product::query()
+            ->whereKeyNot($product->getKey())
+            ->where('slug', $slug)
+            ->exists();
+
+        if ($conflictExists) {
+            throw new \RuntimeException("Cannot assign product URL '{$slug}' because another product code resolves to the same URL.");
+        }
 
         if ($product->slug === $slug) {
             return;
@@ -1833,27 +1842,6 @@ class RetailExcelImportService
         $product->forceFill([
             'slug' => $slug,
         ])->saveQuietly();
-    }
-
-    private function generateUniqueImportedProductSlug(string $source, ?int $ignoreId = null): string
-    {
-        $baseSlug = Str::slug(trim($source));
-        $baseSlug = $baseSlug !== '' ? $baseSlug : 'product';
-
-        $slug = $baseSlug;
-        $counter = 2;
-
-        while (
-            Product::query()
-                ->when($ignoreId !== null, fn ($query) => $query->whereKeyNot($ignoreId))
-                ->where('slug', $slug)
-                ->exists()
-        ) {
-            $slug = $baseSlug . '-' . $counter;
-            $counter++;
-        }
-
-        return $slug;
     }
 
     public function joinDescription(array $parts): ?string

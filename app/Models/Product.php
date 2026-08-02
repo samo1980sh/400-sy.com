@@ -201,34 +201,20 @@ class Product extends Model
         });
 
         static::creating(function (self $product): void {
-            if (blank($product->slug)) {
-                $product->slug = static::generateUniqueSlug($product->title_ar ?: $product->model_no);
-            }
+            $product->slug = static::slugFromModelCode($product->model_no);
         });
 
         static::updating(function (self $product): void {
-            if (blank($product->slug)) {
-                $product->slug = static::generateUniqueSlug($product->title_ar ?: $product->model_no, $product->getKey());
-            }
+            $product->slug = static::slugFromModelCode($product->model_no);
         });
     }
 
-    protected static function generateUniqueSlug(string $title, ?int $ignoreId = null): string
+    public static function slugFromModelCode(?string $modelNo): string
     {
-        $baseSlug = Str::slug($title);
-        $slug = $baseSlug !== '' ? $baseSlug : 'product';
-        $counter = 1;
+        $slug = Str::slug(trim((string) $modelNo));
 
-        while (
-            static::query()
-                ->when($ignoreId !== null, fn ($query) => $query->whereKeyNot($ignoreId))
-                ->where('slug', $slug)
-                ->exists()
-        ) {
-            $counter++;
-            $slug = $baseSlug !== ''
-                ? $baseSlug . '-' . $counter
-                : 'product-' . $counter;
+        if ($slug === '') {
+            throw new \InvalidArgumentException('Product model code is required to generate the product URL.');
         }
 
         return $slug;
