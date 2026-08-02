@@ -20,12 +20,18 @@ class FrontCustomerRegisterRequest extends FormRequest
         $mobile = $this->normalizeMobileInput((string) $this->input('mobile', ''));
         $secondaryMobile = $this->normalizeMobileInput((string) $this->input('secondary_mobile', ''));
 
+        $nationalityChoice = trim((string) $this->input('nationality_choice', $this->input('nationality', '')));
+        $nationality = $nationalityChoice === 'other'
+            ? trim((string) $this->input('nationality', ''))
+            : $nationalityChoice;
+
         $this->merge([
             'name' => trim((string) $this->input('name', '')),
             'mobile' => $mobile,
             'secondary_mobile' => $secondaryMobile !== '' ? $secondaryMobile : null,
             'email' => mb_strtolower(trim((string) $this->input('email', ''))),
-            'nationality' => filled($this->input('nationality')) ? trim((string) $this->input('nationality')) : null,
+            'nationality_choice' => $nationalityChoice,
+            'nationality' => $nationality !== '' ? $nationality : null,
             'gender' => filled($this->input('gender')) ? trim((string) $this->input('gender')) : null,
             'city' => filled($this->input('city')) ? trim((string) $this->input('city')) : null,
             'area' => filled($this->input('area')) ? trim((string) $this->input('area')) : null,
@@ -39,6 +45,23 @@ class FrontCustomerRegisterRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'min:5', 'max:255', 'regex:/^\S+\s+\S+\s+\S+/u'],
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
+            'nationality_choice' => [
+                'required',
+                'string',
+                Rule::in([
+                    'syrian',
+                    'egyptian',
+                    'jordanian',
+                    'iraqi',
+                    'lebanese',
+                    'palestinian',
+                    'saudi',
+                    'emirati',
+                    'kuwaiti',
+                    'qatari',
+                    'other',
+                ]),
+            ],
             'nationality' => ['required', 'string', 'max:255'],
             'mobile' => ['required', 'string', 'size:9', 'regex:/^9[0-9]{8}$/', Rule::unique('customers', 'mobile')],
             'gender' => ['required', 'string', Rule::in(['male', 'female'])],
@@ -57,7 +80,8 @@ class FrontCustomerRegisterRequest extends FormRequest
         return [
             'name' => __('front.auth.full_name'),
             'birth_date' => __('front.auth.birth_date'),
-            'nationality' => __('front.auth.nationality'),
+            'nationality_choice' => __('front.auth.nationality'),
+            'nationality' => __('front.auth.other_nationality'),
             'mobile' => __('front.auth.mobile_number'),
             'gender' => __('front.auth.gender'),
             'city' => __('front.auth.city'),

@@ -34,6 +34,59 @@
             .customer-register-submit { width: 100%; min-width: 0; }
         }
     </style>
+    {{-- NOTE 22 AUTH R1: inline validation styles --}}
+    <style>
+        #login .tf-field.has-error .tf-field-label,
+        #activateAccount .tf-field.has-error .tf-field-label,
+        #forgotPassword .tf-field.has-error .tf-field-label {
+            color: #b42318;
+        }
+
+        #login .tf-field-input.is-invalid,
+        #activateAccount .tf-field-input.is-invalid,
+        #forgotPassword .tf-field-input.is-invalid {
+            border-color: #d92d20 !important;
+            box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.10);
+        }
+
+        #login .tf-field-input.is-invalid:focus,
+        #activateAccount .tf-field-input.is-invalid:focus,
+        #forgotPassword .tf-field-input.is-invalid:focus {
+            border-color: #b42318 !important;
+            box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.14);
+        }
+
+        #login .customer-auth-inline-error,
+        #activateAccount .customer-auth-inline-error,
+        #forgotPassword .customer-auth-inline-error {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin-top: 7px;
+            color: #b42318;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        #login .customer-auth-inline-error::before,
+        #activateAccount .customer-auth-inline-error::before,
+        #forgotPassword .customer-auth-inline-error::before {
+            content: '!';
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 16px;
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+            border: 1px solid currentColor;
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1;
+        }
+    </style>
 <div class="modal modalCentered fade form-sign-in modal-part-content" id="login" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -100,6 +153,55 @@
         </div>
     </div>
 
+    {{-- NOTE 22 R5: custom registration validation styles --}}
+    <style>
+        #register .customer-register-field.has-error .customer-register-label {
+            color: #b42318;
+        }
+
+        #register .customer-register-control.is-invalid {
+            border-color: #d92d20 !important;
+            box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.10);
+        }
+
+        #register .customer-register-control.is-invalid:focus {
+            border-color: #b42318 !important;
+            box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.14);
+        }
+
+        #register .customer-register-error {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin-top: 7px;
+            color: #b42318;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        #register .customer-register-error::before {
+            content: '!';
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 16px;
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+            border: 1px solid currentColor;
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        #register .customer-register-required {
+            display: inline-block;
+            margin-inline-start: 3px;
+            color: #d92d20;
+        }
+    </style>
     <div class="modal modalCentered fade form-sign-in modal-part-content customer-register-modal" id="register" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -108,7 +210,20 @@
                     <span class="icon-close icon-close-popup" data-bs-dismiss="modal"></span>
                 </div>
                 <div class="tf-login-form">
-                    <form method="POST" action="{{ route('front.customer.register') }}">
+                    <form
+                            id="customer-register-form"
+                            method="POST"
+                            action="{{ route('front.customer.register') }}"
+                            novalidate
+                            data-validation-required="{{ __('front.auth.validation_required') }}"
+                            data-validation-select-required="{{ __('front.auth.validation_select_required') }}"
+                            data-validation-invalid="{{ __('front.auth.validation_invalid') }}"
+                            data-validation-name="{{ __('front.auth.full_name_three_parts') }}"
+                            data-validation-email="{{ __('front.auth.validation_email_invalid') }}"
+                            data-validation-mobile="{{ __('front.auth.validation_mobile_invalid') }}"
+                            data-validation-password-min="{{ __('front.auth.validation_password_min') }}"
+                            data-validation-password-mismatch="{{ __('front.auth.validation_password_mismatch') }}"
+                        >
                         @csrf
 
                         @if ($errors->customerRegister->any())
@@ -122,6 +237,8 @@
 
                         @php
                             $nationalityOptions = ['syrian', 'egyptian', 'jordanian', 'iraqi', 'lebanese', 'palestinian', 'saudi', 'emirati', 'kuwaiti', 'qatari', 'other'];
+                            $selectedNationality = old('nationality_choice', old('nationality'));
+                            $otherNationality = $selectedNationality === 'other' ? old('nationality') : '';
                             $maritalStatusOptions = ['single', 'married', 'divorced', 'widowed'];
                         @endphp
 
@@ -138,12 +255,46 @@
 
                             <div class="customer-register-field">
                                 <label class="customer-register-label" for="register_nationality">{{ __('front.auth.nationality') }}<span class="customer-register-required">*</span></label>
-                                <select id="register_nationality" class="customer-register-control" name="nationality" required>
+                                <select
+                                    id="register_nationality"
+                                    class="customer-register-control"
+                                    name="nationality_choice"
+                                    required
+                                    onchange="
+                                        const field = document.getElementById('register_other_nationality_field');
+                                        const input = document.getElementById('register_other_nationality');
+                                        const isOther = this.value === 'other';
+                                        field.hidden = !isOther;
+                                        input.disabled = !isOther;
+                                        input.required = isOther;
+                                        if (! isOther) input.value = '';
+                                    "
+                                >
                                     <option value="">{{ __('front.auth.select_nationality') }}</option>
                                     @foreach ($nationalityOptions as $nationality)
-                                        <option value="{{ $nationality }}" @selected(old('nationality') === $nationality)>{{ __('front.auth.nationalities.' . $nationality) }}</option>
+                                        <option value="{{ $nationality }}" @selected($selectedNationality === $nationality)>{{ __('front.auth.nationalities.' . $nationality) }}</option>
                                     @endforeach
                                 </select>
+                            </div>
+
+                            <div
+                                id="register_other_nationality_field"
+                                class="customer-register-field"
+                                @if ($selectedNationality !== 'other') hidden @endif
+                            >
+                                <label class="customer-register-label" for="register_other_nationality">{{ __('front.auth.other_nationality') }}<span class="customer-register-required">*</span></label>
+                                <input
+                                    id="register_other_nationality"
+                                    class="customer-register-control"
+                                    type="text"
+                                    name="nationality"
+                                    value="{{ $otherNationality }}"
+                                    placeholder="{{ __('front.auth.other_nationality_placeholder') }}"
+                                    maxlength="255"
+                                    autocomplete="country-name"
+                                    @disabled($selectedNationality !== 'other')
+                                    @required($selectedNationality === 'other')
+                                >
                             </div>
 
                             <div class="customer-register-field">
@@ -191,7 +342,7 @@
                             </div>
 
                             <div class="customer-register-field full-width">
-                                <label class="customer-register-label" for="register_email">{{ __('customer_auth.email_required') }}<span class="customer-register-required">*</span></label>
+                                <label class="customer-register-label" for="register_email">{{ __('customer_auth.email') }}<span class="customer-register-required">*</span></label>
                                 <input id="register_email" class="customer-register-control" type="email" name="email" value="{{ old('email') }}" placeholder="{{ __('front.auth.email_placeholder') }}" autocomplete="email" dir="ltr" required>
                             </div>
 
@@ -236,6 +387,207 @@
         </div>
     </div>
 
+    {{-- NOTE 22 R5: custom registration validation behavior --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('customer-register-form');
+
+            if (! form || form.dataset.note22ValidationReady === '1') {
+                return;
+            }
+
+            form.dataset.note22ValidationReady = '1';
+
+            const nationalitySelect = document.getElementById('register_nationality');
+            const otherNationalityField = document.getElementById('register_other_nationality_field');
+            const otherNationalityInput = document.getElementById('register_other_nationality');
+            const passwordInput = document.getElementById('register_password');
+            const passwordConfirmationInput = document.getElementById('register_password_confirmation');
+            const controls = Array.from(form.querySelectorAll('.customer-register-control'));
+            const serverErrors = @json($errors->customerRegister->toArray());
+            let submittedOnce = Object.keys(serverErrors || {}).length > 0;
+
+            const isVisible = function (control) {
+                return ! control.disabled && ! control.hidden && control.offsetParent !== null;
+            };
+
+            const clearError = function (control) {
+                const wrapper = control.closest('.customer-register-field');
+                const errorId = control.id ? control.id + '_error' : '';
+
+                control.classList.remove('is-invalid');
+                control.removeAttribute('aria-invalid');
+
+                if (errorId && control.getAttribute('aria-describedby') === errorId) {
+                    control.removeAttribute('aria-describedby');
+                }
+
+                if (wrapper) {
+                    wrapper.classList.remove('has-error');
+                    const error = wrapper.querySelector('.customer-register-error[data-control-id="' + control.id + '"]');
+                    if (error) {
+                        error.remove();
+                    }
+                }
+            };
+
+            const showError = function (control, message) {
+                const wrapper = control.closest('.customer-register-field');
+
+                if (! wrapper || ! message) {
+                    return;
+                }
+
+                clearError(control);
+
+                const error = document.createElement('div');
+                error.className = 'customer-register-error';
+                error.dataset.controlId = control.id;
+                error.id = control.id + '_error';
+                error.setAttribute('role', 'alert');
+                error.textContent = message;
+
+                wrapper.classList.add('has-error');
+                control.classList.add('is-invalid');
+                control.setAttribute('aria-invalid', 'true');
+                control.setAttribute('aria-describedby', error.id);
+                wrapper.appendChild(error);
+            };
+
+            const validationMessage = function (control) {
+                if (! isVisible(control)) {
+                    return '';
+                }
+
+                const value = String(control.value || '').trim();
+
+                if (control.required && value === '') {
+                    return control.tagName === 'SELECT'
+                        ? form.dataset.validationSelectRequired
+                        : form.dataset.validationRequired;
+                }
+
+                if (control.name === 'name' && value !== '' && ! /^\S+\s+\S+\s+\S+/u.test(value)) {
+                    return form.dataset.validationName;
+                }
+
+                if ((control.name === 'mobile' || control.name === 'secondary_mobile') && value !== '' && ! /^9[0-9]{8}$/.test(value)) {
+                    return form.dataset.validationMobile;
+                }
+
+                if (control.type === 'email' && value !== '' && ! control.validity.valid) {
+                    return form.dataset.validationEmail;
+                }
+
+                if (control.name === 'password' && value !== '' && value.length < 8) {
+                    return form.dataset.validationPasswordMin;
+                }
+
+                if (control.name === 'password_confirmation' && value !== '' && passwordInput && value !== passwordInput.value) {
+                    return form.dataset.validationPasswordMismatch;
+                }
+
+                if (! control.validity.valid) {
+                    return form.dataset.validationInvalid;
+                }
+
+                return '';
+            };
+
+            const validateControl = function (control) {
+                const message = validationMessage(control);
+
+                if (message) {
+                    showError(control, message);
+                    return false;
+                }
+
+                clearError(control);
+                return true;
+            };
+
+            const syncOtherNationality = function () {
+                if (! nationalitySelect || ! otherNationalityField || ! otherNationalityInput) {
+                    return;
+                }
+
+                const isOther = nationalitySelect.value === 'other';
+                otherNationalityField.hidden = ! isOther;
+                otherNationalityInput.disabled = ! isOther;
+                otherNationalityInput.required = isOther;
+
+                if (! isOther) {
+                    otherNationalityInput.value = '';
+                    clearError(otherNationalityInput);
+                }
+            };
+
+            if (nationalitySelect) {
+                nationalitySelect.addEventListener('change', function () {
+                    syncOtherNationality();
+                    if (submittedOnce) {
+                        validateControl(nationalitySelect);
+                        if (otherNationalityInput && ! otherNationalityInput.disabled) {
+                            validateControl(otherNationalityInput);
+                        }
+                    }
+                });
+            }
+
+            controls.forEach(function (control) {
+                const eventName = control.tagName === 'SELECT' || control.type === 'date' ? 'change' : 'input';
+
+                control.addEventListener(eventName, function () {
+                    if (submittedOnce || control.classList.contains('is-invalid')) {
+                        validateControl(control);
+                    }
+
+                    if (control === passwordInput && passwordConfirmationInput && passwordConfirmationInput.value !== '') {
+                        validateControl(passwordConfirmationInput);
+                    }
+                });
+
+                control.addEventListener('blur', function () {
+                    if (submittedOnce) {
+                        validateControl(control);
+                    }
+                });
+            });
+
+            form.addEventListener('submit', function (event) {
+                submittedOnce = true;
+                syncOtherNationality();
+
+                let firstInvalid = null;
+
+                controls.forEach(function (control) {
+                    if (! validateControl(control) && ! firstInvalid) {
+                        firstInvalid = control;
+                    }
+                });
+
+                if (! firstInvalid) {
+                    return;
+                }
+
+                event.preventDefault();
+                firstInvalid.focus({ preventScroll: true });
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+
+            syncOtherNationality();
+
+            Object.entries(serverErrors || {}).forEach(function ([name, messages]) {
+                const control = form.elements.namedItem(name);
+                if (! control || ! control.id || ! isVisible(control)) {
+                    return;
+                }
+
+                const message = Array.isArray(messages) ? messages[0] : String(messages || '');
+                showError(control, message);
+            });
+        });
+    </script>
     <div class="modal modalCentered fade form-sign-in modal-part-content" id="activateAccount" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -393,6 +745,208 @@
         </div>
     </div>
 
+    {{-- NOTE 22 AUTH R1: inline validation behavior --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const messages = {
+                required: @json(__('front.auth.validation_required')),
+                invalid: @json(__('front.auth.validation_invalid')),
+                email: @json(__('front.auth.validation_email_invalid')),
+                code: @json(__('front.auth.validation_code')),
+                passwordMin: @json(__('front.auth.validation_password_min')),
+                passwordMismatch: @json(__('front.auth.validation_password_mismatch')),
+            };
+
+            const groups = [
+                { modalId: 'login', formIndex: 0, errors: @json($errors->customerLogin->toArray()) },
+                { modalId: 'activateAccount', formIndex: 0, errors: @json($errors->customerActivationCode->toArray()) },
+                { modalId: 'activateAccount', formIndex: 1, errors: @json($errors->customerActivate->toArray()) },
+                { modalId: 'forgotPassword', formIndex: 0, errors: @json($errors->customerPasswordResetCode->toArray()) },
+                { modalId: 'forgotPassword', formIndex: 1, errors: @json($errors->customerForgotPassword->toArray()) },
+            ];
+
+            const isUsable = function (control) {
+                return ! control.disabled
+                    && control.type !== 'hidden'
+                    && ! control.hidden
+                    && ! control.closest('[hidden]');
+            };
+
+            const setupForm = function (group) {
+                const modal = document.getElementById(group.modalId);
+                if (! modal) {
+                    return;
+                }
+
+                const forms = modal.querySelectorAll('form');
+                const form = forms[group.formIndex];
+                if (! form || form.dataset.note22AuthValidationReady === '1') {
+                    return;
+                }
+
+                form.dataset.note22AuthValidationReady = '1';
+                form.noValidate = true;
+
+                const controls = Array.from(form.querySelectorAll('input, select, textarea'))
+                    .filter(isUsable);
+                let submittedOnce = Object.keys(group.errors || {}).length > 0;
+
+                controls.forEach(function (control, index) {
+                    if (! control.id) {
+                        const safeName = String(control.name || 'field').replace(/[^a-zA-Z0-9_-]/g, '-');
+                        control.id = 'auth-' + group.modalId + '-' + group.formIndex + '-' + safeName + '-' + index;
+                    }
+                });
+
+                const clearError = function (control) {
+                    const wrapper = control.closest('.tf-field');
+                    const errorId = control.id + '_error';
+
+                    control.classList.remove('is-invalid');
+                    control.removeAttribute('aria-invalid');
+
+                    if (control.getAttribute('aria-describedby') === errorId) {
+                        control.removeAttribute('aria-describedby');
+                    }
+
+                    if (wrapper) {
+                        wrapper.classList.remove('has-error');
+                        const error = wrapper.querySelector('.customer-auth-inline-error[data-control-id="' + control.id + '"]');
+                        if (error) {
+                            error.remove();
+                        }
+                    }
+                };
+
+                const showError = function (control, message) {
+                    const wrapper = control.closest('.tf-field');
+                    if (! wrapper || ! message) {
+                        return;
+                    }
+
+                    clearError(control);
+
+                    const error = document.createElement('div');
+                    error.className = 'customer-auth-inline-error';
+                    error.dataset.controlId = control.id;
+                    error.id = control.id + '_error';
+                    error.setAttribute('role', 'alert');
+                    error.textContent = message;
+
+                    wrapper.classList.add('has-error');
+                    control.classList.add('is-invalid');
+                    control.setAttribute('aria-invalid', 'true');
+                    control.setAttribute('aria-describedby', error.id);
+                    wrapper.appendChild(error);
+                };
+
+                const validationMessage = function (control) {
+                    if (! isUsable(control)) {
+                        return '';
+                    }
+
+                    const value = String(control.value || '').trim();
+
+                    if (control.required && value === '') {
+                        return messages.required;
+                    }
+
+                    if (control.type === 'email' && value !== '' && ! control.validity.valid) {
+                        return messages.email;
+                    }
+
+                    if (control.name === 'code' && value !== '' && ! /^[0-9]{6}$/.test(value)) {
+                        return messages.code;
+                    }
+
+                    if (control.name === 'password' && control.autocomplete === 'new-password' && value !== '' && value.length < 8) {
+                        return messages.passwordMin;
+                    }
+
+                    if (control.name === 'password_confirmation' && value !== '') {
+                        const password = form.querySelector('[name="password"]');
+                        if (password && value !== password.value) {
+                            return messages.passwordMismatch;
+                        }
+                    }
+
+                    if (! control.validity.valid) {
+                        return messages.invalid;
+                    }
+
+                    return '';
+                };
+
+                const validateControl = function (control) {
+                    const message = validationMessage(control);
+
+                    if (message) {
+                        showError(control, message);
+                        return false;
+                    }
+
+                    clearError(control);
+                    return true;
+                };
+
+                controls.forEach(function (control) {
+                    const eventName = control.tagName === 'SELECT' ? 'change' : 'input';
+
+                    control.addEventListener(eventName, function () {
+                        if (submittedOnce || control.classList.contains('is-invalid')) {
+                            validateControl(control);
+                        }
+
+                        if (control.name === 'password') {
+                            const confirmation = form.querySelector('[name="password_confirmation"]');
+                            if (confirmation && confirmation.value !== '') {
+                                validateControl(confirmation);
+                            }
+                        }
+                    });
+
+                    control.addEventListener('blur', function () {
+                        if (submittedOnce) {
+                            validateControl(control);
+                        }
+                    });
+                });
+
+                form.addEventListener('submit', function (event) {
+                    submittedOnce = true;
+                    let firstInvalid = null;
+
+                    controls.forEach(function (control) {
+                        if (! validateControl(control) && ! firstInvalid) {
+                            firstInvalid = control;
+                        }
+                    });
+
+                    if (! firstInvalid) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    firstInvalid.focus({ preventScroll: true });
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+
+                Object.entries(group.errors || {}).forEach(function ([name, errorMessages]) {
+                    const control = form.elements.namedItem(name);
+                    if (! control || ! control.id || ! isUsable(control)) {
+                        return;
+                    }
+
+                    const message = Array.isArray(errorMessages)
+                        ? errorMessages[0]
+                        : String(errorMessages || '');
+                    showError(control, message);
+                });
+            };
+
+            groups.forEach(setupForm);
+        });
+    </script>
     @if (session('auth_modal'))
         <script>
             document.addEventListener('DOMContentLoaded', function () {
