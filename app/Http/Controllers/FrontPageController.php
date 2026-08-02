@@ -587,10 +587,29 @@ $effectiveCategoryIds = $selectedCategoryModels->isNotEmpty()
             : collect();
 
         return $relatedModels
-            ->take(8)
+            ->filter(fn (Product $related): bool => $this->relatedProductHasAvailableStock($related))
+            ->take(5)
             ->map(fn (Product $related): array => $this->homePageData->presentProduct($related, $locale))
             ->values()
             ->all();
+    }
+
+    protected function relatedProductHasAvailableStock(Product $product): bool
+    {
+        $variants = $product->relationLoaded('variants')
+            ? $product->variants
+            : $product->variants()
+                ->whereHas('productColor', fn ($query) => $query->where('status', 'active'))
+                ->get();
+
+        if ($variants->isEmpty()) {
+            return true;
+        }
+
+        return $variants->contains(
+            fn (ProductVariant $variant): bool => $variant->status === 'active'
+                && (int) $variant->quantity > 0,
+        );
     }
 
 
