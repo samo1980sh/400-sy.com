@@ -25,6 +25,7 @@ class ProductVariant extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'compare_price' => 'decimal:2',
+        'quantity' => 'integer',
         'is_default' => 'boolean',
     ];
 

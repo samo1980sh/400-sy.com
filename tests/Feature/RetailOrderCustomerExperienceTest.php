@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Mail\RetailOrderApprovedMail;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\RetailOrderApprovalService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Mail;
@@ -40,7 +42,11 @@ class RetailOrderCustomerExperienceTest extends TestCase
             'customer_email_snapshot' => 'customer@example.com',
         ]);
 
+        [$product, $variant] = $this->productWithVariant(5);
+
         $item = $order->items()->create([
+            'product_id' => $product->getKey(),
+            'product_variant_id' => $variant->getKey(),
             'quantity' => 2,
             'unit_price' => 100,
             'line_total' => 200,
@@ -66,6 +72,8 @@ class RetailOrderCustomerExperienceTest extends TestCase
         $this->assertStringContainsString('تم اعتماد طلبك', $html);
         $this->assertStringContainsString('Your order has been confirmed', $html);
         $this->assertSame(1, (int) $approved->items->first()->approved_quantity);
+        $this->assertSame(1, (int) $approved->items->first()->stock_deducted_quantity);
+        $this->assertSame(4, (int) $variant->refresh()->quantity);
     }
 
     public function test_it_skips_email_when_the_order_has_no_valid_address(): void
@@ -76,7 +84,11 @@ class RetailOrderCustomerExperienceTest extends TestCase
             'customer_email_snapshot' => 'not-an-email',
         ]);
 
+        [$product, $variant] = $this->productWithVariant(5);
+
         $item = $order->items()->create([
+            'product_id' => $product->getKey(),
+            'product_variant_id' => $variant->getKey(),
             'quantity' => 1,
             'unit_price' => 100,
             'line_total' => 100,
@@ -88,6 +100,7 @@ class RetailOrderCustomerExperienceTest extends TestCase
         ]);
 
         Mail::assertNothingSent();
+        $this->assertSame(4, (int) $variant->refresh()->quantity);
     }
 
     public function test_mail_failure_does_not_roll_back_order_approval(): void
@@ -101,7 +114,11 @@ class RetailOrderCustomerExperienceTest extends TestCase
             'customer_email_snapshot' => 'customer@example.com',
         ]);
 
+        [$product, $variant] = $this->productWithVariant(5);
+
         $item = $order->items()->create([
+            'product_id' => $product->getKey(),
+            'product_variant_id' => $variant->getKey(),
             'quantity' => 2,
             'unit_price' => 100,
             'line_total' => 200,
@@ -113,11 +130,43 @@ class RetailOrderCustomerExperienceTest extends TestCase
         ]);
 
         $this->assertSame('confirmed', $approved->status);
+        $this->assertNotNull($approved->stock_deducted_at);
+        $this->assertSame(4, (int) $variant->refresh()->quantity);
         $this->assertDatabaseHas('orders', [
             'id' => $order->getKey(),
             'status' => 'confirmed',
             'total' => 100,
         ]);
+    }
+
+    /**
+     * @return array{0: Product, 1: ProductVariant}
+     */
+    private function productWithVariant(int $quantity): array
+    {
+        static $counter = 0;
+        $counter++;
+
+        $product = Product::query()->create([
+            'model_no' => 'CUSTOMER-EXPERIENCE-PRODUCT-' . $counter,
+            'title_ar' => 'منتج تجربة الزبون ' . $counter,
+            'title_en' => 'Customer experience product ' . $counter,
+            'price' => 100,
+            'show_web' => true,
+            'show_retail' => true,
+            'is_active' => true,
+        ]);
+
+        $variant = ProductVariant::query()->create([
+            'product_id' => $product->getKey(),
+            'sku' => 'CUSTOMER-EXPERIENCE-SKU-' . $counter,
+            'barcode' => 'CUSTOMER-EXPERIENCE-BARCODE-' . $counter,
+            'price' => 100,
+            'quantity' => $quantity,
+            'status' => 'active',
+        ]);
+
+        return [$product, $variant];
     }
 
     /**

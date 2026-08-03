@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Mail\RetailOrderApprovedMail;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
+use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -33,6 +34,12 @@ final class RetailOrderApprovalService
             if ($lockedOrder->status !== 'pending') {
                 throw new RuntimeException(
                     'يمكن اعتماد كميات الطلب عندما تكون حالته بانتظار التأكيد فقط.'
+                );
+            }
+
+            if (filled($lockedOrder->stock_deducted_at)) {
+                throw new RuntimeException(
+                    'تم خصم مخزون هذا الطلب سابقاً، ولا يمكن تكرار عملية الاعتماد.'
                 );
             }
 
@@ -70,6 +77,8 @@ final class RetailOrderApprovalService
             $requestedUnits = 0;
             $newSubtotal = 0.0;
             $summaryLines = [];
+            $approvalRows = [];
+            $requiredByVariant = [];
 
             foreach ($orderItems as $item) {
                 $itemId = (int) $item->getKey();
@@ -90,23 +99,42 @@ final class RetailOrderApprovalService
                     );
                 }
 
-                $unitPrice = round((float) $item->unit_price, 2);
-                $lineTotal = round($unitPrice * $approvedQuantity, 2);
-
-                $item->forceFill([
-                    'approved_quantity' => $approvedQuantity,
-                    'line_total' => $lineTotal,
-                ])->save();
-
-                $requestedUnits += $requestedQuantity;
-                $approvedUnits += $approvedQuantity;
-                $newSubtotal += $lineTotal;
-
                 $productName = trim((string) (
                     $item->product_name_snapshot
                     ?: $item->product?->name
                     ?: "المنتج رقم {$itemId}"
                 ));
+
+                $variantId = (int) ($item->product_variant_id ?? 0);
+                $productId = (int) ($item->product_id ?? 0);
+
+                if ($approvedQuantity > 0 && ($variantId < 1 || $productId < 1)) {
+                    throw new RuntimeException(
+                        "لا يمكن اعتماد {$productName} بكمية موجبة لأنه غير مرتبط بقياس مخزون صالح."
+                    );
+                }
+
+                $unitPrice = round((float) $item->unit_price, 2);
+                $lineTotal = round($unitPrice * $approvedQuantity, 2);
+
+                $approvalRows[$itemId] = [
+                    'item' => $item,
+                    'product_id' => $productId,
+                    'variant_id' => $variantId,
+                    'product_name' => $productName,
+                    'requested_quantity' => $requestedQuantity,
+                    'approved_quantity' => $approvedQuantity,
+                    'line_total' => $lineTotal,
+                ];
+
+                if ($approvedQuantity > 0) {
+                    $requiredByVariant[$variantId] =
+                        ($requiredByVariant[$variantId] ?? 0) + $approvedQuantity;
+                }
+
+                $requestedUnits += $requestedQuantity;
+                $approvedUnits += $approvedQuantity;
+                $newSubtotal += $lineTotal;
 
                 $summaryLines[] = "{$productName}: طلب {$requestedQuantity} / اعتماد {$approvedQuantity}";
             }
@@ -115,6 +143,78 @@ final class RetailOrderApprovalService
                 throw new RuntimeException(
                     'لا يمكن اعتماد الطلب عندما تكون جميع الكميات المعتمدة صفراً.'
                 );
+            }
+
+            $variantIds = array_keys($requiredByVariant);
+
+            $lockedVariants = ProductVariant::query()
+                ->whereKey($variantIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy(fn (ProductVariant $variant): int => (int) $variant->getKey());
+
+            if ($lockedVariants->count() !== count($variantIds)) {
+                throw new RuntimeException(
+                    'تعذر العثور على أحد قياسات المنتجات المرتبطة بالطلب.'
+                );
+            }
+
+            foreach ($approvalRows as $row) {
+                if ($row['approved_quantity'] < 1) {
+                    continue;
+                }
+
+                /** @var ProductVariant|null $variant */
+                $variant = $lockedVariants->get($row['variant_id']);
+
+                if (! $variant instanceof ProductVariant) {
+                    throw new RuntimeException(
+                        "تعذر العثور على قياس المخزون المرتبط بالمنتج {$row['product_name']}."
+                    );
+                }
+
+                if ((int) $variant->product_id !== $row['product_id']) {
+                    throw new RuntimeException(
+                        "قياس المخزون المرتبط بالمنتج {$row['product_name']} لا يتبع للمنتج نفسه."
+                    );
+                }
+            }
+
+            foreach ($requiredByVariant as $variantId => $requiredQuantity) {
+                /** @var ProductVariant $variant */
+                $variant = $lockedVariants->get($variantId);
+                $availableQuantity = (int) $variant->quantity;
+
+                if ($availableQuantity < $requiredQuantity) {
+                    $productNames = collect($approvalRows)
+                        ->filter(fn (array $row): bool => $row['variant_id'] === $variantId)
+                        ->pluck('product_name')
+                        ->unique()
+                        ->implode('، ');
+
+                    throw new RuntimeException(
+                        "المخزون غير كافٍ للمنتج {$productNames}. "
+                        . "المتوفر {$availableQuantity} والمطلوب اعتماده {$requiredQuantity}."
+                    );
+                }
+            }
+
+            foreach ($approvalRows as $row) {
+                $row['item']->forceFill([
+                    'approved_quantity' => $row['approved_quantity'],
+                    'stock_deducted_quantity' => $row['approved_quantity'],
+                    'line_total' => $row['line_total'],
+                ])->save();
+            }
+
+            foreach ($requiredByVariant as $variantId => $requiredQuantity) {
+                /** @var ProductVariant $variant */
+                $variant = $lockedVariants->get($variantId);
+
+                $variant->forceFill([
+                    'quantity' => (int) $variant->quantity - $requiredQuantity,
+                ])->save();
             }
 
             $oldSubtotal = max(
@@ -169,6 +269,8 @@ final class RetailOrderApprovalService
                 ? 'تم اعتماد الطلب جزئياً.'
                 : 'تم اعتماد كامل كميات الطلب.';
 
+            $historyNote .= " تم خصم {$approvedUnits} قطعة من مخزون قياسات المنتجات.";
+
             if (filled($approvalNote)) {
                 $historyNote .= ' ملاحظة الموظف: ' . trim((string) $approvalNote);
             }
@@ -191,6 +293,8 @@ final class RetailOrderApprovalService
                 'total' => $newTotal,
                 'status' => 'confirmed',
                 'confirmed_at' => $lockedOrder->confirmed_at ?: now(),
+                'stock_deducted_at' => now(),
+                'stock_restored_at' => null,
             ])->save();
 
             OrderStatusHistory::query()->create([

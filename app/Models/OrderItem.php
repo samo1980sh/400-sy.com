@@ -16,6 +16,7 @@ class OrderItem extends Model
         'product_variant_id',
         'quantity',
         'approved_quantity',
+        'stock_deducted_quantity',
         'unit_price',
         'product_name_snapshot',
         'product_model_no_snapshot',
@@ -32,6 +33,7 @@ class OrderItem extends Model
         return [
             'quantity' => 'integer',
             'approved_quantity' => 'integer',
+            'stock_deducted_quantity' => 'integer',
             'unit_price' => 'decimal:2',
             'line_total' => 'decimal:2',
         ];

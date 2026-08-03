@@ -49,6 +49,8 @@ class Order extends Model
         'shipped_at',
         'delivered_at',
         'cancelled_at',
+        'stock_deducted_at',
+        'stock_restored_at',
         'notes',
     ];
 
@@ -67,6 +69,8 @@ class Order extends Model
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'stock_deducted_at' => 'datetime',
+        'stock_restored_at' => 'datetime',
     ];
 
     protected static function booted(): void

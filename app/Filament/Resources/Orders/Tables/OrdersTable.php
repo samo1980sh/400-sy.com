@@ -9,6 +9,7 @@ use App\Models\OrderStatusHistory;
 use App\Models\PaymentMethod;
 use App\Services\CustomerLoyaltyService;
 use App\Services\OrderCouponService;
+use App\Services\RetailOrderCancellationService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -22,6 +23,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Throwable;
 
 class OrdersTable
@@ -165,25 +167,41 @@ class OrdersTable
                     ->visible(fn (Order $record): bool => $record->status === 'pending')
                     ->modalHeading('اعتماد كميات طلب المفرق')
                     ->modalDescription(
-                        'حدد الكمية المتوفرة والمعتمدة لكل منتج. '
-                        . 'ستُعاد حساب الفاتورة بناءً على الكميات المعتمدة فقط.'
+                        'راجع المخزون الحالي وحدد الكمية المعتمدة لكل منتج. '
+                        . 'سيُخصم المعتمد من مخزون القياس وتُعاد حساب الفاتورة.'
                     )
                     ->modalSubmitActionLabel('اعتماد الطلب')
                     ->modalWidth('5xl')
                     ->fillForm(function (Order $record): array {
                         return [
                             'items' => $record->items()
+                                ->with('productVariant')
                                 ->orderBy('id')
                                 ->get()
-                                ->map(fn ($item): array => [
-                                    'item_id' => $item->getKey(),
-                                    'product_name' => trim((string) (
-                                        $item->product_name_snapshot
-                                        ?: 'المنتج رقم ' . $item->getKey()
-                                    )),
-                                    'requested_quantity' => (int) $item->quantity,
-                                    'approved_quantity' => (int) $item->quantity,
-                                ])
+                                ->map(function ($item): array {
+                                    $availableQuantity = (
+                                        $item->productVariant
+                                        && (int) $item->productVariant->product_id === (int) $item->product_id
+                                    )
+                                        ? max(0, (int) $item->productVariant->quantity)
+                                        : 0;
+
+                                    $requestedQuantity = max(0, (int) $item->quantity);
+
+                                    return [
+                                        'item_id' => $item->getKey(),
+                                        'product_name' => trim((string) (
+                                            $item->product_name_snapshot
+                                            ?: 'المنتج رقم ' . $item->getKey()
+                                        )),
+                                        'requested_quantity' => $requestedQuantity,
+                                        'available_quantity' => $availableQuantity,
+                                        'approved_quantity' => min(
+                                            $requestedQuantity,
+                                            $availableQuantity,
+                                        ),
+                                    ];
+                                })
                                 ->all(),
                             'approval_note' => null,
                         ];
@@ -194,7 +212,7 @@ class OrdersTable
                             ->addable(false)
                             ->deletable(false)
                             ->reorderable(false)
-                            ->columns(4)
+                            ->columns(5)
                             ->schema([
                                 \Filament\Forms\Components\Hidden::make('item_id'),
                                 \Filament\Forms\Components\TextInput::make('product_name')
@@ -204,6 +222,11 @@ class OrdersTable
                                     ->columnSpan(2),
                                 \Filament\Forms\Components\TextInput::make('requested_quantity')
                                     ->label('الكمية المطلوبة')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->numeric(),
+                                \Filament\Forms\Components\TextInput::make('available_quantity')
+                                    ->label('المتوفر حالياً')
                                     ->disabled()
                                     ->dehydrated(false)
                                     ->numeric(),
@@ -274,9 +297,41 @@ class OrdersTable
                     ->label('إلغاء')
                     ->icon(Heroicon::OutlinedXCircle)
                     ->color('danger')
-                    ->visible(fn (Order $record): bool => ! in_array($record->status, ['delivered', 'cancelled'], true))
+                    ->visible(fn (Order $record): bool => in_array(
+                        $record->status,
+                        ['pending', 'confirmed'],
+                        true,
+                    ))
                     ->requiresConfirmation()
-                    ->action(fn (Order $record) => self::transitionStatus($record, 'cancelled')),
+                    ->modalDescription(
+                        'عند إلغاء طلب مؤكد ستُعاد الكميات التي خُصمت منه إلى المخزون.'
+                    )
+                    ->action(function (Order $record): void {
+                        try {
+                            $cancelled = app(
+                                RetailOrderCancellationService::class
+                            )->cancel($record);
+
+                            Notification::make()
+                                ->title('تم إلغاء الطلب.')
+                                ->body(
+                                    filled($cancelled->stock_restored_at)
+                                        ? 'تمت إعادة الكميات المخصومة إلى المخزون.'
+                                        : 'لم يكن الطلب قد خُصم من المخزون.'
+                                )
+                                ->success()
+                                ->send();
+                        } catch (Throwable $exception) {
+                            report($exception);
+
+                            Notification::make()
+                                ->title('تعذر إلغاء الطلب.')
+                                ->body($exception->getMessage())
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                        }
+                    }),
                 Action::make('markPaid')
                     ->label('مدفوع')
                     ->icon(Heroicon::OutlinedCurrencyDollar)
@@ -353,7 +408,10 @@ class OrdersTable
                         ->color('danger')
                         ->requiresConfirmation()
                         ->modalHeading('حذف الطلبات المحددة')
-                        ->modalDescription('سيتم حذف الطلبات المحددة مع عناصرها وسجل حالاتها. لن يتم حذف الزبائن المرتبطين بهذه الطلبات.')
+                        ->modalDescription(
+                            'يسمح بالحذف فقط للطلبات قيد المراجعة أو الملغاة، '
+                            . 'وبعد التأكد من عدم وجود مخزون مخصوم غير معاد.'
+                        )
                         ->modalSubmitActionLabel('نعم، احذف الطلبات')
                         ->action(function (Collection $records): void {
                             try {
@@ -388,7 +446,29 @@ class OrdersTable
             $orders = Order::query()
                 ->whereKey($orders->modelKeys())
                 ->with('couponRedemption')
+                ->orderBy('id')
+                ->lockForUpdate()
                 ->get();
+
+            $blockedOrders = $orders->filter(function (Order $order): bool {
+                $statusAllowsDeletion = in_array(
+                    $order->status,
+                    ['pending', 'cancelled'],
+                    true,
+                );
+
+                $hasUnrestoredStock = filled($order->stock_deducted_at)
+                    && blank($order->stock_restored_at);
+
+                return ! $statusAllowsDeletion || $hasUnrestoredStock;
+            });
+
+            if ($blockedOrders->isNotEmpty()) {
+                throw new RuntimeException(
+                    'لا يمكن حذف الطلبات التالية قبل إلغائها وإعادة مخزونها: '
+                    . $blockedOrders->pluck('order_no')->implode('، ')
+                );
+            }
 
             $orderIds = $orders->modelKeys();
 
