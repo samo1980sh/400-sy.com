@@ -189,13 +189,13 @@
                     <div class="customer-qr-frame">
                         {!! $qr_svg !!}
                     </div>
-                    <div class="customer-qr-token" dir="ltr" data-customer-qr-token>{{ $qr_code->token }}</div>
+                    <div class="customer-qr-token" dir="ltr" data-customer-qr-account>{{ $qr_value }}</div>
                 @else
                     <div class="customer-qr-muted-box">
                         رمز QR غير متاح حاليًا. يرجى مراجعة الإدارة أو أحد فروع 400.
                     </div>
-                    @if (filled($qr_code->token))
-                        <div class="customer-qr-token" dir="ltr" data-customer-qr-token>{{ $qr_code->token }}</div>
+                    @if (filled($qr_value))
+                        <div class="customer-qr-token" dir="ltr" data-customer-qr-account>{{ $qr_value }}</div>
                     @endif
                 @endif
             </div>
@@ -205,7 +205,7 @@
             <div class="customer-qr-info">
                 <h5 class="customer-qr-title">QR الحساب والولاء</h5>
                 <p class="customer-qr-text mb-0">
-                    هذا الرمز ثابت لحسابك، ويمكن استخدامه داخل الصالات لتعريف حسابك وربط عمليات الشراء أو الاستفادة من مزايا الولاء بحسابك.
+                    يحتوي هذا الرمز رقم حسابك مباشرة، ويمكن مسحه داخل الصالات للتعرف على حسابك وتطبيق قسائم النقاط وتسجيل نقاط الشراء على حساب الولاء.
                 </p>
 
                 <div class="customer-qr-data">
@@ -239,10 +239,10 @@
                     إذا لم يتمكن الماسح من قراءة الرمز، ارفع سطوع الشاشة وافتح الصفحة بوضع التكبير. لا تشارك هذا الرمز مع أشخاص آخرين. في حال لاحظت استخدامًا غير صحيح لحسابك، تواصل مع الإدارة لتعطيل الرمز وإعادة تفعيله عند الحاجة.
                 </div>
 
-                @if (filled($qr_code->token))
+                @if (filled($qr_value))
                     <div class="customer-qr-actions">
-                        <button type="button" class="customer-qr-copy" data-copy-customer-qr>
-                            نسخ كود QR
+                        <button type="button" class="customer-qr-copy" data-copy-customer-account>
+                            نسخ رقم الحساب
                         </button>
                     </div>
                 @endif
@@ -254,19 +254,19 @@
 @push('scripts')
     <script>
         document.addEventListener('click', function (event) {
-            const button = event.target.closest('[data-copy-customer-qr]');
+            const button = event.target.closest('[data-copy-customer-account]');
 
             if (!button) {
                 return;
             }
 
-            const token = document.querySelector('[data-customer-qr-token]')?.textContent?.trim() || '';
+            const accountNo = document.querySelector('[data-customer-qr-account]')?.textContent?.trim() || '';
 
-            if (!token || !navigator.clipboard) {
+            if (!accountNo || !navigator.clipboard) {
                 return;
             }
 
-            navigator.clipboard.writeText(token).then(function () {
+            navigator.clipboard.writeText(accountNo).then(function () {
                 const originalText = button.textContent;
                 button.textContent = 'تم النسخ';
 

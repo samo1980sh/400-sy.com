@@ -39,7 +39,10 @@ class CustomerQrCodeForm
                         ->preload()
                         ->required(),
                     TextInput::make('token')
-                        ->label('الرمز')
+                        ->label('الرمز الداخلي القديم')
+                        ->helperText('يُحتفظ به للتوافق مع رموز QR القديمة. رمز الزبون الحالي يعتمد رقم الحساب مباشرة.')
+                        ->disabled()
+                        ->dehydrated(false)
                         ->maxLength(255),
                     Select::make('status')
                         ->label('الحالة')
@@ -52,6 +55,8 @@ class CustomerQrCodeForm
                     TextInput::make('scan_count')
                         ->label('عدد مرات الاستخدام')
                         ->numeric()
+                        ->disabled()
+                        ->dehydrated(false)
                         ->default(0),
                     Textarea::make('notes')
                         ->label('ملاحظات')

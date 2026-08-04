@@ -89,7 +89,7 @@ class FrontHomePageDataService
             'ticker_items' => $this->buildTickerItems($locale),
             'hero_slides' => $this->buildHeroSlides(),
             'collections' => $this->buildCollections($locale),
-            'nav_categories' => $this->buildNavCategories(),
+            'nav_categories' => $this->buildNavCategories($locale),
             'trending_products' => $this->buildProductCards($trendingProducts, $locale, 'trending'),
             'new_products' => $this->buildProductCards($newProducts, $locale, 'new'),
             'branches' => $this->buildBranches($locale),
@@ -221,7 +221,7 @@ class FrontHomePageDataService
         ]);
     }
 
-    protected function buildNavCategories(): Collection
+    protected function buildNavCategories(string $locale): Collection
     {
         $categories = Category::query()
             ->whereNull('parent_id')
@@ -468,7 +468,7 @@ class FrontHomePageDataService
 
     protected function buildQuickLinks(string $locale): Collection
     {
-        $links = $this->buildNavCategories()
+        $links = $this->buildNavCategories($locale)
             ->take(4)
             ->map(function ($category) use ($locale): array {
                 return [

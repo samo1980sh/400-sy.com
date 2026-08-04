@@ -20,7 +20,7 @@ class CustomerLoyaltyTransactionResource extends \App\Filament\Resources\RbacRes
     protected static ?string $pluralModelLabel = 'حركات النقاط';
     protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
     protected static ?string $navigationLabel = 'سجل النقاط';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowTrendingUp;
 

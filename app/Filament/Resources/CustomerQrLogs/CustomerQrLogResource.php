@@ -19,7 +19,7 @@ class CustomerQrLogResource extends \App\Filament\Resources\RbacResource
     protected static ?string $pluralModelLabel = 'سجل QR';
     protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
     protected static ?string $navigationLabel = 'سجل استخدام QR';
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 8;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
 

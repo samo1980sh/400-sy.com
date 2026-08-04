@@ -62,7 +62,13 @@ class Branch extends Model
 
         static::saving(function (self $branch): void {
             $service = app(WebpImageService::class);
-            $branch->main_image = $service->convertStoredPath($branch->main_image, config('company_media.branches.main_image', []));
+
+            $branch->main_image = filled($branch->main_image)
+                ? $service->convertStoredPath(
+                    (string) $branch->main_image,
+                    config('company_media.branches.main_image', []),
+                )
+                : null;
 
             $galleryImages = is_array($branch->gallery_images) ? $branch->gallery_images : [];
             $branch->gallery_images = $service->convertStoredPaths($galleryImages, config('company_media.branches.gallery_image', []));
@@ -88,7 +94,11 @@ class Branch extends Model
 
         static::deleting(function (self $branch): void {
             $service = app(WebpImageService::class);
-            $service->deleteStoredPath($branch->main_image);
+
+            if (filled($branch->main_image)) {
+                $service->deleteStoredPath((string) $branch->main_image);
+            }
+
             $service->deleteStoredPaths($branch->gallery_images ?? []);
         });
     }

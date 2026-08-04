@@ -16,7 +16,7 @@ use App\Models\PointVoucherRedemption;
 use App\Models\PointsVoucher;
 use App\Models\PaymentMethod;
 use App\Services\FrontHomePageDataService;
-use App\Support\SimpleQrSvg;
+use App\Support\CustomerQrSvg;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -76,11 +76,12 @@ class FrontCustomerAccountController extends Controller
             ]
         );
 
+        $qrValue = trim((string) $customer->account_no);
         $qrSvg = null;
 
-        if ($qrCode->isActive()) {
+        if ($qrCode->isActive() && $qrValue !== '') {
             try {
-                $qrSvg = SimpleQrSvg::svg((string) $qrCode->token, 14, 6);
+                $qrSvg = CustomerQrSvg::render($qrValue);
             } catch (\Throwable) {
                 $qrSvg = null;
             }
@@ -93,6 +94,7 @@ class FrontCustomerAccountController extends Controller
             'wallet' => $wallet,
             'qr_code' => $qrCode,
             'qr_svg' => $qrSvg,
+            'qr_value' => $qrValue,
         ]));
     }
 

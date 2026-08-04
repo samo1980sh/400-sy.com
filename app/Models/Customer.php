@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Str;
 
 class Customer extends Authenticatable
 {
@@ -114,6 +115,14 @@ class Customer extends Authenticatable
 
     protected static function booted(): void
     {
+        static::creating(function (Customer $customer): void {
+            if (blank($customer->account_no)) {
+                do {
+                    $customer->account_no = 'CUST-' . now()->format('ymd') . '-' . strtoupper(Str::random(6));
+                } while (static::query()->where('account_no', $customer->account_no)->exists());
+            }
+        });
+
         static::created(function (Customer $customer): void {
             CustomerLoyaltyWallet::firstOrCreate(
                 ['customer_id' => $customer->id],

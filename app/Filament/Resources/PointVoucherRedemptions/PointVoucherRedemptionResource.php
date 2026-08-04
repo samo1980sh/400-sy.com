@@ -20,7 +20,7 @@ class PointVoucherRedemptionResource extends \App\Filament\Resources\RbacResourc
     protected static ?string $pluralModelLabel = 'صرف قسائم النقاط';
     protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
     protected static ?string $navigationLabel = 'سجل قسائم النقاط';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 6;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;
 

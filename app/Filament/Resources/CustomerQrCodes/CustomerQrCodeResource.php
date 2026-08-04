@@ -20,7 +20,7 @@ class CustomerQrCodeResource extends \App\Filament\Resources\RbacResource
     protected static ?string $pluralModelLabel = 'رموز QR';
     protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
     protected static ?string $navigationLabel = 'رموز QR';
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 7;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQrCode;
 

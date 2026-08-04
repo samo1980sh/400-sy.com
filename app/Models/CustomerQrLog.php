@@ -13,6 +13,9 @@ class CustomerQrLog extends Model
     protected $fillable = [
         'customer_id',
         'customer_qr_code_id',
+        'branch_id',
+        'scanned_by_user_id',
+        'point_voucher_redemption_id',
         'action_type',
         'account_no',
         'customer_name',
@@ -22,6 +25,8 @@ class CustomerQrLog extends Model
         'points_earned',
         'points_spent',
         'discount_amount',
+        'sale_amount',
+        'net_amount',
         'ip_address',
         'user_agent',
         'notes',
@@ -36,6 +41,8 @@ class CustomerQrLog extends Model
             'points_earned' => 'decimal:2',
             'points_spent' => 'decimal:2',
             'discount_amount' => 'decimal:2',
+            'sale_amount' => 'decimal:2',
+            'net_amount' => 'decimal:2',
             'is_suspicious' => 'boolean',
             'scanned_at' => 'datetime',
         ];
@@ -49,5 +56,20 @@ class CustomerQrLog extends Model
     public function qrCode(): BelongsTo
     {
         return $this->belongsTo(CustomerQrCode::class, 'customer_qr_code_id');
+    }
+
+    public function branchRecord(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
+    }
+
+    public function scannedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'scanned_by_user_id');
+    }
+
+    public function pointVoucherRedemption(): BelongsTo
+    {
+        return $this->belongsTo(PointVoucherRedemption::class);
     }
 }

@@ -13,6 +13,12 @@ class CustomerQrLogsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with([
+                'customer',
+                'branchRecord',
+                'scannedBy',
+                'pointVoucherRedemption',
+            ]))
             ->defaultSort('scanned_at', 'desc')
             ->columns([
                 TextColumn::make('customer.name')
@@ -20,16 +26,67 @@ class CustomerQrLogsTable
                     ->searchable(),
                 TextColumn::make('account_no')
                     ->label('رقم الحساب')
-                    ->searchable(),
+                    ->searchable()
+                    ->copyable()
+                    ->extraCellAttributes(['dir' => 'ltr', 'style' => 'text-align: left;']),
                 TextColumn::make('mobile')
                     ->label('الموبايل')
+                    ->searchable()
+                    ->extraCellAttributes(['dir' => 'ltr', 'style' => 'text-align: left;']),
+                TextColumn::make('branchRecord.name_ar')
+                    ->label('الصالة / الفرع')
+                    ->placeholder(fn (CustomerQrLog $record): string => $record->branch ?: '—')
                     ->searchable(),
-                TextColumn::make('branch')
-                    ->label('الفرع')
+                TextColumn::make('scannedBy.name')
+                    ->label('الموظف')
+                    ->placeholder('—')
                     ->searchable(),
                 TextColumn::make('action_type')
                     ->label('نوع العملية')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'identify' => 'تعرف على الحساب',
+                        'hall_sale' => 'عملية صالة',
+                        'scan' => 'مسح قديم',
+                        default => (string) $state,
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'identify' => 'info',
+                        'hall_sale' => 'success',
+                        default => 'gray',
+                    }),
+                TextColumn::make('reference_no')
+                    ->label('رقم المرجع')
+                    ->searchable()
+                    ->copyable()
+                    ->extraCellAttributes(['dir' => 'ltr', 'style' => 'text-align: left;']),
+                TextColumn::make('sale_amount')
+                    ->label('قيمة الفاتورة')
+                    ->formatStateUsing(fn ($state): string => self::number($state))
+                    ->alignEnd(),
+                TextColumn::make('discount_amount')
+                    ->label('قيمة الحسم')
+                    ->formatStateUsing(fn ($state): string => self::number($state))
+                    ->alignEnd(),
+                TextColumn::make('net_amount')
+                    ->label('الصافي')
+                    ->formatStateUsing(fn ($state): string => self::number($state))
+                    ->alignEnd(),
+                TextColumn::make('points_earned')
+                    ->label('نقاط مكتسبة')
+                    ->formatStateUsing(fn ($state): string => self::number($state))
+                    ->alignEnd(),
+                TextColumn::make('points_spent')
+                    ->label('نقاط القسيمة')
+                    ->formatStateUsing(fn ($state): string => self::number($state))
+                    ->alignEnd(),
+                TextColumn::make('pointVoucherRedemption.order_no')
+                    ->label('قسيمة النقاط')
+                    ->placeholder('—')
+                    ->searchable()
+                    ->copyable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->extraCellAttributes(['dir' => 'ltr', 'style' => 'text-align: left;']),
                 TextColumn::make('is_suspicious')
                     ->label('مريب')
                     ->badge()
@@ -39,18 +96,6 @@ class CustomerQrLogsTable
                     ->label('سبب الاشتباه')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->wrap(),
-                TextColumn::make('points_earned')
-                    ->label('نقاط مكتسبة')
-                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, '.', ',')),
-                TextColumn::make('points_spent')
-                    ->label('نقاط مصروفة')
-                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, '.', ',')),
-                TextColumn::make('discount_amount')
-                    ->label('قيمة الحسم')
-                    ->formatStateUsing(fn ($state): string => number_format((float) $state, 2, '.', ',')),
-                TextColumn::make('reference_no')
-                    ->label('رقم المرجع')
-                    ->searchable(),
                 TextColumn::make('scanned_at')
                     ->label('وقت الاستخدام')
                     ->dateTime()
@@ -60,5 +105,10 @@ class CustomerQrLogsTable
             ->columnManagerTriggerAction(fn (Action $action) => $action
                 ->label('إظهار / إخفاء الأعمدة')
                 ->icon(Heroicon::OutlinedViewColumns));
+    }
+
+    protected static function number(mixed $value): string
+    {
+        return number_format((float) $value, 2, '.', ',');
     }
 }

@@ -20,7 +20,7 @@ class CustomerLoyaltyWalletResource extends \App\Filament\Resources\RbacResource
     protected static ?string $pluralModelLabel = 'محافظ النقاط';
     protected static string|UnitEnum|null $navigationGroup = 'الولاء والنقاط و QR';
     protected static ?string $navigationLabel = 'محافظ الولاء';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 

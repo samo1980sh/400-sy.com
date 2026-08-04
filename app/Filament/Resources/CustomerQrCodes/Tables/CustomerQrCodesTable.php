@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\CustomerQrCodes\Tables;
 
-use App\Filament\Resources\CustomerQrCodes\Schemas\CustomerQrCodeForm;
+use App\Filament\Pages\HallQrWorkspace;
 use App\Models\CustomerQrCode;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -22,11 +22,20 @@ class CustomerQrCodesTable
                     ->label('الزبون')
                     ->searchable(),
                 TextColumn::make('customer.account_no')
-                    ->label('رقم الحساب')
-                    ->searchable(),
+                    ->label('رقم الحساب / QR')
+                    ->searchable()
+                    ->copyable()
+                    ->extraCellAttributes(['dir' => 'ltr', 'style' => 'text-align: left;']),
+                TextColumn::make('customer.mobile')
+                    ->label('الموبايل')
+                    ->searchable()
+                    ->copyable()
+                    ->extraCellAttributes(['dir' => 'ltr', 'style' => 'text-align: left;']),
                 TextColumn::make('token')
-                    ->label('الرمز')
-                    ->searchable(),
+                    ->label('الرمز الداخلي القديم')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->extraCellAttributes(['dir' => 'ltr', 'style' => 'text-align: left;']),
                 TextColumn::make('status')
                     ->label('الحالة')
                     ->badge()
@@ -51,6 +60,14 @@ class CustomerQrCodesTable
             ->columnManagerTriggerAction(fn (Action $action) => $action
                 ->label('إظهار / إخفاء الأعمدة')
                 ->icon(Heroicon::OutlinedViewColumns))
+            ->headerActions([
+                Action::make('openHallQrWorkspace')
+                    ->label('فتح شاشة تشغيل الصالة')
+                    ->icon(Heroicon::OutlinedBuildingStorefront)
+                    ->color('success')
+                    ->visible(fn (): bool => HallQrWorkspace::canAccess())
+                    ->url(fn (): string => HallQrWorkspace::getUrl()),
+            ])
             ->recordActions([
                 Action::make('toggleStatus')
                     ->label(fn (CustomerQrCode $record): string => $record->status === 'active' ? 'تعطيل' : 'تفعيل')
@@ -61,10 +78,9 @@ class CustomerQrCodesTable
                     ->requiresConfirmation()
                     ->action(function (CustomerQrCode $record): void {
                         try {
-                            $record->update([
-                                'status' => $record->status === 'active' ? 'inactive' : 'active',
-                                'disabled_at' => $record->status === 'active' ? now() : null,
-                            ]);
+                            $record->status === 'active'
+                                ? $record->disable()
+                                : $record->enable();
 
                             Notification::make()
                                 ->title('تم تحديث حالة QR بنجاح.')
